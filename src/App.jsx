@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Deposit from './pages/Deposit'; 
 import History from './pages/History';
+import Welcome from './pages/Welcome'; 
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -16,6 +17,9 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Mengarahkan halaman utama (/) ke Welcome page, bukan redirect ke dashboard */}
+        <Route path="/" element={<Welcome />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
@@ -31,7 +35,6 @@ function App() {
           </PrivateRoute>
         } />
 
-         {/* Placeholder untuk halaman lain agar tidak error */}
         <Route path="/deposit" element={
           <PrivateRoute>
              <div className="p-5">Halaman Deposit (Belum dicustom)</div>
@@ -49,8 +52,6 @@ function App() {
              <div className="p-5">Halaman History (Belum dicustom)</div>
           </PrivateRoute>
         } />
-
-        <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </Router>
   );
