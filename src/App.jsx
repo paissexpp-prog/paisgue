@@ -7,26 +7,38 @@ import Profile from './pages/Profile';
 import Deposit from './pages/Deposit'; 
 import History from './pages/History';
 import Welcome from './pages/Welcome'; 
-import Navbar from './components/Navbar'; // <--- Wajib di-import
+import Navbar from './components/Navbar';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
 };
 
+const AuthRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  return token ? <Navigate to="/dashboard" replace /> : children;
+};
+
 function App() {
   return (
     <Router>
-      {/* Navbar dipasang di sini agar muncul di SEMUA halaman (Login, Welcome, dll) */}
       <Navbar /> 
       
-      <div className="pt-16"> {/* Tambahan padding agar konten tidak tertutup Navbar */}
+      <div className="pt-16">
         <Routes>
-          {/* Halaman utama mengarah ke Welcome Page dulu */}
           <Route path="/" element={<Welcome />} />
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={
+            <AuthRoute>
+              <Login />
+            </AuthRoute>
+          } />
+          
+          <Route path="/register" element={
+            <AuthRoute>
+              <Register />
+            </AuthRoute>
+          } />
           
           <Route path="/dashboard" element={
             <PrivateRoute>
@@ -42,7 +54,7 @@ function App() {
 
           <Route path="/deposit" element={
             <PrivateRoute>
-               <div className="p-5">Halaman Deposit (Belum dicustom)</div>
+               <Deposit />
             </PrivateRoute>
           } />
           
@@ -54,7 +66,7 @@ function App() {
 
           <Route path="/history" element={
             <PrivateRoute>
-               <div className="p-5">Halaman History (Belum dicustom)</div>
+               <History />
             </PrivateRoute>
           } />
         </Routes>
@@ -64,4 +76,5 @@ function App() {
 }
 
 export default App;
+
 
