@@ -1,238 +1,173 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { useTheme } from '../context/ThemeContext';
-import { Loader2, RefreshCw, Smartphone, Globe, Server, ShoppingCart } from 'lucide-react';
+import BottomNav from '../components/BottomNav';
+import { Bell, RefreshCw, Smartphone, Globe, Gamepad2, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export default function Dashboard() {
-  const { color } = useTheme();
-  const [services, setServices] = useState([]);
-  const [countries, setCountries] = useState([]);
-  const [operators, setOperators] = useState([]);
-  
-  const [selectedService, setSelectedService] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedOperator, setSelectedOperator] = useState('');
-  
-  const [activeOrder, setActiveOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [otpCode, setOtpCode] = useState('Menunggu SMS...');
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState({ username: 'Loading...', balance: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserData = async () => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      if (storedUser) {
+        setUser(storedUser); 
+      }
+      
+      const res = await api.get('/auth/me'); 
+      if (res.data.success) {
+        setUser(res.data.data);
+        localStorage.setItem('user', JSON.stringify(res.data.data));
+      }
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchServices();
-    const savedOrder = localStorage.getItem('activeOrder');
-    if (savedOrder) setActiveOrder(JSON.parse(savedOrder));
+    fetchUserData();
   }, []);
 
-  const fetchServices = async () => {
-    try {
-      const res = await api.get('/services/list');
-      if (res.data.success) setServices(res.data.data);
-    } catch (err) { console.error(err); }
-  };
-
-  const handleServiceChange = async (e) => {
-    const serviceId = e.target.value;
-    setSelectedService(serviceId);
-    setCountries([]);
-    setOperators([]);
-    if (!serviceId) return;
-
-    setLoading(true);
-    try {
-      const res = await api.get(`/countries/list?service_id=${serviceId}`);
-      if (res.data.success) setCountries(res.data.data);
-    } catch (err) { alert('Gagal ambil negara'); }
-    setLoading(false);
-  };
-
-  const handleCountryChange = async (e) => {
-    const countryId = e.target.value;
-    setSelectedCountry(countryId);
-    setOperators([]);
-    if (!countryId) return;
-
-    setLoading(true);
-    try {
-      const res = await api.get(`/operators/list?country=${countryId}&provider_id=1`); 
-      if (res.data.success) setOperators(res.data.data);
-    } catch (err) { alert('Gagal ambil operator'); }
-    setLoading(false);
-  };
-
-  const handleBuy = async () => {
-    if (!selectedOperator) return;
-    setLoading(true);
-    try {
-      const opData = operators.find(o => o.operator_id === selectedOperator);
-      
-      const res = await api.get('/orders/buy', {
-        params: {
-          number_id: 'any',
-          provider_id: '1',
-          operator_id: selectedOperator,
-          expected_price: opData ? opData.price : 0
-        }
-      });
-
-      if (res.data.success) {
-        const newOrder = res.data.data;
-        setActiveOrder(newOrder);
-        localStorage.setItem('activeOrder', JSON.stringify(newOrder));
-        setOtpCode('Menunggu SMS...');
-      }
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Gagal membeli nomor');
-    }
-    setLoading(false);
-  };
-
-  const checkStatus = async () => {
-    if (!activeOrder) return;
-    try {
-      const res = await api.get(`/orders/check-status?order_id=${activeOrder.order_id}`);
-      if (res.data.success) {
-        const status = res.data.data.status;
-        if (status === 'COMPLETED') {
-            setOtpCode(res.data.data.otp_code);
-            localStorage.removeItem('activeOrder');
-        } else if (status === 'CANCELED') {
-            setOtpCode('Dibatalkan / Expired');
-            localStorage.removeItem('activeOrder');
-        }
-      }
-    } catch (err) { console.error(err); }
+  const formatRupiah = (number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(number);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 transition-colors duration-300 dark:bg-slate-900 md:p-8">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="mb-8 text-2xl font-bold text-slate-900 dark:text-white">Dashboard Order</h1>
-
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Card Pemesanan */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${color.bg} ${color.text}`}>
-                <ShoppingCart size={20} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pemesanan Baru</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Pilih layanan dan negara</p>
-              </div>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      
+      <div className="bg-white px-5 pt-12 pb-4 sticky top-0 z-40 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-lg">
+              {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
             </div>
-            
-            <div className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  1. Layanan Aplikasi
-                </label>
-                <div className="relative">
-                  <Smartphone className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                  <select 
-                    className={`w-full appearance-none rounded-xl border bg-white px-10 py-3 text-slate-900 focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white ${color.border} ${color.ring}`}
-                    onChange={handleServiceChange} 
-                    value={selectedService}
-                  >
-                    <option value="">-- Pilih Aplikasi --</option>
-                    {services.map(s => <option key={s.service_id} value={s.service_id}>{s.service_name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  2. Negara
-                </label>
-                <div className="relative">
-                  <Globe className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                  <select 
-                    className={`w-full appearance-none rounded-xl border bg-white px-10 py-3 text-slate-900 focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white ${color.border} ${color.ring}`}
-                    onChange={handleCountryChange} 
-                    value={selectedCountry} 
-                    disabled={!selectedService}
-                  >
-                    <option value="">-- Pilih Negara --</option>
-                    {countries.map(c => <option key={c.country_id} value={c.country_id}>{c.country_name} (ID: {c.country_id})</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  3. Operator & Harga
-                </label>
-                <div className="relative">
-                  <Server className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                  <select 
-                    className={`w-full appearance-none rounded-xl border bg-white px-10 py-3 text-slate-900 focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white ${color.border} ${color.ring}`}
-                    onChange={(e) => setSelectedOperator(e.target.value)} 
-                    value={selectedOperator} 
-                    disabled={!selectedCountry}
-                  >
-                    <option value="">-- Pilih Operator --</option>
-                    {operators.map(o => <option key={o.operator_id} value={o.operator_id}>{o.operator_name} - {o.price_format}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <button 
-                onClick={handleBuy} 
-                disabled={loading || !selectedOperator}
-                className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-bold transition-all hover:scale-[1.02] disabled:opacity-50 ${color.btn}`}
-              >
-                {loading ? <Loader2 className="animate-spin" /> : 'Beli Nomor Sekarang'}
-              </button>
+            <div>
+              <h1 className="font-bold text-gray-800 text-lg">{user.username}</h1>
+              <p className="text-xs text-gray-500">Selamat sore 🌤️</p>
             </div>
           </div>
-
-          {/* Card Status */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <div className="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${color.bg} ${color.text}`}>
-                <RefreshCw size={20} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Status Pesanan</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Pantau SMS masuk disini</p>
-              </div>
-            </div>
-
-            {activeOrder ? (
-                <div className="flex flex-col items-center justify-center space-y-6 py-4">
-                    <div className="text-center">
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Nomor Virtual</p>
-                      <div className="mt-1 text-3xl font-mono font-bold tracking-wider text-slate-900 dark:text-white">
-                        {activeOrder.phone_number}
-                      </div>
-                    </div>
-                    
-                    <div className="w-full rounded-xl bg-slate-50 p-6 text-center dark:bg-slate-900">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Kode OTP Masuk</p>
-                        <div className={`text-4xl font-bold tracking-[0.5em] ${color.text}`}>
-                          {otpCode}
-                        </div>
-                    </div>
-                    
-                    <button 
-                        onClick={checkStatus} 
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                        <RefreshCw size={16} /> Refresh Manual
-                    </button>
-                    <p className="text-xs text-slate-400 text-center">
-                      Sistem akan merefresh otomatis. Jika SMS belum masuk dalam 20 menit, saldo akan otomatis dikembalikan (Refund).
-                    </p>
-                </div>
-            ) : (
-                <div className="flex h-64 flex-col items-center justify-center text-center text-slate-400">
-                    <Smartphone size={48} className="mb-4 opacity-20" />
-                    <p>Belum ada pesanan aktif saat ini.</p>
-                </div>
-            )}
+          <div className="flex gap-2">
+             <button className="p-2 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200">
+                <RefreshCw size={20} onClick={fetchUserData} />
+             </button>
+             <button className="p-2 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200">
+                <Bell size={20} />
+             </button>
           </div>
         </div>
       </div>
+
+      <div className="px-5 mt-6">
+        <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden">
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-gray-500 text-sm font-medium mb-1">Saldo Kamu</p>
+              <h2 className="text-2xl font-bold text-gray-800">{formatRupiah(user.balance)}</h2>
+            </div>
+            <button 
+              onClick={() => navigate('/deposit')}
+              className="bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1"
+            >
+              Top Up
+            </button>
+          </div>
+          
+          <div className="mt-6 flex items-center gap-2 relative z-10">
+             <span className="bg-green-50 text-green-600 px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                Online
+             </span>
+             <span className="text-xs text-gray-400">198ms response server saat ini</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 mt-6">
+        <div className="bg-gradient-to-r from-orange-400 to-emerald-400 rounded-3xl p-6 text-white relative overflow-hidden shadow-lg">
+           <div className="relative z-10">
+              <h3 className="font-bold text-lg">Get Virtual Number</h3>
+              <p className="text-white/90 text-sm mt-1 mb-4 w-3/4">OTP access for 1,038+ apps across 193 countries</p>
+              
+              <div className="flex items-center gap-2 mb-2">
+                 <div className="bg-white/20 p-1.5 rounded-full"><Smartphone size={16} /></div>
+                 <div className="bg-white/20 p-1.5 rounded-full"><Globe size={16} /></div>
+                 <span className="text-xs font-medium">+99 Apps</span>
+              </div>
+
+              <button 
+                onClick={() => navigate('/order')}
+                className="flex items-center gap-1 text-sm font-bold mt-2"
+              >
+                Beli Nomor &gt;
+              </button>
+           </div>
+           
+           <div className="absolute -right-5 -bottom-10 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+        </div>
+      </div>
+
+      <div className="px-5 mt-8">
+        <div className="flex items-center justify-between mb-4">
+           <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">🔥 Lagi Populer</h3>
+           <button className="text-blue-600 text-sm font-medium">Lihat Semua</button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+           <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center gap-2 cursor-pointer hover:border-blue-200 transition-colors">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                 <Zap size={24} />
+              </div>
+              <span className="text-xs font-medium text-gray-700">DANA</span>
+           </div>
+
+           <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center gap-2 cursor-pointer hover:border-blue-200 transition-colors">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                 <Gamepad2 size={24} />
+              </div>
+              <span className="text-xs font-medium text-gray-700">Free Fire</span>
+           </div>
+
+           <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center gap-2 cursor-pointer hover:border-blue-200 transition-colors">
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                 <Smartphone size={24} />
+              </div>
+              <span className="text-xs font-medium text-gray-700">WhatsApp</span>
+           </div>
+        </div>
+      </div>
+
+      <div className="px-5 mt-8 mb-6">
+         <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-gray-800 text-lg">Pesanan Pending</h3>
+            <button className="p-1 text-blue-600"><RefreshCw size={16}/></button>
+         </div>
+         
+         <div className="bg-white rounded-3xl p-8 text-center border border-gray-100 shadow-sm">
+            <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">
+               🤷‍♂️
+            </div>
+            <h4 className="font-bold text-gray-800 mb-1">Tidak ada pesanan</h4>
+            <p className="text-sm text-gray-400 mb-6">Pesanan aktif akan muncul disini</p>
+            <button 
+              onClick={() => navigate('/order')}
+              className="bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-medium w-full"
+            >
+              + Buat Pesanan
+            </button>
+         </div>
+      </div>
+
+      <BottomNav />
     </div>
   );
-}
+};
+
+export default Dashboard;
 
