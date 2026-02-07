@@ -1,7 +1,7 @@
 {
   "name": "ruangotp-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -26,3 +26,4 @@
     "vite": "^5.1.4"
   }
 }
+
