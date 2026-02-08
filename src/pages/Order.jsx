@@ -148,19 +148,16 @@ export default function Order() {
 
   // 3. LOGIKA BUKA NEGARA & LOAD OPERATOR
   const toggleCountry = async (country) => {
-      // Jika menutup negara yang sama
       if (expandedCountry === country.number_id) {
           setExpandedCountry(null);
           return;
       }
 
-      // Buka negara baru
       setExpandedCountry(country.number_id);
-      setSelectedOperatorId('any'); // Reset ke any
+      setSelectedOperatorId('any'); 
       setCurrentOperators([]); 
       setLoadingOperators(true);
 
-      // Ambil sample provider untuk request operator
       const sampleProviderId = country.pricelist && country.pricelist.length > 0 ? country.pricelist[0].provider_id : null;
 
       if (sampleProviderId) {
@@ -183,7 +180,6 @@ export default function Order() {
           return;
       }
 
-      // Nama Operator untuk konfirmasi
       const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
 
@@ -482,8 +478,8 @@ export default function Order() {
                              <span>Acak (Any)</span>
                          </button>
 
-                         {/* List Operator dari API */}
-                         {currentOperators.length > 0 ? currentOperators.map((op) => (
+                         {/* List Operator dari API (DIFILTER AGAR 'ANY' TIDAK MUNCUL) */}
+                         {currentOperators.length > 0 ? currentOperators.filter(op => op.name !== 'any').map((op) => (
                              <button 
                                  key={op.id}
                                  onClick={() => setSelectedOperatorId(op.id)}
