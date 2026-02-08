@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, Server, Globe, Smartphone, Loader2 } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -22,13 +22,17 @@ export default function Order() {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Kontrol Bottom Sheet
+  // Kontrol Bottom Sheet & Accordion
   const [sheetMode, setSheetMode] = useState(null); // 'services' | 'countries' | null
   const [selectedService, setSelectedService] = useState(null);
+  const [expandedCountry, setExpandedCountry] = useState(null); // ID Negara yang sedang dibuka
 
-  // Cache
-  const CACHE_KEY = 'otp_services_v5'; // Update versi cache
-  const CACHE_TIME = 'otp_services_time_v5';
+  // --- STATE TOAST (NOTIFIKASI MODERN) ---
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' }); // type: 'success' | 'error'
+
+  // Cache Keys
+  const CACHE_KEY = 'otp_services_v6';
+  const CACHE_TIME = 'otp_services_time_v6';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
@@ -43,6 +47,15 @@ export default function Order() {
         setFilteredServices(results);
     }
   }, [searchTerm, services, sheetMode]);
+
+  // --- FUNGSI TOAST NOTIFICATION ---
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    // Hilang otomatis setelah 3 detik
+    setTimeout(() => {
+        setToast(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
 
   // 1. FETCH DATA AWAL
   const fetchInitialData = async () => {
@@ -97,72 +110,56 @@ export default function Order() {
     setSheetMode('countries'); 
     setCountries([]);
     setLoadingCountries(true);
+    setExpandedCountry(null); // Reset accordion
 
     try {
-      // API call ke backend Anda
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
       if (res.data.success) {
         setCountries(res.data.data);
       }
     } catch (err) {
-      console.error("Gagal ambil negara");
+      showToast("Gagal memuat negara", "error");
     } finally {
       setLoadingCountries(false);
     }
   };
 
-  // 3. KLIK NEGARA (Format Baru)
-  const handleCountryClick = async (country) => {
-      // Cari provider termurah yang ada stoknya
-      if (!country.pricelist || country.pricelist.length === 0) {
-          alert("Layanan tidak tersedia untuk negara ini.");
+  // 3. KLIK NEGARA -> TOGGLE ACCORDION (BUKA DAFTAR SERVER)
+  const toggleCountry = (countryId) => {
+      setExpandedCountry(expandedCountry === countryId ? null : countryId);
+  };
+
+  // 4. KLIK BELI (SERVER TERTENTU)
+  const handleBuy = async (country, provider) => {
+      // Cek Saldo Dulu (Optional, buat UX lebih cepat)
+      if (balance < provider.price) {
+          showToast("Saldo tidak mencukupi!", "error");
           return;
       }
 
-      // Filter stok > 0 dan urutkan harga termurah
-      const availableProviders = country.pricelist
-          .filter(p => p.stock > 0 && p.available)
-          .sort((a, b) => a.price - b.price);
+      // Konfirmasi singkat (atau langsung beli)
+      if(!confirm(`Beli nomor ${country.name} (Server ${provider.server_id}) seharga Rp ${provider.price}?`)) return;
 
-      if (availableProviders.length === 0) {
-          alert("Stok sedang kosong untuk negara ini.");
-          return;
-      }
+      try {
+          // Tutup drawer biar lega
+          setSheetMode(null);
+          showToast("Memproses pesanan...", "success"); // Feedback instan
 
-      const bestOffer = availableProviders[0]; // Ambil yang paling murah
-
-      // Konfirmasi Pembelian
-      const msg = `📦 Konfirmasi Order\n\n` + 
-                  `📱 Aplikasi: ${selectedService.service_name}\n` +
-                  `🌍 Negara: ${country.name}\n` + 
-                  `💰 Harga: Rp ${bestOffer.price.toLocaleString('id-ID')}\n` +
-                  `🔌 Server ID: ${bestOffer.server_id}\n\n` +
-                  `Lanjutkan pembelian?`;
-
-      if(confirm(msg)) {
-          setSheetMode(null); // Tutup drawer
+          const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=any&expected_price=${provider.price}`;
+          const res = await api.get(buyUrl);
           
-          // Panggil API Beli
-          // Backend butuh: number_id, provider_id, operator_id, expected_price
-          try {
-              // Operator ID biasanya 'any' atau ambil dari provider jika ada. 
-              // Di JSON pricelist tidak ada operator_id eksplisit, biasanya default 'any' atau provider_id itu sendiri.
-              // Kita coba kirim provider_id sebagai parameter provider.
-              
-              const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${bestOffer.provider_id}&operator_id=any&expected_price=${bestOffer.price}`;
-              
-              const res = await api.get(buyUrl);
-              
-              if (res.data.success) {
-                  alert("✅ Berhasil! Menunggu SMS masuk...");
-                  fetchInitialData(); // Refresh data pending order
-              } else {
-                  alert("Gagal: " + (res.data.error?.message || "Unknown error"));
-              }
-          } catch (err) {
-              const errMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
-              alert("Gagal: " + errMsg);
+          if (res.data.success) {
+              showToast("✅ Order Berhasil! Menunggu SMS...", "success");
+              fetchInitialData(); // Refresh data pending order
+          } else {
+              showToast(res.data.error?.message || "Order Gagal", "error");
+              // Jika gagal, buka lagi drawernya (opsional)
+              setSheetMode('countries');
           }
+      } catch (err) {
+          const errMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
+          showToast(errMsg, "error");
+          setSheetMode('countries');
       }
   };
 
@@ -173,25 +170,18 @@ export default function Order() {
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
-  // Helper Hitung Harga Termurah untuk Tampilan
+  // Helper Cari Harga Termurah untuk Label
   const getCheapestPrice = (pricelist) => {
       if (!pricelist || pricelist.length === 0) return 0;
-      const cheapest = Math.min(...pricelist.map(p => p.price));
-      return cheapest;
+      return Math.min(...pricelist.map(p => p.price));
   };
 
   const handleCancelOrder = async () => {
      if (!activeOrder) return;
      if(window.confirm("Batalkan pesanan aktif?")) {
-        try {
-            // Asumsi activeOrder menyimpan order_id (ID Kita)
-            await api.get(`/orders/check-status?order_id=${activeOrder.order_id}`); 
-            // Note: Biasanya ada endpoint khusus cancel, tapi di backend Anda cancel terjadi otomatis 
-            // atau via endpoint status jika statusnya batal.
-            // Tapi mari kita set null visualnya dulu.
-            setActiveOrder(null); 
-            fetchInitialData();
-        } catch(e) { setActiveOrder(null); }
+        setActiveOrder(null); // Hapus visual segera
+        // Logic cancel ke API bisa ditambahkan disini
+        showToast("Pesanan dibatalkan", "success");
      }
   };
 
@@ -298,6 +288,15 @@ export default function Order() {
 
       </div>
 
+      {/* --- TOAST NOTIFICATION MODERN --- */}
+      <div 
+         className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}
+      >
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-bold">{toast.message}</span>
+      </div>
+
+
       {/* --- SHEET 1: LAYANAN --- */}
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
@@ -349,7 +348,7 @@ export default function Order() {
          </div>
       </div>
 
-      {/* --- SHEET 2: NEGARA (DATA BARU) --- */}
+      {/* --- SHEET 2: NEGARA (ACCORDION STYLE) --- */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
          
@@ -373,34 +372,80 @@ export default function Order() {
                     {[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-800"></div>)}
                 </div>
             ) : countries.length > 0 ? (
-                <div className="space-y-2 mt-2">
+                <div className="space-y-3 mt-4">
                     {countries.map((country) => {
                         const startPrice = getCheapestPrice(country.pricelist);
+                        const isExpanded = expandedCountry === country.number_id;
+
+                        // Filter provider yang tersedia dan ada stok
+                        const availableServers = country.pricelist
+                            ?.filter(p => p.stock > 0 && p.available)
+                            .sort((a,b) => a.price - b.price) || [];
+
                         return (
-                            <button 
-                                key={country.number_id} // Gunakan number_id
-                                onClick={() => handleCountryClick(country)}
-                                className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
-                                    <div className="text-left">
-                                        <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
-                                        <p className="text-xs text-blue-600 font-medium">Rp {startPrice.toLocaleString('id-ID')}</p>
+                            <div key={country.number_id} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 transition-all dark:border-slate-800 dark:bg-slate-900/50">
+                                
+                                {/* HEADER ACCORDION (Klik disini untuk buka list server) */}
+                                <button 
+                                    onClick={() => toggleCountry(country.number_id)}
+                                    className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
+                                        <div className="text-left">
+                                            <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
+                                            <p className="text-xs text-blue-600 font-medium">Mulai Rp {startPrice.toLocaleString('id-ID')}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                     <span className="text-xs text-slate-400">Stok: {country.stock_total}</span>
-                                     <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800">
-                                        <ChevronRight size={16} />
-                                     </div>
-                                </div>
-                            </button>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400">Stok: {country.stock_total}</span>
+                                        {isExpanded ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
+                                    </div>
+                                </button>
+
+                                {/* ISI ACCORDION (LIST SERVER) */}
+                                {isExpanded && (
+                                    <div className="bg-white border-t border-slate-100 p-3 space-y-2 dark:bg-slate-950 dark:border-slate-800">
+                                        {availableServers.length > 0 ? availableServers.map((server, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-50 bg-slate-50 dark:bg-slate-900 dark:border-slate-800">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Server size={14} className="text-slate-400" />
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Server {server.server_id}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">Stok: {server.stock} pcs</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold text-emerald-600 text-sm dark:text-emerald-400">Rp {server.price}</span>
+                                                    <button 
+                                                        onClick={() => handleBuy(country, server)}
+                                                        className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-transform active:scale-95 dark:bg-white dark:text-slate-900"
+                                                    >
+                                                        Beli
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )) : (
+                                            <div className="text-center py-4 text-xs text-red-400">
+                                                Maaf, stok server sedang kosong.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         );
                     })}
                 </div>
             ) : (
                 <div className="text-center py-10 text-slate-400">
-                    <p>Negara tidak tersedia untuk layanan ini.</p>
-                    <button onClick={() => setSheetMode('services')} className="mt-2 text-blue-600 font-bold text-sm">Pilih layanan lain</button>
-                </
+                    <p>Negara tidak tersedia.</p>
+                </div>
+            )}
+         </div>
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+}
+
