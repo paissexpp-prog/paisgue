@@ -4,9 +4,9 @@ import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
-  User, LogOut, Wallet, ShoppingBag, Calendar, 
+  User, LogOut, Wallet, ShoppingBag, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
-  CreditCard, Loader2, Copy, HelpCircle 
+  CreditCard, Loader2, Copy, Calendar
 } from 'lucide-react';
 
 export default function Profile() {
@@ -84,7 +84,7 @@ export default function Profile() {
 
       <div className="px-5 mt-6 space-y-6">
         
-        {/* 1. KARTU USER */}
+        {/* 1. KARTU USER (TETAP SAMA) */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white shadow-xl dark:from-blue-900 dark:to-slate-950">
           <div className="relative z-10 flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-2xl font-bold border border-white/20">
@@ -126,7 +126,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 2. STATISTIK */}
+        {/* 2. STATISTIK (TETAP SAMA) */}
         <div className="grid grid-cols-3 gap-3">
            <div className="rounded-2xl bg-white p-3 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800">
               <div className="mb-2 p-2 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20">
@@ -159,7 +159,41 @@ export default function Profile() {
            </div>
         </div>
 
-        {/* 3. KONTAK & SUPPORT */}
+        {/* --- PENGATURAN TEMA BARU (DESAIN LEBIH MENARIK) --- */}
+        <div>
+          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Tampilan Aplikasi</h3>
+          
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+             <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-4">
+                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-500 ${isDarkMode ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-orange-400 text-white shadow-lg shadow-orange-400/30'}`}>
+                      {isDarkMode ? <Moon size={24} className="animate-pulse-slow" /> : <Sun size={24} className="animate-spin-slow" />}
+                   </div>
+                   <div>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                         {isDarkMode ? 'Mode Gelap Aktif' : 'Mode Terang Aktif'}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                         {isDarkMode ? 'Tampilan nyaman di mata malam hari' : 'Tampilan cerah untuk siang hari'}
+                      </p>
+                   </div>
+                </div>
+
+                {/* Custom Switch Toggle */}
+                <button 
+                  onClick={toggleTheme}
+                  className={`relative h-8 w-14 rounded-full p-1 transition-all duration-300 focus:outline-none ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <span 
+                    className={`block h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}
+                  />
+                </button>
+             </div>
+          </div>
+        </div>
+
+
+        {/* 3. KONTAK & SUPPORT (TETAP SAMA) */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Pusat Bantuan</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
@@ -183,34 +217,14 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. PENGATURAN APLIKASI */}
-        <div>
-          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Aplikasi</h3>
-          <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
-            
-            <button onClick={toggleTheme} className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Mode Gelap</span>
-              </div>
-              <div className={`relative h-6 w-11 rounded-full transition-colors ${isDarkMode ? 'bg-blue-600' : 'bg-slate-200'}`}>
-                <div className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
-              </div>
-            </button>
-
-            <button onClick={handleLogoutClick} className="w-full flex items-center justify-between p-4 transition-colors hover:bg-red-50 dark:hover:bg-red-900/10 group">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
-                  <LogOut size={18} className="ml-0.5" />
-                </div>
-                <span className="text-sm font-medium text-red-600 dark:text-red-400">Keluar Akun</span>
-              </div>
-            </button>
-
-          </div>
-        </div>
+        {/* 4. TOMBOL LOGOUT (DIPISAH SUPAYA LEBIH RAPI) */}
+        <button 
+          onClick={handleLogoutClick} 
+          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-600 transition-all active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
+        >
+          <LogOut size={18} />
+          <span className="font-bold text-sm">Keluar dari Aplikasi</span>
+        </button>
 
       </div>
 
