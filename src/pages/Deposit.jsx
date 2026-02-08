@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext'; // <--- Import Theme
 import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, ChevronRight } from 'lucide-react';
 
 export default function Deposit() {
-  const { color } = useTheme();
+  const { color } = useTheme(); // <--- Pakai color tema
   const [amount, setAmount] = useState(5000);
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -52,45 +52,45 @@ export default function Deposit() {
   const getStatusBadge = (status) => {
     switch(status) {
       case 'success':
-        return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Sukses</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Sukses</span>;
       case 'pending':
-        return <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">Pending</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pending</span>;
       default:
-        return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">Gagal</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">Gagal</span>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white px-5 pt-8 pb-4 sticky top-0 z-40 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-800">Isi Saldo</h1>
+      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white px-5 pb-4 pt-8 dark:border-slate-800 dark:bg-slate-950">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Isi Saldo</h1>
       </div>
 
-      <div className="px-5 mt-6 max-w-md mx-auto">
+      <div className="mx-auto mt-6 max-w-md px-5">
         
-        {/* Card Form Deposit (Style seperti Foto 1) */}
+        {/* Card Form Deposit */}
         {!qrisData ? (
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             {/* Header Metode */}
-            <div className="flex items-center gap-4 mb-6 border-b border-gray-50 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+            <div className="mb-6 flex items-center gap-4 border-b border-slate-50 pb-4 dark:border-slate-800">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${color.bg} ${color.text}`}>
                 <Wallet size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-gray-800 text-lg">Topup QRIS Instant</h3>
-                <p className="text-xs text-gray-400">Otomatis masuk 24 Jam</p>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Topup QRIS Instant</h3>
+                <p className="text-xs text-slate-400">Otomatis masuk 24 Jam</p>
               </div>
             </div>
 
             {/* Input Nominal */}
             <div className="mb-5">
-              <label className="block text-xs font-bold text-gray-500 mb-2">Nominal Deposit (Rp)</label>
+              <label className="mb-2 block text-xs font-bold text-slate-500 dark:text-slate-400">Nominal Deposit (Rp)</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">Rp</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">Rp</span>
                 <input 
                   type="number" 
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-10 pr-4 text-lg font-bold text-gray-800 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                  className={`w-full rounded-xl border bg-slate-50 py-3.5 pl-10 pr-4 text-lg font-bold text-slate-800 transition-all focus:outline-none focus:ring-1 dark:bg-slate-900 dark:text-white ${color.border} ${color.ring}`}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="5000"
@@ -99,92 +99,92 @@ export default function Deposit() {
               </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-blue-50 rounded-xl p-4 flex gap-3 mb-6">
-              <AlertCircle size={20} className="text-blue-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700 leading-relaxed">
+            {/* Info Box - Ikut warna tema */}
+            <div className={`mb-6 flex gap-3 rounded-xl p-4 ${color.bg}`}>
+              <AlertCircle size={20} className={`shrink-0 mt-0.5 ${color.text}`} />
+              <p className={`text-xs leading-relaxed ${color.text}`}>
                 Minimal deposit <span className="font-bold">Rp 500</span>. Biaya admin mungkin berlaku sesuai provider QRIS.
               </p>
             </div>
 
-            {/* Tombol Aksi */}
+            {/* Tombol Aksi - Ikut warna tema */}
             <button 
               onClick={handleDeposit}
               disabled={loading}
-              className={`w-full py-4 rounded-xl font-bold text-white shadow-lg shadow-purple-200 transition-transform active:scale-95 ${color.btn}`}
+              className={`w-full rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 ${color.btn}`}
             >
               {loading ? 'Memproses...' : 'Buat Tagihan QRIS'}
             </button>
           </div>
         ) : (
           /* Tampilan QRIS Result */
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 text-center">
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 mx-auto mb-4">
-               <QrCode size={24} />
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <QrCode size={24} />
             </div>
-            <h3 className="font-bold text-gray-800 text-xl">Scan Pembayaran</h3>
-            <p className="text-xs text-gray-400 mt-1">Scan QRIS di bawah ini sebelum expired</p>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Scan Pembayaran</h3>
+            <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
 
-            <div className="my-6 p-2 border-2 border-dashed border-gray-200 rounded-2xl inline-block">
-               <img src={qrisData.qr_image} alt="QRIS" className="w-56 h-56 object-contain" />
+            <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
+               <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2 mb-6">
+            <div className="mb-6 space-y-2 rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Total Bayar</span>
-                  <span className="font-bold text-gray-800">Rp {qrisData.total_pay.toLocaleString('id-ID')}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Total Bayar</span>
+                  <span className="font-bold text-slate-800 dark:text-white">Rp {qrisData.total_pay.toLocaleString('id-ID')}</span>
                </div>
                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Saldo Masuk</span>
-                  <span className="font-bold text-green-600">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Saldo Masuk</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
                </div>
             </div>
 
             <button 
               onClick={() => setQrisData(null)}
-              className="w-full py-3 rounded-xl font-bold text-gray-600 border border-gray-200 hover:bg-gray-50"
+              className="w-full rounded-xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Kembali / Buat Baru
             </button>
           </div>
         )}
 
-        {/* Bagian Riwayat Deposit (Menyatu di halaman ini) */}
+        {/* Bagian Riwayat Deposit */}
         <div className="mt-8">
-          <div className="flex items-center gap-2 mb-4">
-            <History size={18} className="text-gray-400" />
-            <h3 className="font-bold text-gray-700">Riwayat Terakhir</h3>
+          <div className="mb-4 flex items-center gap-2">
+            <History size={18} className="text-slate-400" />
+            <h3 className="font-bold text-slate-700 dark:text-slate-200">Riwayat Terakhir</h3>
           </div>
 
           <div className="space-y-3">
             {historyLoading ? (
-               <div className="text-center py-6 text-gray-400 text-sm">Memuat riwayat...</div>
+               <div className="py-6 text-center text-sm text-slate-400">Memuat riwayat...</div>
             ) : history.length > 0 ? (
               history.map((item) => (
-                <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                <div key={item.id} className="flex justify-between items-center rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        item.status === 'success' ? 'bg-green-50 text-green-600' :
-                        item.status === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                        item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                       }`}>
-                         {item.status === 'success' ? <CheckCircle2 size={18} /> : 
+                          {item.status === 'success' ? <CheckCircle2 size={18} /> : 
                           item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
                       </div>
                       <div>
-                         <p className="font-bold text-gray-800 text-sm">Rp {item.request_amount.toLocaleString('id-ID')}</p>
-                         <p className="text-[10px] text-gray-400">
+                         <p className="text-sm font-bold text-slate-800 dark:text-white">Rp {item.request_amount.toLocaleString('id-ID')}</p>
+                         <p className="text-[10px] text-slate-400">
                             {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                         </p>
+                          </p>
                       </div>
                    </div>
                    <div className="text-right">
                       {getStatusBadge(item.status)}
-                   </div>
+                    </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 bg-white rounded-2xl border border-dashed border-gray-200">
-                <p className="text-sm text-gray-400">Belum ada riwayat deposit</p>
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-8 text-center dark:border-slate-800 dark:bg-slate-950">
+                <p className="text-sm text-slate-400">Belum ada riwayat deposit</p>
               </div>
             )}
           </div>
