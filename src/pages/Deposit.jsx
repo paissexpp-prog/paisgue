@@ -2,24 +2,41 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, 
+  Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2 
+} from 'lucide-react';
 
 export default function Deposit() {
   const { color } = useTheme();
   const [amount, setAmount] = useState(5000);
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [canceling, setCanceling] = useState(false);
-  
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  
-  // State untuk Accordion (Menyimpan ID mana yang sedang dibuka)
   const [expandedId, setExpandedId] = useState(null);
+
+  // --- STATE MODAL & TOAST ---
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  // --- FUNGSI HELPER UI ---
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const showConfirm = (title, message, action) => {
+      setConfirmModal({ show: true, title, message, onConfirm: action, loading: false });
+  };
+
+  const closeConfirm = () => {
+      setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
+  };
 
   const fetchHistory = async () => {
     setHistoryLoading(true);
@@ -29,7 +46,7 @@ export default function Deposit() {
         const data = res.data.data;
         setHistory(data.slice(0, 5));
 
-        // Cek Auto-Restore Pending (langsung munculkan QR jika ada pending)
+        // Auto-Restore Pending QRIS
         if (data.length > 0 && data[0].status === 'pending') {
             const pendingItem = data[0];
             setQrisData({
@@ -42,52 +59,55 @@ export default function Deposit() {
             setQrisData(null);
         }
       }
-    } catch (err) {
-      // Silent error
-    } finally {
-      setHistoryLoading(false);
-    }
+    } catch (err) { } 
+    finally { setHistoryLoading(false); }
   };
 
   const handleDeposit = async () => {
-    if (amount < 500) return alert('Minimal deposit Rp500');
+    if (amount < 500) return showToast('Minimal deposit Rp500', 'error');
     setLoading(true);
     try {
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
         setQrisData(res.data.data);
         fetchHistory();
+        showToast('Tagihan berhasil dibuat', 'success');
       }
     } catch (err) {
-      alert('Gagal membuat deposit');
+      showToast('Gagal membuat deposit', 'error');
     }
     setLoading(false);
   };
 
-  const handleCancel = async () => {
+  // --- LOGIKA CANCEL (DENGAN MODAL KEREN) ---
+  const handleCancelClick = () => {
       if (!qrisData) return;
-      const confirmCancel = window.confirm("Yakin ingin membatalkan deposit ini?");
-      if (!confirmCancel) return;
-
-      setCanceling(true);
-      try {
-          const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
-          if (res.data.success) {
-              alert('Deposit berhasil dibatalkan.');
-              setQrisData(null); 
-              fetchHistory();    
-          } else {
-              alert('Gagal membatalkan: ' + (res.data.error?.message || 'Unknown error'));
+      
+      showConfirm(
+          "Batalkan Deposit?",
+          "Apakah Anda yakin ingin membatalkan tagihan ini?",
+          async () => {
+              setConfirmModal(prev => ({ ...prev, loading: true }));
+              try {
+                  const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
+                  if (res.data.success) {
+                      closeConfirm();
+                      setQrisData(null);
+                      fetchHistory();
+                      showToast('Deposit berhasil dibatalkan', 'success');
+                  } else {
+                      closeConfirm();
+                      showToast(res.data.error?.message || 'Gagal membatalkan', 'error');
+                  }
+              } catch (err) {
+                  closeConfirm();
+                  showToast('Terjadi kesalahan koneksi', 'error');
+              }
           }
-      } catch (err) {
-          alert('Terjadi kesalahan saat membatalkan deposit.');
-      } finally {
-          setCanceling(false);
-      }
+      );
   };
 
   const toggleExpand = (id) => {
-    // Kalau diklik lagi, tutup. Kalau belum, buka.
     setExpandedId(expandedId === id ? null : id);
   };
 
@@ -104,8 +124,9 @@ export default function Deposit() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
+      
       {/* Header */}
-      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white px-5 pb-4 pt-8 dark:border-slate-800 dark:bg-slate-950">
+      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 px-5 pb-4 pt-8 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">Isi Saldo</h1>
       </div>
 
@@ -149,14 +170,15 @@ export default function Deposit() {
             <button 
               onClick={handleDeposit}
               disabled={loading}
-              className={`w-full rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 ${color.btn}`}
+              className={`w-full rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 ${color.btn}`}
             >
+              {loading && <Loader2 size={18} className="animate-spin" />}
               {loading ? 'Memproses...' : 'Buat Tagihan QRIS'}
             </button>
           </div>
         ) : (
           /* TAMPILAN QRIS */
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <QrCode size={24} />
             </div>
@@ -183,17 +205,15 @@ export default function Deposit() {
             </div>
 
             <button 
-              onClick={handleCancel}
-              disabled={canceling}
+              onClick={handleCancelClick}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 py-3 font-bold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
             >
-              <Trash2 size={18} />
-              {canceling ? 'Membatalkan...' : 'Batalkan Deposit'}
+              <Trash2 size={18} /> Batalkan Deposit
             </button>
           </div>
         )}
 
-        {/* --- RIWAYAT TRANSAKSI (BAGIAN YANG DIUBAH) --- */}
+        {/* --- RIWAYAT TRANSAKSI --- */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
             <History size={18} className="text-slate-400" />
@@ -206,38 +226,21 @@ export default function Deposit() {
             ) : history.length > 0 ? (
               history.map((item) => (
                 <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950">
-                   {/* HEADER (Selalu Muncul) - Klik untuk Buka/Tutup */}
-                   <div 
-                      onClick={() => toggleExpand(item.id)}
-                      className="flex cursor-pointer items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                   >
+                   <div onClick={() => toggleExpand(item.id)} className="flex cursor-pointer items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50">
                        <div className="flex items-center gap-3">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                            item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                            item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                              {item.status === 'success' ? <CheckCircle2 size={18} /> : 
-                              item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                              {item.status === 'success' ? <CheckCircle2 size={18} /> : item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
                           </div>
                           <div>
                              <p className="text-sm font-bold text-slate-800 dark:text-white">Rp {item.request_amount.toLocaleString('id-ID')}</p>
-                             <p className="text-[10px] text-slate-400">
-                                {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                              </p>
+                             <p className="text-[10px] text-slate-400">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                           </div>
                        </div>
-                       
                        <div className="flex items-center gap-3">
                           {getStatusBadge(item.status)}
-                          {/* Ikon Chevron Berubah Arah */}
-                          {expandedId === item.id ? 
-                            <ChevronUp size={16} className="text-slate-400" /> : 
-                            <ChevronDown size={16} className="text-slate-400" />
-                          }
+                          {expandedId === item.id ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                        </div>
                    </div>
-
-                   {/* ISI DETAIL (Hanya Muncul Jika Diklik) */}
                    {expandedId === item.id && (
                      <div className="border-t border-slate-100 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-900/30">
                         <div className="flex justify-between items-center">
@@ -256,6 +259,36 @@ export default function Deposit() {
           </div>
         </div>
 
+      </div>
+
+      {/* --- CONFIRM MODAL (POPUP KEREN) --- */}
+      {confirmModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
+                  <div className="flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                          <HelpCircle size={32} />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+                      <div className="flex gap-3 w-full">
+                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                              Batal
+                          </button>
+                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 flex items-center justify-center gap-2">
+                              {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
+                              {confirmModal.loading ? 'Memproses...' : 'Ya, Batalkan'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- TOAST NOTIFICATION --- */}
+      <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-bold">{toast.message}</span>
       </div>
 
       <BottomNav />
