@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { useTheme } from '../context/ThemeContext'; // <--- Import Theme
-import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, ChevronRight } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
 
 export default function Deposit() {
-  const { color } = useTheme(); // <--- Pakai color tema
+  const { color } = useTheme();
   const [amount, setAmount] = useState(5000);
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false); // State untuk loading saat batal
   
   // State untuk Riwayat
   const [history, setHistory] = useState([]);
@@ -20,11 +21,27 @@ export default function Deposit() {
   }, []);
 
   const fetchHistory = async () => {
+    setHistoryLoading(true);
     try {
       const res = await api.get('/deposit/history');
       if (res.data.success) {
-        // Ambil 5 transaksi terakhir saja agar tidak terlalu panjang
-        setHistory(res.data.data.slice(0, 5));
+        const data = res.data.data;
+        setHistory(data.slice(0, 5));
+
+        // --- LOGIKA BARU: CEK PENDING ---
+        // Jika transaksi paling baru statusnya 'pending', langsung tampilkan QR
+        if (data.length > 0 && data[0].status === 'pending') {
+            const pendingItem = data[0];
+            setQrisData({
+                deposit_id: pendingItem.id, // ID Deposit (DEP-xxxx)
+                qr_image: pendingItem.qr_image,
+                total_pay: pendingItem.total_bill,
+                amount_received: pendingItem.request_amount
+            });
+        } else {
+            // Jika tidak ada pending, pastikan form yang muncul
+            setQrisData(null);
+        }
       }
     } catch (err) {
       // Silent error
@@ -40,13 +57,38 @@ export default function Deposit() {
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
         setQrisData(res.data.data);
-        // Refresh history setelah membuat deposit baru (optional, akan muncul sebagai pending)
+        // Refresh history agar data pending masuk ke list bawah juga
         fetchHistory();
       }
     } catch (err) {
       alert('Gagal membuat deposit');
     }
     setLoading(false);
+  };
+
+  // --- LOGIKA BARU: BATALKAN DEPOSIT ---
+  const handleCancel = async () => {
+      if (!qrisData) return;
+      
+      const confirmCancel = window.confirm("Yakin ingin membatalkan deposit ini?");
+      if (!confirmCancel) return;
+
+      setCanceling(true);
+      try {
+          // Panggil API Cancel di Backend
+          const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
+          if (res.data.success) {
+              alert('Deposit berhasil dibatalkan.');
+              setQrisData(null); // Kembali ke Form
+              fetchHistory();    // Refresh list history jadi 'canceled'
+          } else {
+              alert('Gagal membatalkan: ' + (res.data.error?.message || 'Unknown error'));
+          }
+      } catch (err) {
+          alert('Terjadi kesalahan saat membatalkan deposit.');
+      } finally {
+          setCanceling(false);
+      }
   };
 
   const getStatusBadge = (status) => {
@@ -69,7 +111,7 @@ export default function Deposit() {
 
       <div className="mx-auto mt-6 max-w-md px-5">
         
-        {/* Card Form Deposit */}
+        {/* KONDISI: TAMPILKAN FORM JIKA TIDAK ADA QRIS DATA */}
         {!qrisData ? (
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             {/* Header Metode */}
@@ -99,7 +141,7 @@ export default function Deposit() {
               </div>
             </div>
 
-            {/* Info Box - Ikut warna tema */}
+            {/* Info Box */}
             <div className={`mb-6 flex gap-3 rounded-xl p-4 ${color.bg}`}>
               <AlertCircle size={20} className={`shrink-0 mt-0.5 ${color.text}`} />
               <p className={`text-xs leading-relaxed ${color.text}`}>
@@ -107,7 +149,7 @@ export default function Deposit() {
               </p>
             </div>
 
-            {/* Tombol Aksi - Ikut warna tema */}
+            {/* Tombol Buat Tagihan */}
             <button 
               onClick={handleDeposit}
               disabled={loading}
@@ -117,7 +159,7 @@ export default function Deposit() {
             </button>
           </div>
         ) : (
-          /* Tampilan QRIS Result */
+          /* --- TAMPILAN JIKA ADA QRIS PENDING (GAMBAR 2) --- */
           <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <QrCode size={24} />
@@ -126,6 +168,7 @@ export default function Deposit() {
             <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
 
             <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
+               {/* Tampilkan QR */}
                <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
             </div>
 
@@ -138,13 +181,20 @@ export default function Deposit() {
                   <span className="text-slate-500 dark:text-slate-400">Saldo Masuk</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
                </div>
+               <div className="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400">ID Referensi</span>
+                  <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{qrisData.deposit_id}</span>
+               </div>
             </div>
 
+            {/* TOMBOL BATALKAN (WARNA MERAH) */}
             <button 
-              onClick={() => setQrisData(null)}
-              className="w-full rounded-xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              onClick={handleCancel}
+              disabled={canceling}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 py-3 font-bold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
             >
-              Kembali / Buat Baru
+              <Trash2 size={18} />
+              {canceling ? 'Membatalkan...' : 'Batalkan Deposit'}
             </button>
           </div>
         )}
