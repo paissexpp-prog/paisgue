@@ -3,79 +3,86 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, ChevronLeft, MapPin } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, Server, Globe, Smartphone, Loader2 } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
   const navigate = useNavigate();
   
-  // --- STATE ---
-  const [services, setServices] = useState([]);
-  const [filteredServices, setFilteredServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Info User
+  // --- STATE DATA ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
-  const [activeOrder, setActiveOrder] = useState(null);
-
-  // Drawer Negara
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState(null);
+  const [activeOrder, setActiveOrder] = useState(null); // Pesanan Pending
+  const [services, setServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
+  
+  // --- STATE UI (LOADING & DRAWER) ---
+  const [loadingServices, setLoadingServices] = useState(true);
   const [loadingCountries, setLoadingCountries] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Kontrol Bottom Sheet
+  const [sheetMode, setSheetMode] = useState(null); // 'services' | 'countries' | null
+  const [selectedService, setSelectedService] = useState(null);
 
-  // Cache System
-  const CACHE_KEY = 'otp_services_v4'; // Versi baru biar fresh
+  // Cache Keys
+  const CACHE_KEY = 'otp_services_v4';
   const CACHE_TIME = 'otp_services_time_v4';
+  const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
-  // Filter Search Real-time
+  // Filter Search Layanan
   useEffect(() => {
-    const results = services.filter(service =>
-      service.service_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredServices(results);
-  }, [searchTerm, services]);
+    if (sheetMode === 'services') {
+        const results = services.filter(service =>
+          service.service_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredServices(results);
+    }
+  }, [searchTerm, services, sheetMode]);
 
-  // 1. FETCH DATA (Saldo, Ping, Order, Services)
+  // 1. FETCH DATA AWAL (Saldo, Ping, Order Aktif, Cache Service)
   const fetchInitialData = async () => {
-    setLoading(true);
     const start = Date.now();
 
-    // Ambil Saldo
+    // A. Saldo & User
     try {
       const resUser = await api.get('/auth/me');
       if (resUser.data.success) setBalance(resUser.data.data.balance);
     } catch (e) {}
 
-    // Hitung Ping
+    // B. Ping
     setPing(Date.now() - start);
 
-    // Cek Active Order (Pending)
+    // C. Cek Pesanan Aktif (Pending)
     try {
-      const resHist = await api.get('/history/list'); 
-      if (resHist.data.success) {
-         // Cari yang statusnya ACTIVE / PENDING
-         const pending = resHist.data.data.find(o => o.status === 'ACTIVE' || o.status === 'PENDING');
+      // Kita cari order yang statusnya ACTIVE (menunggu SMS)
+      const resHistory = await api.get('/history/list'); 
+      if (resHistory.data.success && resHistory.data.data.length > 0) {
+         // Filter hanya yang status ACTIVE/PENDING
+         const pending = resHistory.data.data.find(o => o.status === 'ACTIVE' || o.status === 'PENDING');
          setActiveOrder(pending || null);
       }
     } catch (e) {}
 
-    // Ambil Services (Cache First)
+    // D. Load Services (Background)
+    loadServicesFromCache();
+  };
+
+  const loadServicesFromCache = async () => {
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME);
     const now = Date.now();
 
-    if (cachedData && cachedTime && (now - cachedTime < 3600000)) { // 1 Jam
-      const parsed = JSON.parse(cachedData);
-      setServices(parsed);
-      setFilteredServices(parsed);
-      setLoading(false);
+    if (cachedData && cachedTime && (now - cachedTime < CACHE_DURATION)) {
+      const parsedData = JSON.parse(cachedData);
+      setServices(parsedData);
+      setFilteredServices(parsedData);
+      setLoadingServices(false);
     } else {
       try {
         const res = await api.get('/services/list');
@@ -86,273 +93,269 @@ export default function Order() {
           localStorage.setItem(CACHE_TIME, now);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Gagal load services");
       } finally {
-        setLoading(false);
+        setLoadingServices(false);
       }
     }
   };
 
-  // 2. KLIK LAYANAN -> BUKA DRAWER NEGARA
+  // 2. LOGIKA PILIH LAYANAN -> BUKA NEGARA
   const handleServiceClick = async (service) => {
     setSelectedService(service);
-    setIsDrawerOpen(true);
-    setCountries([]); 
+    setSheetMode('countries'); // Pindah ke Sheet Negara
+    setCountries([]);
     setLoadingCountries(true);
 
     try {
-      // FIX: Gunakan service_code (bukan id)
+      // REQUEST KE BACKEND: /countries/list?service_id=13
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
       if (res.data.success) {
         setCountries(res.data.data);
       }
     } catch (err) {
-      console.error("Gagal ambil negara", err);
+      console.error("Gagal ambil negara");
     } finally {
       setLoadingCountries(false);
     }
   };
 
-  // 3. FIX GAMBAR (Proxy Image)
+  // 3. LOGIKA PILIH NEGARA -> BELI (LOGIKA SEMENTARA)
+  const handleCountryClick = (country) => {
+      // Disini nanti logika beli / modal konfirmasi
+      const msg = `Konfirmasi:\nLayanan: ${selectedService.service_name}\nNegara: ${country.country_name}\n\nLanjutkan pembelian?`;
+      if(confirm(msg)) {
+          // navigate('/process-order'...) atau panggil API buy
+          alert("Permintaan pembelian dikirim (Simulasi)");
+          setSheetMode(null); // Tutup semua sheet
+      }
+  };
+
+  // Helper Gambar
   const getOptimizedImage = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
     const cleanUrl = url.replace('https://', '').replace('http://', '');
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
-  // 4. BATAL ORDER
   const handleCancelOrder = async () => {
-    if (!activeOrder) return;
-    if (confirm('Batalkan pesanan ini? Saldo akan dikembalikan.')) {
-        // Panggil API Cancel (Simulasi visual dulu, backend sudah handle di worker)
-        // Idealnya panggil endpoint cancel disini
-        setActiveOrder(null);
-    }
+     if(window.confirm("Batalkan pesanan aktif?")) {
+        // Panggil API Cancel disini (sesuaikan endpoint backend)
+        // await api.get(`/orders/cancel?order_id=${activeOrder.order_id}`);
+        setActiveOrder(null); 
+     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32 transition-colors duration-300 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* --- HEADER DATA CENTER & SALDO --- */}
-      <div className="sticky top-0 z-30 bg-white/90 px-5 pt-8 pb-4 backdrop-blur-md dark:bg-slate-950/90">
-        
-        {/* Baris Atas: Back & Title */}
-        <div className="mb-4 flex items-center gap-3">
-            <button onClick={() => navigate('/dashboard')} className="rounded-full bg-slate-100 p-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <ChevronLeft size={20} />
-            </button>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white">Pilih Layanan</h1>
-        </div>
-
-        {/* Kartu Info Data Center */}
-        <div className="mb-4 flex items-center justify-between rounded-2xl bg-slate-900 p-4 text-white shadow-xl dark:bg-slate-800">
-            <div>
-            <p className="text-xs text-slate-400">Total Saldo</p>
-            <h2 className="text-xl font-bold">Rp {balance.toLocaleString('id-ID')}</h2>
-            </div>
-            <div className="text-right">
-                <div className="flex items-center justify-end gap-1 text-xs text-emerald-400">
-                <Wifi size={14} />
-                <span>Data Center</span>
-                </div>
-                <p className="text-[10px] text-slate-500">{ping}ms Latency</p>
-            </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-            type="text" 
-            placeholder="Cari aplikasi (WhatsApp, Telegram...)" 
-            className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition-all focus:bg-white focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            />
-        </div>
-      </div>
-
-      {/* --- GRID LAYANAN (APLIKASI) --- */}
-      <div className="px-5 mt-2">
-        <div className="flex items-center justify-between mb-3">
-             <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400">Semua Aplikasi</h3>
-             <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500 dark:bg-slate-800">{filteredServices.length} Apps</span>
-        </div>
-        
-        {loading ? (
-          <div className="grid grid-cols-4 gap-4">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div className="h-14 w-14 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
-                <div className="h-3 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800"></div>
+      {/* --- HEADER UTAMA (Data Center) --- */}
+      <div className="sticky top-0 z-30 bg-white/80 pb-4 pt-8 backdrop-blur-md dark:bg-slate-950/80 px-5 border-b border-slate-100 dark:border-slate-800">
+           <div className="flex items-center justify-between">
+              <div>
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-white">Order Baru</h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Wifi size={10} /> Data Center
+                    </span>
+                    <span className="text-[10px] text-slate-400">{ping}ms latency</span>
+                  </div>
               </div>
-            ))}
-          </div>
-        ) : filteredServices.length > 0 ? (
-          <div className="grid grid-cols-4 gap-x-2 gap-y-6 sm:grid-cols-5 md:grid-cols-6">
-            {filteredServices.map((item) => (
-              <button 
-                key={item.service_code}
-                onClick={() => handleServiceClick(item)} // BUKA DRAWER NEGARA
-                className="group flex flex-col items-center gap-2 transition-transform active:scale-95"
-              >
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100 transition-all group-hover:shadow-md dark:border-slate-800 dark:bg-slate-800">
-                  <img 
-                    src={getOptimizedImage(item.service_img)} 
-                    alt={item.service_name}
-                    className="h-full w-full object-contain rounded-lg"
-                    loading="lazy"
-                  />
-                </div>
-                <span className="truncate w-full text-center text-[10px] font-medium text-slate-600 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-white">
-                  {item.service_name}
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-10 text-center text-slate-400">
-            <p>Aplikasi tidak ditemukan</p>
-          </div>
-        )}
+              <div className="text-right">
+                  <p className="text-[10px] text-slate-400">Saldo Anda</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">Rp {balance.toLocaleString('id-ID')}</p>
+              </div>
+           </div>
       </div>
 
-      {/* --- PENDING ORDER (FLOATING BOTTOM) --- */}
-      {/* Muncul sticky di bawah jika ada order aktif */}
-      {activeOrder && (
-        <div className="fixed bottom-20 left-5 right-5 z-40">
-            <div className="overflow-hidden rounded-2xl bg-slate-900 text-white shadow-2xl ring-1 ring-white/20 dark:bg-slate-800">
-                <div className="flex items-center gap-3 p-4">
-                    {/* Icon Loading Animated */}
-                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800">
-                        <div className="absolute inset-0 rounded-full border-2 border-emerald-500 opacity-25"></div>
-                        <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-emerald-500"></div>
-                        <ShoppingBag size={18} className="text-emerald-400" />
+      {/* --- KONTEN HALAMAN --- */}
+      <div className="px-5 mt-6 space-y-6">
+
+        {/* 1. KARTU PESANAN PENDING (Jika Ada) */}
+        {activeOrder && (
+             <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
+                <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
+                    Menunggu SMS
+                </div>
+                <div className="p-5">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center dark:bg-slate-900">
+                             <Loader2 size={24} className="text-blue-600 animate-spin" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{activeOrder.service || 'Layanan'}</h3>
+                            <p className="text-sm text-slate-500 font-mono">{activeOrder.phone_number}</p>
+                        </div>
                     </div>
                     
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-sm font-bold truncate">Menunggu SMS...</h3>
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Pending</span>
-                        </div>
-                        <p className="text-xs text-slate-400 truncate">
-                             {activeOrder.service} • {activeOrder.phone_number}
-                        </p>
+                    {/* Progress Bar Visual */}
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
+                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={handleCancelOrder}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
+                        >
+                            <Trash2 size={14} /> Batalkan
+                        </button>
+                        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none">
+                            <Repeat size={14} /> Cek SMS
+                        </button>
                     </div>
                 </div>
+             </div>
+        )}
 
-                {/* Tombol Action Kecil */}
-                <div className="grid grid-cols-2 border-t border-white/10">
-                    <button 
-                        onClick={handleCancelOrder}
-                        className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-red-400 hover:bg-white/5"
-                    >
-                        <Trash2 size={14} /> Batalkan
-                    </button>
-                    <button 
-                         className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-blue-400 hover:bg-white/5"
-                    >
-                        <Repeat size={14} /> Cek SMS
-                    </button>
+        {/* 2. TOMBOL BESAR "GET VIRTUAL NUMBER" */}
+        <button 
+            onClick={() => {
+                setSheetMode('services');
+                setSearchTerm(''); // Reset search saat buka
+            }}
+            className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900"
+        >
+            <div className="relative z-10 flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white mb-1">Get Virtual Number</h2>
+                    <p className="text-slate-300 text-sm">Pilih layanan dari 190+ negara</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                    <Plus size={24} className="text-white" />
                 </div>
             </div>
+            
+            {/* Dekorasi Background */}
+            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
+                <Smartphone size={120} className="text-white" />
+            </div>
+        </button>
+
+        {/* 3. INFO TAMBAHAN */}
+        <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+                <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20">
+                    <Server size={18} />
+                </div>
+                <p className="text-xs text-slate-400">Server Status</p>
+                <p className="font-bold text-slate-700 dark:text-slate-200">Online 100%</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+                <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20">
+                    <Globe size={18} />
+                </div>
+                <p className="text-xs text-slate-400">Total Negara</p>
+                <p className="font-bold text-slate-700 dark:text-slate-200">193 Negara</p>
+            </div>
         </div>
-      )}
 
-      {/* --- DRAWER / BOTTOM SHEET NEGARA --- */}
-      {/* Backdrop */}
-      {isDrawerOpen && (
-        <div 
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsDrawerOpen(false)}
-        ></div>
-      )}
+      </div>
 
-      {/* Konten Drawer */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 h-[85vh] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 ${isDrawerOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+      {/* --- BOTTOM SHEET 1: LAYANAN (SERVICES) --- */}
+      <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
          
-         {/* Handle Bar */}
-         <div className="absolute left-0 right-0 top-0 flex justify-center pt-3 pb-1" onClick={() => setIsDrawerOpen(false)}>
-            <div className="h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+         {/* Handle & Header */}
+         <div className="pt-3 pb-2 px-6 bg-white rounded-t-[2rem] z-10 dark:bg-slate-900">
+            <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
+            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+                <Search size={18} className="text-slate-400" />
+                <input 
+                    type="text" 
+                    placeholder="Cari layanan (WhatsApp, Telegram)..." 
+                    className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    autoFocus
+                />
+            </div>
          </div>
 
-         {/* Header Drawer */}
-         <div className="mt-6 flex items-center justify-between border-b border-slate-100 px-6 pb-4 dark:border-slate-800">
+         {/* Grid Layanan */}
+         <div className="flex-1 overflow-y-auto px-6 py-4 pb-10">
+            {loadingServices ? (
+                <div className="grid grid-cols-4 gap-4">
+                    {[...Array(12)].map((_,i) => <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse dark:bg-slate-800"></div>)}
+                </div>
+            ) : filteredServices.length > 0 ? (
+                <div className="grid grid-cols-4 gap-x-2 gap-y-6 sm:grid-cols-5">
+                    {filteredServices.map((item) => (
+                        <button 
+                            key={item.service_code}
+                            onClick={() => handleServiceClick(item)}
+                            className="group flex flex-col items-center gap-2"
+                        >
+                            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 p-2 border border-slate-100 transition-all group-active:scale-95 hover:border-blue-200 dark:bg-slate-800 dark:border-slate-700">
+                                <img 
+                                    src={getOptimizedImage(item.service_img)} 
+                                    className="h-full w-full object-contain"
+                                    loading="lazy"
+                                />
+                            </div>
+                            <span className="truncate w-full text-center text-[10px] font-medium text-slate-600 dark:text-slate-400">
+                                {item.service_name}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-10 text-slate-400">Tidak ditemukan</div>
+            )}
+         </div>
+      </div>
+
+      {/* --- BOTTOM SHEET 2: NEGARA (COUNTRIES) --- */}
+      <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
+         
+         {/* Header Service yang Dipilih */}
+         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-3">
-               {selectedService && (
-                   <div className="h-12 w-12 rounded-xl bg-slate-50 p-2 border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
-                        <img 
-                            src={getOptimizedImage(selectedService.service_img)} 
-                            className="h-full w-full object-contain"
-                            alt="Icon"
-                        />
-                   </div>
-               )}
-               <div>
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                      {selectedService ? selectedService.service_name : '...'}
-                  </h3>
-                  <p className="text-xs text-slate-400">Pilih Server Negara</p>
-               </div>
+                <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <X size={20} className="text-slate-500" />
+                </button>
+                {selectedService && (
+                    <>
+                        <img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" />
+                        <h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3>
+                    </>
+                )}
             </div>
-            <button onClick={() => setIsDrawerOpen(false)} className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">
-                <X size={20} />
-            </button>
          </div>
 
          {/* List Negara */}
-         <div className="h-full overflow-y-auto px-6 pb-32 pt-4">
+         <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
             {loadingCountries ? (
-               <div className="space-y-3">
-                  {[1,2,3,4,5].map(i => (
-                     <div key={i} className="flex items-center justify-between rounded-xl border border-slate-100 p-4 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800"></div>
-                            <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800"></div>
-                        </div>
-                        <div className="h-6 w-12 animate-pulse rounded bg-slate-200 dark:bg-slate-800"></div>
-                     </div>
-                  ))}
-               </div>
+                <div className="space-y-3 mt-4">
+                    {[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-800"></div>)}
+                </div>
             ) : countries.length > 0 ? (
-               <div className="grid gap-3">
-                  {countries.map((country) => (
-                     <button 
-                        key={country.country_id}
-                        onClick={() => {
-                            // Disini nanti logika beli (kita bahas next step)
-                            alert(`Beli ${selectedService.service_name} server ${country.country_name}?`);
-                        }}
-                        className="group flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-blue-500 hover:bg-blue-50 hover:shadow-md dark:border-slate-800 dark:bg-slate-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
-                     >
-                        <div className="flex items-center gap-4">
-                           {/* Icon Map Pin / Flag (Simulasi) */}
-                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg shadow-sm group-hover:scale-110 transition-transform dark:bg-slate-700">
-                                🌍
-                           </div>
-                           <div className="text-left">
-                                <h4 className="font-bold text-slate-700 dark:text-slate-200">{country.country_name}</h4>
-                                <p className="text-[10px] text-slate-400">ID: {country.country_id} • Server Stabil</p>
-                           </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-end gap-1">
-                            <div className="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                {country.count ? `${country.count} Pcs` : 'Ready'}
+                <div className="space-y-2 mt-2">
+                    {countries.map((country) => (
+                        <button 
+                            key={country.country_id}
+                            onClick={() => handleCountryClick(country)}
+                            className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800"
+                        >
+                            <div className="flex items-center gap-4">
+                                <span className="text-2xl">🌍</span>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.country_name}</p>
+                                    <p className="text-xs text-slate-400">{country.count ? `Stok: ${country.count}` : 'Tersedia'}</p>
+                                </div>
                             </div>
-                            <span className="text-[10px] text-slate-400 group-hover:text-blue-500">Pilih &gt;</span>
-                        </div>
-                     </button>
-                  ))}
-               </div>
+                            <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800">
+                                <ChevronRight size={16} />
+                            </div>
+                        </button>
+                    ))}
+                </div>
             ) : (
-               <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="mb-4 rounded-full bg-slate-100 p-4 dark:bg-slate-800">
-                      <MapPin size={32} className="text-slate-400" />
-                  </div>
-                  <h3 className="font-bold text-slate-700 dark:text-slate-300">Negara Kosong</h3>
-                  <p className="text-xs text-slate-400">Stok untuk layanan ini sedang habis.</p>
-               </div>
+                <div className="text-center py-10 text-slate-400">
+                    <p>Negara tidak tersedia untuk layanan ini.</p>
+                    <button onClick={() => setSheetMode('services')} className="mt-2 text-blue-600 font-bold text-sm">Pilih layanan lain</button>
+                </div>
             )}
          </div>
       </div>
