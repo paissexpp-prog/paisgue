@@ -6,7 +6,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Deposit from './pages/Deposit'; 
 import History from './pages/History';
-import Welcome from './pages/Welcome'; 
+import Order from './pages/Order'; // <--- 1. IMPORT INI
+import Welcome from './pages/Welcome';
 import Navbar from './components/Navbar';
 
 const PrivateRoute = ({ children }) => {
@@ -58,15 +59,16 @@ function App() {
             </PrivateRoute>
           } />
           
+          {/* 2. UPDATE BAGIAN INI */}
           <Route path="/order" element={
             <PrivateRoute>
-               <div className="p-5">Halaman Order (Belum dicustom)</div>
+               <Order /> 
             </PrivateRoute>
           } />
 
           <Route path="/history" element={
             <PrivateRoute>
-               <History />
+                <History />
             </PrivateRoute>
           } />
         </Routes>
@@ -76,5 +78,4 @@ function App() {
 }
 
 export default App;
-
 
