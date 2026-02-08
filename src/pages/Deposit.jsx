@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
+import { Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function Deposit() {
   const { color } = useTheme();
   const [amount, setAmount] = useState(5000);
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [canceling, setCanceling] = useState(false); // State untuk loading saat batal
+  const [canceling, setCanceling] = useState(false);
   
-  // State untuk Riwayat
+  // State untuk Riwayat & Accordion
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState(null); // <--- State untuk melacak item mana yang dibuka
 
-  // Ambil data riwayat saat halaman dimuat
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -28,18 +28,16 @@ export default function Deposit() {
         const data = res.data.data;
         setHistory(data.slice(0, 5));
 
-        // --- LOGIKA BARU: CEK PENDING ---
-        // Jika transaksi paling baru statusnya 'pending', langsung tampilkan QR
+        // Cek Auto-Restore Pending
         if (data.length > 0 && data[0].status === 'pending') {
             const pendingItem = data[0];
             setQrisData({
-                deposit_id: pendingItem.id, // ID Deposit (DEP-xxxx)
+                deposit_id: pendingItem.id,
                 qr_image: pendingItem.qr_image,
                 total_pay: pendingItem.total_bill,
                 amount_received: pendingItem.request_amount
             });
         } else {
-            // Jika tidak ada pending, pastikan form yang muncul
             setQrisData(null);
         }
       }
@@ -57,7 +55,6 @@ export default function Deposit() {
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
         setQrisData(res.data.data);
-        // Refresh history agar data pending masuk ke list bawah juga
         fetchHistory();
       }
     } catch (err) {
@@ -66,21 +63,18 @@ export default function Deposit() {
     setLoading(false);
   };
 
-  // --- LOGIKA BARU: BATALKAN DEPOSIT ---
   const handleCancel = async () => {
       if (!qrisData) return;
-      
       const confirmCancel = window.confirm("Yakin ingin membatalkan deposit ini?");
       if (!confirmCancel) return;
 
       setCanceling(true);
       try {
-          // Panggil API Cancel di Backend
           const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
           if (res.data.success) {
               alert('Deposit berhasil dibatalkan.');
-              setQrisData(null); // Kembali ke Form
-              fetchHistory();    // Refresh list history jadi 'canceled'
+              setQrisData(null); 
+              fetchHistory();    
           } else {
               alert('Gagal membatalkan: ' + (res.data.error?.message || 'Unknown error'));
           }
@@ -89,6 +83,12 @@ export default function Deposit() {
       } finally {
           setCanceling(false);
       }
+  };
+
+  // Fungsi Toggle Accordion
+  const toggleExpand = (id) => {
+    // Kalau ID sama diklik, tutup (set null). Kalau beda, buka yang baru.
+    setExpandedId(expandedId === id ? null : id);
   };
 
   const getStatusBadge = (status) => {
@@ -111,7 +111,6 @@ export default function Deposit() {
 
       <div className="mx-auto mt-6 max-w-md px-5">
         
-        {/* KONDISI: TAMPILKAN FORM JIKA TIDAK ADA QRIS DATA */}
         {!qrisData ? (
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             {/* Header Metode */}
@@ -141,7 +140,6 @@ export default function Deposit() {
               </div>
             </div>
 
-            {/* Info Box */}
             <div className={`mb-6 flex gap-3 rounded-xl p-4 ${color.bg}`}>
               <AlertCircle size={20} className={`shrink-0 mt-0.5 ${color.text}`} />
               <p className={`text-xs leading-relaxed ${color.text}`}>
@@ -149,7 +147,6 @@ export default function Deposit() {
               </p>
             </div>
 
-            {/* Tombol Buat Tagihan */}
             <button 
               onClick={handleDeposit}
               disabled={loading}
@@ -159,7 +156,7 @@ export default function Deposit() {
             </button>
           </div>
         ) : (
-          /* --- TAMPILAN JIKA ADA QRIS PENDING (GAMBAR 2) --- */
+          /* TAMPILAN QRIS PENDING */
           <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <QrCode size={24} />
@@ -168,7 +165,6 @@ export default function Deposit() {
             <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
 
             <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
-               {/* Tampilkan QR */}
                <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
             </div>
 
@@ -187,7 +183,6 @@ export default function Deposit() {
                </div>
             </div>
 
-            {/* TOMBOL BATALKAN (WARNA MERAH) */}
             <button 
               onClick={handleCancel}
               disabled={canceling}
@@ -199,7 +194,7 @@ export default function Deposit() {
           </div>
         )}
 
-        {/* Bagian Riwayat Deposit */}
+        {/* --- Bagian Riwayat Deposit dengan Accordion --- */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
             <History size={18} className="text-slate-400" />
@@ -211,25 +206,55 @@ export default function Deposit() {
                <div className="py-6 text-center text-sm text-slate-400">Memuat riwayat...</div>
             ) : history.length > 0 ? (
               history.map((item) => (
-                <div key={item.id} className="flex justify-between items-center rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                   <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                        item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                        item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                          {item.status === 'success' ? <CheckCircle2 size={18} /> : 
-                          item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
-                      </div>
-                      <div>
-                         <p className="text-sm font-bold text-slate-800 dark:text-white">Rp {item.request_amount.toLocaleString('id-ID')}</p>
-                         <p className="text-[10px] text-slate-400">
-                            {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                      </div>
+                <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950">
+                   {/* Header Card (Selalu Muncul) - Klik disini untuk buka/tutup */}
+                   <div 
+                      onClick={() => toggleExpand(item.id)}
+                      className="flex cursor-pointer items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                   >
+                       <div className="flex items-center gap-3">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                            item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                            item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                              {item.status === 'success' ? <CheckCircle2 size={18} /> : 
+                              item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
+                          </div>
+                          <div>
+                             <p className="text-sm font-bold text-slate-800 dark:text-white">Rp {item.request_amount.toLocaleString('id-ID')}</p>
+                             <p className="text-[10px] text-slate-400">
+                                {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-3">
+                          {getStatusBadge(item.status)}
+                          {/* Ikon Panah Berubah arah */}
+                          {expandedId === item.id ? 
+                            <ChevronUp size={16} className="text-slate-400" /> : 
+                            <ChevronDown size={16} className="text-slate-400" />
+                          }
+                       </div>
                    </div>
-                   <div className="text-right">
-                      {getStatusBadge(item.status)}
-                    </div>
+
+                   {/* Detail Content (Muncul hanya jika expandedId == item.id) */}
+                   {expandedId === item.id && (
+                     <div className="border-t border-slate-100 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-900/30">
+                        <div className="mb-2 flex justify-between">
+                           <span className="text-slate-500 dark:text-slate-400">ID Transaksi</span>
+                           <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{item.id}</span>
+                        </div>
+                        <div className="mb-2 flex justify-between">
+                           <span className="text-slate-500 dark:text-slate-400">Metode</span>
+                           <span className="font-medium text-slate-700 dark:text-slate-300 uppercase">{item.method || 'QRIS'}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200 pt-2 dark:border-slate-700">
+                           <span className="font-bold text-slate-500 dark:text-slate-400">Total Bayar</span>
+                           <span className="font-bold text-slate-800 dark:text-white">Rp {item.total_bill ? item.total_bill.toLocaleString('id-ID') : '-'}</span>
+                        </div>
+                     </div>
+                   )}
                 </div>
               ))
             ) : (
@@ -242,7 +267,6 @@ export default function Deposit() {
 
       </div>
 
-      {/* Navigasi Bawah */}
       <BottomNav />
     </div>
   );
