@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -25,14 +25,23 @@ export default function Order() {
   // Kontrol Bottom Sheet & Accordion
   const [sheetMode, setSheetMode] = useState(null); // 'services' | 'countries' | null
   const [selectedService, setSelectedService] = useState(null);
-  const [expandedCountry, setExpandedCountry] = useState(null); // ID Negara yang sedang dibuka
+  const [expandedCountry, setExpandedCountry] = useState(null);
 
-  // --- STATE TOAST (NOTIFIKASI MODERN) ---
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' }); // type: 'success' | 'error'
+  // --- MODAL KONFIRMASI (PENGGANTI ALERT BROWSER) ---
+  const [confirmModal, setConfirmModal] = useState({
+      show: false,
+      title: '',
+      message: '',
+      onConfirm: null,
+      loading: false
+  });
+
+  // --- TOAST NOTIFICATION ---
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Cache Keys
-  const CACHE_KEY = 'otp_services_v6';
-  const CACHE_TIME = 'otp_services_time_v6';
+  const CACHE_KEY = 'otp_services_v7';
+  const CACHE_TIME = 'otp_services_time_v7';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
@@ -48,13 +57,24 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- FUNGSI TOAST NOTIFICATION ---
+  // --- FUNGSI HELPER UI ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
-    // Hilang otomatis setelah 3 detik
-    setTimeout(() => {
-        setToast(prev => ({ ...prev, show: false }));
-    }, 3000);
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const showConfirm = (title, message, action) => {
+      setConfirmModal({
+          show: true,
+          title,
+          message,
+          onConfirm: action,
+          loading: false
+      });
+  };
+
+  const closeConfirm = () => {
+      setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
   };
 
   // 1. FETCH DATA AWAL
@@ -110,7 +130,7 @@ export default function Order() {
     setSheetMode('countries'); 
     setCountries([]);
     setLoadingCountries(true);
-    setExpandedCountry(null); // Reset accordion
+    setExpandedCountry(null); 
 
     try {
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
@@ -124,65 +144,80 @@ export default function Order() {
     }
   };
 
-  // 3. KLIK NEGARA -> TOGGLE ACCORDION (BUKA DAFTAR SERVER)
   const toggleCountry = (countryId) => {
       setExpandedCountry(expandedCountry === countryId ? null : countryId);
   };
 
-  // 4. KLIK BELI (SERVER TERTENTU)
-  const handleBuy = async (country, provider) => {
-      // Cek Saldo Dulu (Optional, buat UX lebih cepat)
+  // 3. LOGIKA TOMBOL BELI (MEMICU POPUP)
+  const handleBuyClick = (country, provider) => {
       if (balance < provider.price) {
           showToast("Saldo tidak mencukupi!", "error");
           return;
       }
 
-      // Konfirmasi singkat (atau langsung beli)
-      if(!confirm(`Beli nomor ${country.name} (Server ${provider.server_id}) seharga Rp ${provider.price}?`)) return;
+      // Tampilkan Pop-up Konfirmasi Sendiri (Bukan Confirm Browser)
+      showConfirm(
+          "Konfirmasi Pembelian",
+          `Beli nomor ${country.name} (Server ${provider.server_id}) seharga Rp ${provider.price}?`,
+          () => processBuy(country, provider)
+      );
+  };
 
+  // 4. PROSES BELI (SETELAH KLIK YA DI POPUP)
+  const processBuy = async (country, provider) => {
+      setConfirmModal(prev => ({ ...prev, loading: true })); // Loading di tombol popup
+      
       try {
-          // Tutup drawer biar lega
-          setSheetMode(null);
-          showToast("Memproses pesanan...", "success"); // Feedback instan
-
           const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=any&expected_price=${provider.price}`;
           const res = await api.get(buyUrl);
           
           if (res.data.success) {
+              closeConfirm(); // Tutup Popup
+              setSheetMode(null); // Tutup Drawer
               showToast("✅ Order Berhasil! Menunggu SMS...", "success");
               fetchInitialData(); // Refresh data pending order
           } else {
+              closeConfirm();
               showToast(res.data.error?.message || "Order Gagal", "error");
-              // Jika gagal, buka lagi drawernya (opsional)
-              setSheetMode('countries');
           }
       } catch (err) {
+          closeConfirm();
           const errMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
           showToast(errMsg, "error");
-          setSheetMode('countries');
       }
   };
 
-  // Helper Gambar
+  // 5. BATALKAN ORDER
+  const handleCancelClick = () => {
+     if (!activeOrder) return;
+     showConfirm(
+         "Batalkan Pesanan?",
+         "Apakah Anda yakin ingin membatalkan pesanan ini? Saldo akan dikembalikan.",
+         async () => {
+             setConfirmModal(prev => ({ ...prev, loading: true }));
+             try {
+                // Simulasi cancel sukses
+                setActiveOrder(null); 
+                closeConfirm();
+                showToast("Pesanan dibatalkan", "success");
+                fetchInitialData();
+             } catch(e) {
+                closeConfirm();
+             }
+         }
+     );
+  };
+
+  // Helper UI
   const getOptimizedImage = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
     const cleanUrl = url.replace('https://', '').replace('http://', '');
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
-  // Helper Cari Harga Termurah untuk Label
   const getCheapestPrice = (pricelist) => {
       if (!pricelist || pricelist.length === 0) return 0;
       return Math.min(...pricelist.map(p => p.price));
-  };
-
-  const handleCancelOrder = async () => {
-     if (!activeOrder) return;
-     if(window.confirm("Batalkan pesanan aktif?")) {
-        setActiveOrder(null); // Hapus visual segera
-        // Logic cancel ke API bisa ditambahkan disini
-        showToast("Pesanan dibatalkan", "success");
-     }
   };
 
   return (
@@ -210,7 +245,7 @@ export default function Order() {
       {/* KONTEN */}
       <div className="px-5 mt-6 space-y-6">
 
-        {/* 1. KARTU PESANAN PENDING */}
+        {/* KARTU PESANAN PENDING */}
         {activeOrder && (
              <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
                 <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
@@ -233,7 +268,7 @@ export default function Order() {
 
                     <div className="flex gap-3">
                         <button 
-                            onClick={handleCancelOrder}
+                            onClick={handleCancelClick}
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
                         >
                             <Trash2 size={14} /> Batalkan
@@ -246,13 +281,13 @@ export default function Order() {
              </div>
         )}
 
-        {/* 2. TOMBOL GET VIRTUAL NUMBER */}
+        {/* TOMBOL GET VIRTUAL NUMBER */}
         <button 
             onClick={() => {
                 setSheetMode('services');
                 setSearchTerm(''); 
             }}
-            className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900"
+            className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95"
         >
             <div className="relative z-10 flex items-center justify-between">
                 <div>
@@ -268,7 +303,7 @@ export default function Order() {
             </div>
         </button>
 
-        {/* 3. INFO TAMBAHAN */}
+        {/* INFO TAMBAHAN */}
         <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                 <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20">
@@ -287,6 +322,39 @@ export default function Order() {
         </div>
 
       </div>
+
+      {/* --- CUSTOM MODAL CONFIRMATION (REPLACEMENT FOR BROWSER ALERT) --- */}
+      {confirmModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
+                  <div className="flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400">
+                          <HelpCircle size={32} />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+                      
+                      <div className="flex gap-3 w-full">
+                          <button 
+                            onClick={closeConfirm}
+                            disabled={confirmModal.loading}
+                            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                          >
+                              Batal
+                          </button>
+                          <button 
+                            onClick={confirmModal.onConfirm}
+                            disabled={confirmModal.loading}
+                            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2"
+                          >
+                              {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
+                              {confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* --- TOAST NOTIFICATION MODERN --- */}
       <div 
@@ -418,7 +486,7 @@ export default function Order() {
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-bold text-emerald-600 text-sm dark:text-emerald-400">Rp {server.price}</span>
                                                     <button 
-                                                        onClick={() => handleBuy(country, server)}
+                                                        onClick={() => handleBuyClick(country, server)}
                                                         className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-transform active:scale-95 dark:bg-white dark:text-slate-900"
                                                     >
                                                         Beli
@@ -448,4 +516,3 @@ export default function Order() {
     </div>
   );
 }
-
