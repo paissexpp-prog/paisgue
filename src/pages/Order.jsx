@@ -12,12 +12,12 @@ export default function Order() {
   // --- STATE DATA ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
-  const [activeOrder, setActiveOrder] = useState(null); // Pesanan Pending
+  const [activeOrder, setActiveOrder] = useState(null);
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
   
-  // --- STATE UI (LOADING & DRAWER) ---
+  // --- STATE UI ---
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,16 +26,15 @@ export default function Order() {
   const [sheetMode, setSheetMode] = useState(null); // 'services' | 'countries' | null
   const [selectedService, setSelectedService] = useState(null);
 
-  // Cache Keys
-  const CACHE_KEY = 'otp_services_v4';
-  const CACHE_TIME = 'otp_services_time_v4';
+  // Cache
+  const CACHE_KEY = 'otp_services_v5'; // Update versi cache
+  const CACHE_TIME = 'otp_services_time_v5';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
-  // Filter Search Layanan
   useEffect(() => {
     if (sheetMode === 'services') {
         const results = services.filter(service =>
@@ -45,31 +44,23 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // 1. FETCH DATA AWAL (Saldo, Ping, Order Aktif, Cache Service)
+  // 1. FETCH DATA AWAL
   const fetchInitialData = async () => {
     const start = Date.now();
-
-    // A. Saldo & User
     try {
       const resUser = await api.get('/auth/me');
       if (resUser.data.success) setBalance(resUser.data.data.balance);
     } catch (e) {}
-
-    // B. Ping
     setPing(Date.now() - start);
 
-    // C. Cek Pesanan Aktif (Pending)
     try {
-      // Kita cari order yang statusnya ACTIVE (menunggu SMS)
       const resHistory = await api.get('/history/list'); 
       if (resHistory.data.success && resHistory.data.data.length > 0) {
-         // Filter hanya yang status ACTIVE/PENDING
          const pending = resHistory.data.data.find(o => o.status === 'ACTIVE' || o.status === 'PENDING');
          setActiveOrder(pending || null);
       }
     } catch (e) {}
 
-    // D. Load Services (Background)
     loadServicesFromCache();
   };
 
@@ -100,15 +91,15 @@ export default function Order() {
     }
   };
 
-  // 2. LOGIKA PILIH LAYANAN -> BUKA NEGARA
+  // 2. KLIK LAYANAN -> BUKA NEGARA
   const handleServiceClick = async (service) => {
     setSelectedService(service);
-    setSheetMode('countries'); // Pindah ke Sheet Negara
+    setSheetMode('countries'); 
     setCountries([]);
     setLoadingCountries(true);
 
     try {
-      // REQUEST KE BACKEND: /countries/list?service_id=13
+      // API call ke backend Anda
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
       if (res.data.success) {
         setCountries(res.data.data);
@@ -120,14 +111,58 @@ export default function Order() {
     }
   };
 
-  // 3. LOGIKA PILIH NEGARA -> BELI (LOGIKA SEMENTARA)
-  const handleCountryClick = (country) => {
-      // Disini nanti logika beli / modal konfirmasi
-      const msg = `Konfirmasi:\nLayanan: ${selectedService.service_name}\nNegara: ${country.country_name}\n\nLanjutkan pembelian?`;
+  // 3. KLIK NEGARA (Format Baru)
+  const handleCountryClick = async (country) => {
+      // Cari provider termurah yang ada stoknya
+      if (!country.pricelist || country.pricelist.length === 0) {
+          alert("Layanan tidak tersedia untuk negara ini.");
+          return;
+      }
+
+      // Filter stok > 0 dan urutkan harga termurah
+      const availableProviders = country.pricelist
+          .filter(p => p.stock > 0 && p.available)
+          .sort((a, b) => a.price - b.price);
+
+      if (availableProviders.length === 0) {
+          alert("Stok sedang kosong untuk negara ini.");
+          return;
+      }
+
+      const bestOffer = availableProviders[0]; // Ambil yang paling murah
+
+      // Konfirmasi Pembelian
+      const msg = `📦 Konfirmasi Order\n\n` + 
+                  `📱 Aplikasi: ${selectedService.service_name}\n` +
+                  `🌍 Negara: ${country.name}\n` + 
+                  `💰 Harga: Rp ${bestOffer.price.toLocaleString('id-ID')}\n` +
+                  `🔌 Server ID: ${bestOffer.server_id}\n\n` +
+                  `Lanjutkan pembelian?`;
+
       if(confirm(msg)) {
-          // navigate('/process-order'...) atau panggil API buy
-          alert("Permintaan pembelian dikirim (Simulasi)");
-          setSheetMode(null); // Tutup semua sheet
+          setSheetMode(null); // Tutup drawer
+          
+          // Panggil API Beli
+          // Backend butuh: number_id, provider_id, operator_id, expected_price
+          try {
+              // Operator ID biasanya 'any' atau ambil dari provider jika ada. 
+              // Di JSON pricelist tidak ada operator_id eksplisit, biasanya default 'any' atau provider_id itu sendiri.
+              // Kita coba kirim provider_id sebagai parameter provider.
+              
+              const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${bestOffer.provider_id}&operator_id=any&expected_price=${bestOffer.price}`;
+              
+              const res = await api.get(buyUrl);
+              
+              if (res.data.success) {
+                  alert("✅ Berhasil! Menunggu SMS masuk...");
+                  fetchInitialData(); // Refresh data pending order
+              } else {
+                  alert("Gagal: " + (res.data.error?.message || "Unknown error"));
+              }
+          } catch (err) {
+              const errMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
+              alert("Gagal: " + errMsg);
+          }
       }
   };
 
@@ -138,18 +173,32 @@ export default function Order() {
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
+  // Helper Hitung Harga Termurah untuk Tampilan
+  const getCheapestPrice = (pricelist) => {
+      if (!pricelist || pricelist.length === 0) return 0;
+      const cheapest = Math.min(...pricelist.map(p => p.price));
+      return cheapest;
+  };
+
   const handleCancelOrder = async () => {
+     if (!activeOrder) return;
      if(window.confirm("Batalkan pesanan aktif?")) {
-        // Panggil API Cancel disini (sesuaikan endpoint backend)
-        // await api.get(`/orders/cancel?order_id=${activeOrder.order_id}`);
-        setActiveOrder(null); 
+        try {
+            // Asumsi activeOrder menyimpan order_id (ID Kita)
+            await api.get(`/orders/check-status?order_id=${activeOrder.order_id}`); 
+            // Note: Biasanya ada endpoint khusus cancel, tapi di backend Anda cancel terjadi otomatis 
+            // atau via endpoint status jika statusnya batal.
+            // Tapi mari kita set null visualnya dulu.
+            setActiveOrder(null); 
+            fetchInitialData();
+        } catch(e) { setActiveOrder(null); }
      }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* --- HEADER UTAMA (Data Center) --- */}
+      {/* HEADER UTAMA */}
       <div className="sticky top-0 z-30 bg-white/80 pb-4 pt-8 backdrop-blur-md dark:bg-slate-950/80 px-5 border-b border-slate-100 dark:border-slate-800">
            <div className="flex items-center justify-between">
               <div>
@@ -168,10 +217,10 @@ export default function Order() {
            </div>
       </div>
 
-      {/* --- KONTEN HALAMAN --- */}
+      {/* KONTEN */}
       <div className="px-5 mt-6 space-y-6">
 
-        {/* 1. KARTU PESANAN PENDING (Jika Ada) */}
+        {/* 1. KARTU PESANAN PENDING */}
         {activeOrder && (
              <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
                 <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
@@ -188,7 +237,6 @@ export default function Order() {
                         </div>
                     </div>
                     
-                    {/* Progress Bar Visual */}
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
                         <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
                     </div>
@@ -208,11 +256,11 @@ export default function Order() {
              </div>
         )}
 
-        {/* 2. TOMBOL BESAR "GET VIRTUAL NUMBER" */}
+        {/* 2. TOMBOL GET VIRTUAL NUMBER */}
         <button 
             onClick={() => {
                 setSheetMode('services');
-                setSearchTerm(''); // Reset search saat buka
+                setSearchTerm(''); 
             }}
             className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900"
         >
@@ -225,8 +273,6 @@ export default function Order() {
                     <Plus size={24} className="text-white" />
                 </div>
             </div>
-            
-            {/* Dekorasi Background */}
             <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
                 <Smartphone size={120} className="text-white" />
             </div>
@@ -252,11 +298,10 @@ export default function Order() {
 
       </div>
 
-      {/* --- BOTTOM SHEET 1: LAYANAN (SERVICES) --- */}
+      {/* --- SHEET 1: LAYANAN --- */}
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
          
-         {/* Handle & Header */}
          <div className="pt-3 pb-2 px-6 bg-white rounded-t-[2rem] z-10 dark:bg-slate-900">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
@@ -272,7 +317,6 @@ export default function Order() {
             </div>
          </div>
 
-         {/* Grid Layanan */}
          <div className="flex-1 overflow-y-auto px-6 py-4 pb-10">
             {loadingServices ? (
                 <div className="grid grid-cols-4 gap-4">
@@ -305,11 +349,10 @@ export default function Order() {
          </div>
       </div>
 
-      {/* --- BOTTOM SHEET 2: NEGARA (COUNTRIES) --- */}
+      {/* --- SHEET 2: NEGARA (DATA BARU) --- */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
          
-         {/* Header Service yang Dipilih */}
          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-3">
                 <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -324,7 +367,6 @@ export default function Order() {
             </div>
          </div>
 
-         {/* List Negara */}
          <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
             {loadingCountries ? (
                 <div className="space-y-3 mt-4">
@@ -332,36 +374,33 @@ export default function Order() {
                 </div>
             ) : countries.length > 0 ? (
                 <div className="space-y-2 mt-2">
-                    {countries.map((country) => (
-                        <button 
-                            key={country.country_id}
-                            onClick={() => handleCountryClick(country)}
-                            className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800"
-                        >
-                            <div className="flex items-center gap-4">
-                                <span className="text-2xl">🌍</span>
-                                <div className="text-left">
-                                    <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.country_name}</p>
-                                    <p className="text-xs text-slate-400">{country.count ? `Stok: ${country.count}` : 'Tersedia'}</p>
+                    {countries.map((country) => {
+                        const startPrice = getCheapestPrice(country.pricelist);
+                        return (
+                            <button 
+                                key={country.number_id} // Gunakan number_id
+                                onClick={() => handleCountryClick(country)}
+                                className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
+                                    <div className="text-left">
+                                        <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
+                                        <p className="text-xs text-blue-600 font-medium">Rp {startPrice.toLocaleString('id-ID')}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800">
-                                <ChevronRight size={16} />
-                            </div>
-                        </button>
-                    ))}
+                                <div className="flex items-center gap-2">
+                                     <span className="text-xs text-slate-400">Stok: {country.stock_total}</span>
+                                     <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800">
+                                        <ChevronRight size={16} />
+                                     </div>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="text-center py-10 text-slate-400">
                     <p>Negara tidak tersedia untuk layanan ini.</p>
                     <button onClick={() => setSheetMode('services')} className="mt-2 text-blue-600 font-bold text-sm">Pilih layanan lain</button>
-                </div>
-            )}
-         </div>
-      </div>
-
-      <BottomNav />
-    </div>
-  );
-}
-
+                </
