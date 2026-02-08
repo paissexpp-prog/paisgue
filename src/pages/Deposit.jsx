@@ -11,10 +11,11 @@ export default function Deposit() {
   const [loading, setLoading] = useState(false);
   const [canceling, setCanceling] = useState(false);
   
-  // State untuk Riwayat & Accordion
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null); // <--- State untuk melacak item mana yang dibuka
+  
+  // State untuk Accordion (Menyimpan ID mana yang sedang dibuka)
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     fetchHistory();
@@ -28,7 +29,7 @@ export default function Deposit() {
         const data = res.data.data;
         setHistory(data.slice(0, 5));
 
-        // Cek Auto-Restore Pending
+        // Cek Auto-Restore Pending (langsung munculkan QR jika ada pending)
         if (data.length > 0 && data[0].status === 'pending') {
             const pendingItem = data[0];
             setQrisData({
@@ -85,9 +86,8 @@ export default function Deposit() {
       }
   };
 
-  // Fungsi Toggle Accordion
   const toggleExpand = (id) => {
-    // Kalau ID sama diklik, tutup (set null). Kalau beda, buka yang baru.
+    // Kalau diklik lagi, tutup. Kalau belum, buka.
     setExpandedId(expandedId === id ? null : id);
   };
 
@@ -111,9 +111,9 @@ export default function Deposit() {
 
       <div className="mx-auto mt-6 max-w-md px-5">
         
+        {/* FORM / QRIS SECTION */}
         {!qrisData ? (
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            {/* Header Metode */}
             <div className="mb-6 flex items-center gap-4 border-b border-slate-50 pb-4 dark:border-slate-800">
               <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${color.bg} ${color.text}`}>
                 <Wallet size={24} />
@@ -124,7 +124,6 @@ export default function Deposit() {
               </div>
             </div>
 
-            {/* Input Nominal */}
             <div className="mb-5">
               <label className="mb-2 block text-xs font-bold text-slate-500 dark:text-slate-400">Nominal Deposit (Rp)</label>
               <div className="relative">
@@ -156,7 +155,7 @@ export default function Deposit() {
             </button>
           </div>
         ) : (
-          /* TAMPILAN QRIS PENDING */
+          /* TAMPILAN QRIS */
           <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <QrCode size={24} />
@@ -194,7 +193,7 @@ export default function Deposit() {
           </div>
         )}
 
-        {/* --- Bagian Riwayat Deposit dengan Accordion --- */}
+        {/* --- RIWAYAT TRANSAKSI (BAGIAN YANG DIUBAH) --- */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
             <History size={18} className="text-slate-400" />
@@ -207,7 +206,7 @@ export default function Deposit() {
             ) : history.length > 0 ? (
               history.map((item) => (
                 <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950">
-                   {/* Header Card (Selalu Muncul) - Klik disini untuk buka/tutup */}
+                   {/* HEADER (Selalu Muncul) - Klik untuk Buka/Tutup */}
                    <div 
                       onClick={() => toggleExpand(item.id)}
                       className="flex cursor-pointer items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50"
@@ -230,7 +229,7 @@ export default function Deposit() {
                        
                        <div className="flex items-center gap-3">
                           {getStatusBadge(item.status)}
-                          {/* Ikon Panah Berubah arah */}
+                          {/* Ikon Chevron Berubah Arah */}
                           {expandedId === item.id ? 
                             <ChevronUp size={16} className="text-slate-400" /> : 
                             <ChevronDown size={16} className="text-slate-400" />
@@ -238,20 +237,12 @@ export default function Deposit() {
                        </div>
                    </div>
 
-                   {/* Detail Content (Muncul hanya jika expandedId == item.id) */}
+                   {/* ISI DETAIL (Hanya Muncul Jika Diklik) */}
                    {expandedId === item.id && (
                      <div className="border-t border-slate-100 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-900/30">
-                        <div className="mb-2 flex justify-between">
-                           <span className="text-slate-500 dark:text-slate-400">ID Transaksi</span>
-                           <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{item.id}</span>
-                        </div>
-                        <div className="mb-2 flex justify-between">
-                           <span className="text-slate-500 dark:text-slate-400">Metode</span>
-                           <span className="font-medium text-slate-700 dark:text-slate-300 uppercase">{item.method || 'QRIS'}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-slate-200 pt-2 dark:border-slate-700">
-                           <span className="font-bold text-slate-500 dark:text-slate-400">Total Bayar</span>
-                           <span className="font-bold text-slate-800 dark:text-white">Rp {item.total_bill ? item.total_bill.toLocaleString('id-ID') : '-'}</span>
+                        <div className="flex justify-between items-center">
+                           <span className="text-slate-500 dark:text-slate-400 font-medium">ID Transaksi</span>
+                           <span className="font-mono font-bold text-slate-700 dark:text-slate-300 select-all">{item.id}</span>
                         </div>
                      </div>
                    )}
