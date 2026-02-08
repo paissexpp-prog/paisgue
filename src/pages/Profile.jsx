@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
-  CreditCard, Loader2 
+  CreditCard, Loader2, Copy 
 } from 'lucide-react';
 
 export default function Profile() {
@@ -24,13 +24,13 @@ export default function Profile() {
   const fetchUserData = async () => {
     setLoading(true);
     try {
-      // 1. Ambil Data User (Saldo & Tanggal Join)
+      // 1. Ambil Data User
       const resUser = await api.get('/auth/me');
       
-      // 2. Ambil History Order (Untuk hitung jumlah)
+      // 2. Ambil History Order
       const resOrders = await api.get('/history/list');
       
-      // 3. Ambil History Deposit (Untuk hitung jumlah)
+      // 3. Ambil History Deposit
       const resDeposits = await api.get('/deposit/history');
 
       if (resUser.data.success) {
@@ -57,16 +57,21 @@ export default function Profile() {
     }
   };
 
-  // Format Tanggal (Fix Invalid Data)
+  const handleCopyId = () => {
+    if (user?.id) {
+        navigator.clipboard.writeText(user.id);
+        alert("ID Pengguna berhasil disalin!");
+    }
+  };
+
+  // Format Tanggal
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     try {
       return new Date(dateString).toLocaleDateString('id-ID', {
         day: 'numeric', month: 'long', year: 'numeric'
       });
-    } catch (e) {
-      return '-';
-    }
+    } catch (e) { return '-'; }
   };
 
   return (
@@ -82,10 +87,13 @@ export default function Profile() {
         {/* 1. KARTU USER (Gradient) */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white shadow-xl dark:from-blue-900 dark:to-slate-950">
           <div className="relative z-10 flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-2xl font-bold border border-white/20">
+            {/* Avatar */}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-2xl font-bold border border-white/20">
               {loading ? <Loader2 className="animate-spin" /> : user?.username?.charAt(0).toUpperCase()}
             </div>
-            <div>
+            
+            {/* Info User */}
+            <div className="flex-1 min-w-0">
               {loading ? (
                 <div className="space-y-2">
                   <div className="h-4 w-32 bg-white/20 rounded animate-pulse"></div>
@@ -93,9 +101,21 @@ export default function Profile() {
                 </div>
               ) : (
                 <>
-                  <h2 className="text-lg font-bold">{user?.username}</h2>
-                  <p className="text-sm text-slate-300">{user?.email}</p>
-                  <div className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-400 bg-black/20 w-fit px-2 py-1 rounded-lg">
+                  <h2 className="text-lg font-bold truncate">{user?.username}</h2>
+                  <p className="text-sm text-slate-300 truncate">{user?.email}</p>
+                  
+                  {/* ID & COPY BUTTON (BARU) */}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                      <button 
+                        onClick={handleCopyId}
+                        className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1 text-[10px] text-slate-200 hover:bg-black/50 transition-colors border border-white/10"
+                      >
+                        <span className="font-mono opacity-80">ID: {user?.id}</span>
+                        <Copy size={10} />
+                      </button>
+                  </div>
+
+                  <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
                     <Calendar size={10} />
                     Terdaftar: {formatDate(user?.created_at)}
                   </div>
@@ -103,8 +123,9 @@ export default function Profile() {
               )}
             </div>
           </div>
+          
           {/* Dekorasi Background */}
-          <div className="absolute -right-4 -bottom-4 text-white/5 rotate-12">
+          <div className="absolute -right-4 -bottom-4 text-white/5 rotate-12 pointer-events-none">
             <User size={120} />
           </div>
         </div>
