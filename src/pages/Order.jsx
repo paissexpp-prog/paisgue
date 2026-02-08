@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, Clock } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -33,7 +33,8 @@ export default function Order() {
   const [expandedCountry, setExpandedCountry] = useState(null);
 
   // Modal & Toast
-  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
+  // Menambahkan confirmText agar tombol bisa berubah tulisan (misal: "Saya Mengerti")
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Cache
@@ -60,12 +61,12 @@ export default function Order() {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  const showConfirm = (title, message, action) => {
-      setConfirmModal({ show: true, title, message, onConfirm: action, loading: false });
+  const showConfirm = (title, message, action, confirmText = 'Ya, Lanjutkan') => {
+      setConfirmModal({ show: true, title, message, onConfirm: action, loading: false, confirmText });
   };
 
   const closeConfirm = () => {
-      setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
+      setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   };
 
   const getOptimizedImage = (url) => {
@@ -213,14 +214,35 @@ export default function Order() {
       }
   };
 
+  // 5. LOGIKA CANCEL (WAJIB 4 MENIT)
   const handleCancelClick = () => {
      if (!activeOrder) return;
+
+     // Hitung selisih waktu
+     const orderTime = new Date(activeOrder.created_at || Date.now()).getTime();
+     const now = Date.now();
+     const diffMinutes = (now - orderTime) / (1000 * 60);
+
+     // JIKA KURANG DARI 4 MENIT -> TAMPILKAN PERINGATAN (POPUP)
+     if (diffMinutes < 4) {
+         const remaining = Math.ceil(4 - diffMinutes);
+         showConfirm(
+             "⏳ Tunggu Sebentar",
+             `Sesuai aturan server, pembatalan hanya bisa dilakukan setelah 4 menit agar status nomor akurat.\n\nMohon tunggu ${remaining} menit lagi.`,
+             closeConfirm, // Aksi: Hanya tutup popup
+             "Saya Mengerti" // Ubah teks tombol
+         );
+         return;
+     }
+
+     // JIKA SUDAH > 4 MENIT -> KONFIRMASI BATAL BIASA
      showConfirm(
          "Batalkan Pesanan?",
-         "Yakin batalkan pesanan? Saldo akan dikembalikan.",
+         "Yakin batalkan pesanan? Saldo akan dikembalikan otomatis.",
          async () => {
              setConfirmModal(prev => ({ ...prev, loading: true }));
              try {
+                // Panggil endpoint cancel di sini jika ada (atau set visual null)
                 setActiveOrder(null); 
                 closeConfirm();
                 showToast("Pesanan dibatalkan", "success");
@@ -228,6 +250,14 @@ export default function Order() {
              } catch(e) { closeConfirm(); }
          }
      );
+  };
+
+  // 6. LOGIKA CEK SMS (REFRESH)
+  const handleCheckSMS = async () => {
+      if(!activeOrder) return;
+      showToast("Memeriksa SMS masuk...", "success");
+      // Panggil refresh data
+      await fetchInitialData();
   };
 
   return (
@@ -255,38 +285,7 @@ export default function Order() {
       {/* KONTEN UTAMA */}
       <div className="px-5 mt-6 space-y-6">
         
-        {/* Active Order Card */}
-        {activeOrder && (
-             <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
-                <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
-                    Menunggu SMS
-                </div>
-                <div className="p-5">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center dark:bg-slate-900">
-                             <Loader2 size={24} className="text-blue-600 animate-spin" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{activeOrder.service || 'Layanan'}</h3>
-                            <p className="text-sm text-slate-500 font-mono">{activeOrder.phone_number}</p>
-                        </div>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
-                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={handleCancelClick} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400">
-                            <Trash2 size={14} /> Batalkan
-                        </button>
-                        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none">
-                            <Repeat size={14} /> Cek SMS
-                        </button>
-                    </div>
-                </div>
-             </div>
-        )}
-
-        {/* Big Button */}
+        {/* 1. TOMBOL GET VIRTUAL NUMBER (Ditaruh Paling Atas) */}
         <button 
             onClick={() => { setSheetMode('services'); setSearchTerm(''); }}
             className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95"
@@ -305,7 +304,7 @@ export default function Order() {
             </div>
         </button>
 
-        {/* Info Cards */}
+        {/* 2. INFO CARDS */}
         <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                 <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20"><Server size={18} /></div>
@@ -318,9 +317,55 @@ export default function Order() {
                 <p className="font-bold text-slate-700 dark:text-slate-200">193 Negara</p>
             </div>
         </div>
+
+        {/* 3. ACTIVE ORDER / CEK SMS (Ditaruh Paling Bawah) */}
+        {activeOrder && (
+             <div className="overflow-hidden rounded-3xl bg-white shadow-lg border border-blue-100 dark:bg-slate-950 dark:border-slate-800 relative animate-in slide-in-from-bottom duration-500">
+                <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1">
+                    <Clock size={12} /> Menunggu SMS
+                </div>
+                <div className="p-5">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center dark:bg-slate-900">
+                             <Loader2 size={24} className="text-blue-600 animate-spin" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{activeOrder.service || 'Layanan'}</h3>
+                            <p className="text-sm text-slate-500 font-mono tracking-wider">{activeOrder.phone_number}</p>
+                        </div>
+                    </div>
+                    
+                    {/* Progress Bar (Visual Only) */}
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
+                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={handleCancelClick}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 transition-colors"
+                        >
+                            <Trash2 size={16} /> Batalkan
+                        </button>
+                        <button 
+                            onClick={handleCheckSMS}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none transition-transform active:scale-95"
+                        >
+                            <Repeat size={16} /> Cek SMS
+                        </button>
+                    </div>
+                    
+                    {/* Note Kecil */}
+                    <p className="text-[10px] text-slate-400 text-center mt-3">
+                        Otomatis batal dalam 15-20 menit jika SMS tidak masuk.
+                    </p>
+                </div>
+             </div>
+        )}
+
       </div>
 
-      {/* CONFIRM MODAL */}
+      {/* CONFIRM MODAL (Universal) */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -331,10 +376,15 @@ export default function Order() {
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
+                          {/* Tombol Batal hanya muncul jika bukan sekedar info (confirmText != Saya Mengerti) */}
+                          {confirmModal.confirmText !== 'Saya Mengerti' && (
+                              <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                  Batal
+                              </button>
+                          )}
                           <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
-                              {confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                              {confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}
                           </button>
                       </div>
                   </div>
@@ -478,7 +528,7 @@ export default function Order() {
                              <span>Acak (Any)</span>
                          </button>
 
-                         {/* List Operator dari API (DIFILTER AGAR 'ANY' TIDAK MUNCUL) */}
+                         {/* List Operator dari API (DIFILTER AGAR 'ANY' TIDAK MUNCUL DUPLIKAT) */}
                          {currentOperators.length > 0 ? currentOperators.filter(op => op.name !== 'any').map((op) => (
                              <button 
                                  key={op.id}
