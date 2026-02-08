@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, Clock } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, Clock, Timer } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -27,19 +27,21 @@ export default function Order() {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // --- STATE TIMER (HITUNG MUNDUR) ---
+  const [cancelTimer, setCancelTimer] = useState(0); // Detik tersisa untuk bisa batal
+
   // Kontrol Bottom Sheet & Accordion
   const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
 
   // Modal & Toast
-  // Menambahkan confirmText agar tombol bisa berubah tulisan (misal: "Saya Mengerti")
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Cache
-  const CACHE_KEY = 'otp_services_v9';
-  const CACHE_TIME = 'otp_services_time_v9';
+  const CACHE_KEY = 'otp_services_v10';
+  const CACHE_TIME = 'otp_services_time_v10';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
@@ -55,7 +57,37 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- HELPER FUNCTIONS ---
+  // --- LOGIKA HITUNG MUNDUR (COUNTDOWN) ---
+  useEffect(() => {
+    let interval;
+    if (activeOrder) {
+      // Fungsi update timer
+      const updateTimer = () => {
+        const createdTime = new Date(activeOrder.created_at).getTime();
+        const now = Date.now();
+        const diffSeconds = Math.floor((now - createdTime) / 1000);
+        const lockDuration = 4 * 60; // 4 Menit (240 detik)
+
+        const remaining = lockDuration - diffSeconds;
+        setCancelTimer(remaining > 0 ? remaining : 0);
+      };
+
+      updateTimer(); // Jalankan sekali di awal
+      interval = setInterval(updateTimer, 1000); // Update tiap detik
+    } else {
+      setCancelTimer(0);
+    }
+    return () => clearInterval(interval);
+  }, [activeOrder]);
+
+  // Helper Format Waktu (MM:SS)
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // --- HELPER FUNCTIONS UI ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -92,6 +124,7 @@ export default function Order() {
     try {
       const resHistory = await api.get('/history/list'); 
       if (resHistory.data.success && resHistory.data.data.length > 0) {
+         // Ambil yang status ACTIVE / PENDING
          const pending = resHistory.data.data.find(o => o.status === 'ACTIVE' || o.status === 'PENDING');
          setActiveOrder(pending || null);
       }
@@ -218,31 +251,24 @@ export default function Order() {
   const handleCancelClick = () => {
      if (!activeOrder) return;
 
-     // Hitung selisih waktu
-     const orderTime = new Date(activeOrder.created_at || Date.now()).getTime();
-     const now = Date.now();
-     const diffMinutes = (now - orderTime) / (1000 * 60);
-
-     // JIKA KURANG DARI 4 MENIT -> TAMPILKAN PERINGATAN (POPUP)
-     if (diffMinutes < 4) {
-         const remaining = Math.ceil(4 - diffMinutes);
+     // Jika Timer Masih Jalan (Belum 4 menit)
+     if (cancelTimer > 0) {
          showConfirm(
-             "⏳ Tunggu Sebentar",
-             `Sesuai aturan server, pembatalan hanya bisa dilakukan setelah 4 menit agar status nomor akurat.\n\nMohon tunggu ${remaining} menit lagi.`,
+             "⏳ Belum Bisa Batal",
+             `Sesuai aturan server, pembatalan baru bisa dilakukan setelah 4 menit agar status nomor akurat.\n\nMohon tunggu ${formatTime(cancelTimer)} lagi.`,
              closeConfirm, // Aksi: Hanya tutup popup
              "Saya Mengerti" // Ubah teks tombol
          );
          return;
      }
 
-     // JIKA SUDAH > 4 MENIT -> KONFIRMASI BATAL BIASA
+     // Jika Timer Habis -> Boleh Batal
      showConfirm(
          "Batalkan Pesanan?",
          "Yakin batalkan pesanan? Saldo akan dikembalikan otomatis.",
          async () => {
              setConfirmModal(prev => ({ ...prev, loading: true }));
              try {
-                // Panggil endpoint cancel di sini jika ada (atau set visual null)
                 setActiveOrder(null); 
                 closeConfirm();
                 showToast("Pesanan dibatalkan", "success");
@@ -252,11 +278,10 @@ export default function Order() {
      );
   };
 
-  // 6. LOGIKA CEK SMS (REFRESH)
+  // 6. CEK SMS
   const handleCheckSMS = async () => {
       if(!activeOrder) return;
       showToast("Memeriksa SMS masuk...", "success");
-      // Panggil refresh data
       await fetchInitialData();
   };
 
@@ -285,7 +310,7 @@ export default function Order() {
       {/* KONTEN UTAMA */}
       <div className="px-5 mt-6 space-y-6">
         
-        {/* 1. TOMBOL GET VIRTUAL NUMBER (Ditaruh Paling Atas) */}
+        {/* 1. TOMBOL BESAR (GET VIRTUAL NUMBER) */}
         <button 
             onClick={() => { setSheetMode('services'); setSearchTerm(''); }}
             className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95"
@@ -318,7 +343,7 @@ export default function Order() {
             </div>
         </div>
 
-        {/* 3. ACTIVE ORDER / CEK SMS (Ditaruh Paling Bawah) */}
+        {/* 3. ACTIVE ORDER / CEK SMS (PINDAH KE PALING BAWAH) */}
         {activeOrder && (
              <div className="overflow-hidden rounded-3xl bg-white shadow-lg border border-blue-100 dark:bg-slate-950 dark:border-slate-800 relative animate-in slide-in-from-bottom duration-500">
                 <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400 flex items-center gap-1">
@@ -335,7 +360,7 @@ export default function Order() {
                         </div>
                     </div>
                     
-                    {/* Progress Bar (Visual Only) */}
+                    {/* Progress Bar Visual */}
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
                         <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
                     </div>
@@ -343,9 +368,16 @@ export default function Order() {
                     <div className="flex gap-3">
                         <button 
                             onClick={handleCancelClick}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400 transition-colors"
+                            disabled={false} // Selalu aktif agar bisa diklik untuk lihat pesan "Tunggu"
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-colors ${cancelTimer > 0 
+                                ? 'border-slate-200 text-slate-400 cursor-not-allowed hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500' 
+                                : 'border-red-100 text-red-600 hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400'}`}
                         >
-                            <Trash2 size={16} /> Batalkan
+                            {cancelTimer > 0 ? (
+                                <> <Timer size={16} /> Tunggu {formatTime(cancelTimer)} </>
+                            ) : (
+                                <> <Trash2 size={16} /> Batalkan </>
+                            )}
                         </button>
                         <button 
                             onClick={handleCheckSMS}
@@ -365,7 +397,7 @@ export default function Order() {
 
       </div>
 
-      {/* CONFIRM MODAL (Universal) */}
+      {/* CONFIRM MODAL */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -376,7 +408,6 @@ export default function Order() {
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          {/* Tombol Batal hanya muncul jika bukan sekedar info (confirmText != Saya Mengerti) */}
                           {confirmModal.confirmText !== 'Saya Mengerti' && (
                               <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                                   Batal
