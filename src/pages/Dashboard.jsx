@@ -3,27 +3,51 @@ import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { Bell, RefreshCw, Smartphone, Globe, Gamepad2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext'; // <--- Import Theme
+import { useTheme } from '../context/ThemeContext';
+import { jwtDecode } from 'jwt-decode'; // Import ini untuk baca Token
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { color } = useTheme(); // <--- Ambil color dari Theme
-  const [user, setUser] = useState({ username: 'Loading...', balance: 0 });
+  const { color } = useTheme();
+  
+  // --- BAGIAN INI RAHASIANYA ---
+  // Kita inisialisasi data user langsung dari Token / LocalStorage
+  // Jadi tidak perlu menunggu loading, nama langsung muncul!
+  const [user, setUser] = useState(() => {
+    // 1. Cek apakah ada data user tersimpan di HP?
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) return JSON.parse(savedUser);
+
+    // 2. Jika tidak ada, Cek Token dan ambil nama dari sana
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        return { 
+          username: decoded.username || 'Member', // Ambil nama dari token
+          balance: 0 
+        };
+      } catch (e) { 
+        return { username: 'Member', balance: 0 }; 
+      }
+    }
+
+    // 3. Default jika belum login
+    return { username: 'Member', balance: 0 };
+  });
+
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async () => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user'));
-      if (storedUser) {
-        setUser(storedUser);
-      }
-      
       const res = await api.get('/auth/me');
       if (res.data.success) {
         setUser(res.data.data);
+        // Simpan data terbaru ke HP biar besok bukanya cepet
         localStorage.setItem('user', JSON.stringify(res.data.data));
       }
     } catch (error) {
+      // Silent error
     } finally {
       setLoading(false);
     }
@@ -42,18 +66,18 @@ const Dashboard = () => {
   };
 
   return (
-    // Background menyesuaikan Dark Mode
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
       {/* Header */}
       <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/80 px-5 pb-4 pt-12 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Avatar ikut warna tema */}
+            {/* Avatar otomatis huruf depan Nama (Bukan L lagi) */}
             <div className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold shadow-sm ${color.btn}`}>
               {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
             </div>
             <div>
+              {/* Nama User langsung muncul */}
               <h1 className="text-lg font-bold text-slate-800 dark:text-white">{user.username}</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Selamat sore 🌤️</p>
             </div>
@@ -63,7 +87,7 @@ const Dashboard = () => {
                 className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 onClick={fetchUserData}
              >
-                <RefreshCw size={20} />
+                <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
              </button>
              <button className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                 <Bell size={20} />
@@ -80,7 +104,6 @@ const Dashboard = () => {
               <p className="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400">Saldo Kamu</p>
               <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{formatRupiah(user.balance)}</h2>
             </div>
-            {/* Tombol Top Up ikut warna tema */}
             <button 
               onClick={() => navigate('/deposit')}
               className={`flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-bold shadow-sm transition-transform active:scale-95 ${color.bg} ${color.text}`}
@@ -101,7 +124,6 @@ const Dashboard = () => {
 
       {/* Banner Get Virtual Number */}
       <div className="mt-6 px-5">
-        {/* Background Gradient ikut warna tema */}
         <div className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-lg bg-gradient-to-r ${color.gradient}`}>
            <div className="relative z-10">
               <h3 className="text-lg font-bold">Get Virtual Number</h3>
@@ -133,24 +155,21 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-           {/* Item 1 */}
-           <div className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700`}>
+           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                  <Zap size={24} />
               </div>
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">DANA</span>
            </div>
 
-           {/* Item 2 */}
-           <div className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700`}>
+           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
                  <Gamepad2 size={24} />
               </div>
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Free Fire</span>
            </div>
 
-           {/* Item 3 */}
-           <div className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700`}>
+           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                   <Smartphone size={24} />
               </div>
@@ -172,8 +191,6 @@ const Dashboard = () => {
             </div>
             <h4 className="mb-1 font-bold text-slate-800 dark:text-white">Tidak ada pesanan</h4>
             <p className="mb-6 text-sm text-slate-400">Pesanan aktif akan muncul disini</p>
-            
-            {/* Tombol Buat Pesanan ikut warna tema */}
             <button 
               onClick={() => navigate('/order')}
               className={`w-full rounded-xl py-3 text-sm font-medium shadow-sm transition-transform active:scale-95 ${color.btn}`}
