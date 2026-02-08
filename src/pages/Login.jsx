@@ -33,8 +33,9 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', form);
       if (res.data.success) {
-        // Simpan Token
-        localStorage.setItem('token', res.data.data.token);
+        // Token tidak lagi disimpan di localStorage karena sudah dikelola otomatis oleh browser via Cookie
+        // Kita cukup menyimpan penanda bahwa user sudah login
+        localStorage.setItem('isLoggedIn', 'true');
         
         showToast('✅ Login Berhasil! Masuk ke dashboard...', 'success');
         
@@ -142,5 +143,4 @@ export default function Login() {
     </div>
   );
 }
-
 

@@ -6,9 +6,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Deposit from './pages/Deposit'; 
 import History from './pages/History';
-import Order from './pages/Order';
+import Order from './pages/Order'; // <--- 1. IMPORT INI
 import Welcome from './pages/Welcome';
-import NotFound from './pages/NotFound'; // Import halaman 404
 import Navbar from './components/Navbar';
 
 const PrivateRoute = ({ children }) => {
@@ -60,6 +59,7 @@ function App() {
             </PrivateRoute>
           } />
           
+          {/* 2. UPDATE BAGIAN INI */}
           <Route path="/order" element={
             <PrivateRoute>
                <Order /> 
@@ -71,9 +71,6 @@ function App() {
                 <History />
             </PrivateRoute>
           } />
-
-          {/* CATCH-ALL ROUTE: Harus diletakkan paling bawah */}
-          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </Router>
@@ -81,5 +78,3 @@ function App() {
 }
 
 export default App;
-
-
