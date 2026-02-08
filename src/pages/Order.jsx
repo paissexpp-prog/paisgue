@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, ArrowLeft } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -22,26 +22,18 @@ export default function Order() {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Kontrol Bottom Sheet & Accordion
-  const [sheetMode, setSheetMode] = useState(null); // 'services' | 'countries' | null
+  // KONTROL SHEET (URUTAN: null -> services -> countries -> operators)
+  const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
-  const [expandedCountry, setExpandedCountry] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(null); // Data negara yang dipilih
 
-  // --- MODAL KONFIRMASI (PENGGANTI ALERT BROWSER) ---
-  const [confirmModal, setConfirmModal] = useState({
-      show: false,
-      title: '',
-      message: '',
-      onConfirm: null,
-      loading: false
-  });
-
-  // --- TOAST NOTIFICATION ---
+  // --- MODAL & TOAST ---
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // Cache Keys
-  const CACHE_KEY = 'otp_services_v7';
-  const CACHE_TIME = 'otp_services_time_v7';
+  // Cache
+  const CACHE_KEY = 'otp_services_v8';
+  const CACHE_TIME = 'otp_services_time_v8';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
   useEffect(() => {
@@ -57,24 +49,24 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- FUNGSI HELPER UI ---
+  // --- HELPER UI ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
   const showConfirm = (title, message, action) => {
-      setConfirmModal({
-          show: true,
-          title,
-          message,
-          onConfirm: action,
-          loading: false
-      });
+      setConfirmModal({ show: true, title, message, onConfirm: action, loading: false });
   };
 
   const closeConfirm = () => {
       setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
+  };
+
+  const getOptimizedImage = (url) => {
+    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
+    const cleanUrl = url.replace('https://', '').replace('http://', '');
+    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
   // 1. FETCH DATA AWAL
@@ -130,7 +122,6 @@ export default function Order() {
     setSheetMode('countries'); 
     setCountries([]);
     setLoadingCountries(true);
-    setExpandedCountry(null); 
 
     try {
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
@@ -144,38 +135,43 @@ export default function Order() {
     }
   };
 
-  const toggleCountry = (countryId) => {
-      setExpandedCountry(expandedCountry === countryId ? null : countryId);
+  // 3. KLIK NEGARA -> BUKA PILIHAN OPERATOR/SERVER (NEW!)
+  const handleCountryClick = (country) => {
+      if (!country.pricelist || country.pricelist.length === 0) {
+          showToast("Stok kosong untuk negara ini", "error");
+          return;
+      }
+      setSelectedCountry(country);
+      setSheetMode('operators'); // Pindah ke sheet ke-3
   };
 
-  // 3. LOGIKA TOMBOL BELI (MEMICU POPUP)
-  const handleBuyClick = (country, provider) => {
-      if (balance < provider.price) {
+  // 4. KLIK OPERATOR/SERVER -> KONFIRMASI BELI
+  const handleServerClick = (server) => {
+      if (balance < server.price) {
           showToast("Saldo tidak mencukupi!", "error");
           return;
       }
 
-      // Tampilkan Pop-up Konfirmasi Sendiri (Bukan Confirm Browser)
       showConfirm(
           "Konfirmasi Pembelian",
-          `Beli nomor ${country.name} (Server ${provider.server_id}) seharga Rp ${provider.price}?`,
-          () => processBuy(country, provider)
+          `Beli nomor ${selectedCountry.name} (${selectedService.service_name})\nServer ID: ${server.server_id}\nHarga: Rp ${server.price}`,
+          () => processBuy(server)
       );
   };
 
-  // 4. PROSES BELI (SETELAH KLIK YA DI POPUP)
-  const processBuy = async (country, provider) => {
-      setConfirmModal(prev => ({ ...prev, loading: true })); // Loading di tombol popup
+  const processBuy = async (server) => {
+      setConfirmModal(prev => ({ ...prev, loading: true }));
       
       try {
-          const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=any&expected_price=${provider.price}`;
+          // operator_id kita set 'any' karena user memilih berdasarkan server/harga spesifik di pricelist
+          const buyUrl = `/orders/buy?number_id=${selectedCountry.number_id}&provider_id=${server.provider_id}&operator_id=any&expected_price=${server.price}`;
           const res = await api.get(buyUrl);
           
           if (res.data.success) {
-              closeConfirm(); // Tutup Popup
-              setSheetMode(null); // Tutup Drawer
+              closeConfirm(); 
+              setSheetMode(null); // Tutup semua sheet
               showToast("✅ Order Berhasil! Menunggu SMS...", "success");
-              fetchInitialData(); // Refresh data pending order
+              fetchInitialData(); 
           } else {
               closeConfirm();
               showToast(res.data.error?.message || "Order Gagal", "error");
@@ -187,37 +183,12 @@ export default function Order() {
       }
   };
 
-  // 5. BATALKAN ORDER
-  const handleCancelClick = () => {
+  const handleCancelOrder = async () => {
      if (!activeOrder) return;
-     showConfirm(
-         "Batalkan Pesanan?",
-         "Apakah Anda yakin ingin membatalkan pesanan ini? Saldo akan dikembalikan.",
-         async () => {
-             setConfirmModal(prev => ({ ...prev, loading: true }));
-             try {
-                // Simulasi cancel sukses
-                setActiveOrder(null); 
-                closeConfirm();
-                showToast("Pesanan dibatalkan", "success");
-                fetchInitialData();
-             } catch(e) {
-                closeConfirm();
-             }
-         }
-     );
-  };
-
-  // Helper UI
-  const getOptimizedImage = (url) => {
-    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
-    const cleanUrl = url.replace('https://', '').replace('http://', '');
-    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
-  };
-
-  const getCheapestPrice = (pricelist) => {
-      if (!pricelist || pricelist.length === 0) return 0;
-      return Math.min(...pricelist.map(p => p.price));
+     if(window.confirm("Batalkan pesanan aktif?")) {
+        setActiveOrder(null); 
+        showToast("Pesanan dibatalkan", "success");
+     }
   };
 
   return (
@@ -242,10 +213,10 @@ export default function Order() {
            </div>
       </div>
 
-      {/* KONTEN */}
+      {/* KONTEN UTAMA */}
       <div className="px-5 mt-6 space-y-6">
 
-        {/* KARTU PESANAN PENDING */}
+        {/* KARTU PENDING ORDER */}
         {activeOrder && (
              <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
                 <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
@@ -267,10 +238,7 @@ export default function Order() {
                     </div>
 
                     <div className="flex gap-3">
-                        <button 
-                            onClick={handleCancelClick}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
-                        >
+                        <button onClick={handleCancelOrder} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400">
                             <Trash2 size={14} /> Batalkan
                         </button>
                         <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none">
@@ -283,10 +251,7 @@ export default function Order() {
 
         {/* TOMBOL GET VIRTUAL NUMBER */}
         <button 
-            onClick={() => {
-                setSheetMode('services');
-                setSearchTerm(''); 
-            }}
+            onClick={() => { setSheetMode('services'); setSearchTerm(''); }}
             className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95"
         >
             <div className="relative z-10 flex items-center justify-between">
@@ -303,27 +268,22 @@ export default function Order() {
             </div>
         </button>
 
-        {/* INFO TAMBAHAN */}
+        {/* INFO GRID */}
         <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
-                <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20">
-                    <Server size={18} />
-                </div>
+                <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20"><Server size={18} /></div>
                 <p className="text-xs text-slate-400">Server Status</p>
                 <p className="font-bold text-slate-700 dark:text-slate-200">Online 100%</p>
             </div>
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
-                <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20">
-                    <Globe size={18} />
-                </div>
+                <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20"><Globe size={18} /></div>
                 <p className="text-xs text-slate-400">Total Negara</p>
                 <p className="font-bold text-slate-700 dark:text-slate-200">193 Negara</p>
             </div>
         </div>
-
       </div>
 
-      {/* --- CUSTOM MODAL CONFIRMATION (REPLACEMENT FOR BROWSER ALERT) --- */}
+      {/* --- CUSTOM MODAL --- */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -332,21 +292,10 @@ export default function Order() {
                           <HelpCircle size={32} />
                       </div>
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
-                      
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          <button 
-                            onClick={closeConfirm}
-                            disabled={confirmModal.loading}
-                            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                          >
-                              Batal
-                          </button>
-                          <button 
-                            onClick={confirmModal.onConfirm}
-                            disabled={confirmModal.loading}
-                            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2"
-                          >
+                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
+                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
                               {confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}
                           </button>
@@ -356,159 +305,125 @@ export default function Order() {
           </div>
       )}
 
-      {/* --- TOAST NOTIFICATION MODERN --- */}
-      <div 
-         className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}
-      >
+      {/* --- TOAST --- */}
+      <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold">{toast.message}</span>
       </div>
 
-
       {/* --- SHEET 1: LAYANAN --- */}
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
-         
          <div className="pt-3 pb-2 px-6 bg-white rounded-t-[2rem] z-10 dark:bg-slate-900">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
                 <Search size={18} className="text-slate-400" />
-                <input 
-                    type="text" 
-                    placeholder="Cari layanan (WhatsApp, Telegram)..." 
-                    className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    autoFocus
-                />
+                <input type="text" placeholder="Cari layanan (WhatsApp, Telegram)..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
             </div>
          </div>
-
          <div className="flex-1 overflow-y-auto px-6 py-4 pb-10">
             {loadingServices ? (
-                <div className="grid grid-cols-4 gap-4">
-                    {[...Array(12)].map((_,i) => <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse dark:bg-slate-800"></div>)}
-                </div>
+                <div className="grid grid-cols-4 gap-4">{[...Array(12)].map((_,i) => <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse dark:bg-slate-800"></div>)}</div>
             ) : filteredServices.length > 0 ? (
                 <div className="grid grid-cols-4 gap-x-2 gap-y-6 sm:grid-cols-5">
                     {filteredServices.map((item) => (
-                        <button 
-                            key={item.service_code}
-                            onClick={() => handleServiceClick(item)}
-                            className="group flex flex-col items-center gap-2"
-                        >
+                        <button key={item.service_code} onClick={() => handleServiceClick(item)} className="group flex flex-col items-center gap-2">
                             <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 p-2 border border-slate-100 transition-all group-active:scale-95 hover:border-blue-200 dark:bg-slate-800 dark:border-slate-700">
-                                <img 
-                                    src={getOptimizedImage(item.service_img)} 
-                                    className="h-full w-full object-contain"
-                                    loading="lazy"
-                                />
+                                <img src={getOptimizedImage(item.service_img)} className="h-full w-full object-contain" loading="lazy" />
                             </div>
-                            <span className="truncate w-full text-center text-[10px] font-medium text-slate-600 dark:text-slate-400">
-                                {item.service_name}
-                            </span>
+                            <span className="truncate w-full text-center text-[10px] font-medium text-slate-600 dark:text-slate-400">{item.service_name}</span>
                         </button>
                     ))}
                 </div>
-            ) : (
-                <div className="text-center py-10 text-slate-400">Tidak ditemukan</div>
-            )}
+            ) : (<div className="text-center py-10 text-slate-400">Tidak ditemukan</div>)}
          </div>
       </div>
 
-      {/* --- SHEET 2: NEGARA (ACCORDION STYLE) --- */}
+      {/* --- SHEET 2: NEGARA --- */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
-         
          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-3">
-                <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <X size={20} className="text-slate-500" />
-                </button>
+                <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft size={20} className="text-slate-500" /></button>
                 {selectedService && (
-                    <>
-                        <img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" />
-                        <h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3>
-                    </>
+                    <div className="flex items-center gap-2">
+                        <img src={getOptimizedImage(selectedService.service_img)} className="w-6 h-6 object-contain" />
+                        <h3 className="font-bold text-slate-800 dark:text-white">Pilih Negara</h3>
+                    </div>
+                )}
+            </div>
+         </div>
+         <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
+            {loadingCountries ? (
+                <div className="space-y-3 mt-4">{[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-800"></div>)}</div>
+            ) : countries.length > 0 ? (
+                <div className="space-y-3 mt-4">
+                    {countries.map((country) => (
+                        <button key={country.number_id} onClick={() => handleCountryClick(country)} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-4">
+                                <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
+                                    <p className="text-xs text-slate-400">Tersedia {country.pricelist?.length || 0} Server</p>
+                                </div>
+                            </div>
+                            <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800"><ChevronRight size={16} /></div>
+                        </button>
+                    ))}
+                </div>
+            ) : (<div className="text-center py-10 text-slate-400"><p>Negara tidak tersedia.</p></div>)}
+         </div>
+      </div>
+
+      {/* --- SHEET 3: OPERATOR / SERVER (NEW!) --- */}
+      <div className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'operators' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('countries')}></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-[70] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'operators' ? 'translate-y-0' : 'translate-y-full'}`}>
+         
+         {/* HEADER SHEET 3 */}
+         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
+            <div className="flex items-center gap-3">
+                <button onClick={() => setSheetMode('countries')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft size={20} className="text-slate-500" /></button>
+                {selectedCountry && (
+                    <div className="flex items-center gap-2">
+                        <img src={getOptimizedImage(selectedCountry.img)} className="w-6 h-6 object-cover rounded" />
+                        <div>
+                             <h3 className="font-bold text-slate-800 dark:text-white text-sm">{selectedCountry.name}</h3>
+                             <p className="text-[10px] text-slate-400">Pilih Operator / Server</p>
+                        </div>
+                    </div>
                 )}
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
-            {loadingCountries ? (
-                <div className="space-y-3 mt-4">
-                    {[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-800"></div>)}
-                </div>
-            ) : countries.length > 0 ? (
-                <div className="space-y-3 mt-4">
-                    {countries.map((country) => {
-                        const startPrice = getCheapestPrice(country.pricelist);
-                        const isExpanded = expandedCountry === country.number_id;
-
-                        // Filter provider yang tersedia dan ada stok
-                        const availableServers = country.pricelist
-                            ?.filter(p => p.stock > 0 && p.available)
-                            .sort((a,b) => a.price - b.price) || [];
-
-                        return (
-                            <div key={country.number_id} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 transition-all dark:border-slate-800 dark:bg-slate-900/50">
-                                
-                                {/* HEADER ACCORDION (Klik disini untuk buka list server) */}
-                                <button 
-                                    onClick={() => toggleCountry(country.number_id)}
-                                    className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
-                                        <div className="text-left">
-                                            <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
-                                            <p className="text-xs text-blue-600 font-medium">Mulai Rp {startPrice.toLocaleString('id-ID')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-slate-400">Stok: {country.stock_total}</span>
-                                        {isExpanded ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
-                                    </div>
-                                </button>
-
-                                {/* ISI ACCORDION (LIST SERVER) */}
-                                {isExpanded && (
-                                    <div className="bg-white border-t border-slate-100 p-3 space-y-2 dark:bg-slate-950 dark:border-slate-800">
-                                        {availableServers.length > 0 ? availableServers.map((server, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-50 bg-slate-50 dark:bg-slate-900 dark:border-slate-800">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Server size={14} className="text-slate-400" />
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Server {server.server_id}</span>
-                                                    </div>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">Stok: {server.stock} pcs</p>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-bold text-emerald-600 text-sm dark:text-emerald-400">Rp {server.price}</span>
-                                                    <button 
-                                                        onClick={() => handleBuyClick(country, server)}
-                                                        className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-transform active:scale-95 dark:bg-white dark:text-slate-900"
-                                                    >
-                                                        Beli
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <div className="text-center py-4 text-xs text-red-400">
-                                                Maaf, stok server sedang kosong.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            ) : (
-                <div className="text-center py-10 text-slate-400">
-                    <p>Negara tidak tersedia.</p>
-                </div>
-            )}
+         {/* LIST OPERATOR / SERVER */}
+         <div className="flex-1 overflow-y-auto px-6 py-4 pb-10 space-y-3">
+             {selectedCountry?.pricelist?.filter(p => p.stock > 0 && p.available).sort((a,b) => a.price - b.price).map((server, idx) => (
+                 <button 
+                    key={idx}
+                    onClick={() => handleServerClick(server)}
+                    className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:border-blue-200 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-blue-900"
+                 >
+                     <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-slate-100 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
+                             <Signal size={20} />
+                         </div>
+                         <div className="text-left">
+                             <p className="font-bold text-slate-700 text-sm dark:text-slate-200">Server {server.server_id}</p>
+                             <div className="flex items-center gap-2">
+                                <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 dark:bg-slate-700 dark:text-slate-300">Stok: {server.stock}</span>
+                                <span className="text-[10px] text-slate-400">Rate: {server.rate}%</span>
+                             </div>
+                         </div>
+                     </div>
+                     <div className="text-right">
+                         <p className="font-bold text-blue-600 text-sm">Rp {server.price.toLocaleString('id-ID')}</p>
+                         <p className="text-[10px] text-slate-400">Pilih</p>
+                     </div>
+                 </button>
+             ))}
+             {(!selectedCountry?.pricelist || selectedCountry.pricelist.length === 0) && (
+                 <div className="text-center py-10 text-slate-400">Stok habis untuk negara ini.</div>
+             )}
          </div>
       </div>
 
@@ -516,3 +431,4 @@ export default function Order() {
     </div>
   );
 }
+
