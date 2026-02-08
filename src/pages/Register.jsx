@@ -33,33 +33,12 @@ export default function Register() {
     setError('');
 
     try {
-      // 1. PROSES REGISTRASI
-      const resReg = await api.post('/auth/register', form);
-      
-      if (resReg.data.success) {
-        showToast('✅ Akun dibuat! Sedang masuk...', 'success');
-
-        // 2. PROSES AUTO-LOGIN (Langsung Login Otomatis)
-        try {
-            const resLogin = await api.post('/auth/login', {
-                email: form.email,
-                password: form.password
-            });
-
-            if (resLogin.data.success) {
-                // Simpan Token
-                localStorage.setItem('token', resLogin.data.data.token);
-                
-                // Jeda sebentar agar user lihat notifikasi, lalu ke DASHBOARD
-                setTimeout(() => {
-                    navigate('/'); // Langsung ke Dashboard/Home
-                }, 1500);
-            }
-        } catch (loginErr) {
-            // Jaga-jaga jika auto-login gagal, lempar ke halaman login manual
-            console.error("Auto login error", loginErr);
-            setTimeout(() => navigate('/login'), 1500);
-        }
+      const res = await api.post('/auth/register', form);
+      if (res.data.success) {
+        showToast('✅ Registrasi Berhasil! Mengalihkan...', 'success');
+        setTimeout(() => {
+            navigate('/login');
+        }, 1500);
       }
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Registrasi gagal';
@@ -129,7 +108,7 @@ export default function Register() {
                 
                 {/* Tombol Mata */}
                 <button
-                  type="button" 
+                  type="button" // PENTING: Agar tidak submit form saat diklik
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
@@ -149,7 +128,7 @@ export default function Register() {
                     Memproses...
                 </>
             ) : (
-                'Daftar & Langsung Masuk'
+                'Daftar Sekarang'
             )}
           </button>
         </form>
@@ -168,4 +147,3 @@ export default function Register() {
     </div>
   );
 }
-
