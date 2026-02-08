@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Monitor, Palette, LogOut, LayoutDashboard } from 'lucide-react';
+import { Sun, Moon, Monitor, Palette, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -12,19 +12,25 @@ export default function Navbar() {
   const token = localStorage.getItem('token');
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
 
-  // Helper agar navbar hilang di halaman login/regis jika diinginkan (opsional)
+  // Helper agar navbar hilang di halaman login/regis jika diinginkan
   // if (isAuthPage) return null; 
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-slate-950/80">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         
-        {/* LOGO */}
-        <Link to="/" className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
-          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${color.btn}`}>
-            OTP
-          </div>
-          <span>RuangOTP</span>
+        {/* LOGO UTAMA (DENGAN GAMBAR) */}
+        <Link to="/" className="flex items-center gap-3 group">
+          {/* Gambar Logo */}
+          <img 
+            src="https://cdn.nekohime.site/file/HsGrgzQf.jpeg" 
+            alt="RuangOTP Logo" 
+            className="h-10 w-10 rounded-full object-cover shadow-sm border border-slate-200 dark:border-slate-700 transition-transform group-hover:scale-105"
+          />
+          {/* Teks Logo (Warna menyesuaikan tema) */}
+          <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            RuangOTP
+          </span>
         </Link>
 
         {/* MENU KANAN */}
@@ -95,7 +101,7 @@ export default function Navbar() {
               <Link to="/dashboard" className={`hidden rounded-full px-4 py-1.5 text-sm font-medium transition-all sm:block ${color.btn}`}>
                 Dashboard
               </Link>
-              <button onClick={() => { localStorage.clear(); navigate('/login'); }} className="text-slate-500 hover:text-red-500">
+              <button onClick={() => { localStorage.clear(); navigate('/login'); }} className="text-slate-500 hover:text-red-500 transition-colors">
                 <LogOut size={20} />
               </button>
             </>
