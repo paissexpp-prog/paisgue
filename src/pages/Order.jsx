@@ -13,18 +13,16 @@ export default function Order() {
   const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isUsingCache, setIsUsingCache] = useState(false);
-
-  // Kunci untuk LocalStorage
-  const CACHE_KEY = 'otp_services_data';
-  const CACHE_TIME = 'otp_services_time';
-  const CACHE_DURATION = 60 * 60 * 1000; // 1 Jam (dalam milidetik)
+  
+  // Cache Keys
+  const CACHE_KEY = 'otp_services_data_v2'; // Ganti versi biar cache lama ke-reset
+  const CACHE_TIME = 'otp_services_time_v2';
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 Jam
 
   useEffect(() => {
     fetchServices();
   }, []);
 
-  // Filter pencarian real-time
   useEffect(() => {
     const results = services.filter(service =>
       service.service_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -35,37 +33,29 @@ export default function Order() {
   const fetchServices = async (forceRefresh = false) => {
     setLoading(true);
     
-    // 1. CEK CACHE DULU
+    // Cek Cache
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME);
     const now = Date.now();
 
     if (!forceRefresh && cachedData && cachedTime && (now - cachedTime < CACHE_DURATION)) {
-      // Jika ada cache & belum expired (1 jam), pakai data lama
       const parsedData = JSON.parse(cachedData);
       setServices(parsedData);
       setFilteredServices(parsedData);
-      setIsUsingCache(true);
       setLoading(false);
-      console.log("Menggunakan data cache lokal (Hemat Kuota)");
       return; 
     }
 
-    // 2. JIKA TIDAK ADA CACHE / EXPIRED / FORCE REFRESH: AMBIL DARI API
+    // Fetch API
     try {
       const res = await api.get('/services/list');
       if (res.data.success) {
         const data = res.data.data;
-        
-        // Simpan ke State
         setServices(data);
         setFilteredServices(data);
         
-        // Simpan ke Cache LocalStorage
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         localStorage.setItem(CACHE_TIME, now);
-        
-        setIsUsingCache(false);
       }
     } catch (err) {
       console.error("Gagal mengambil layanan", err);
@@ -74,19 +64,24 @@ export default function Order() {
     }
   };
 
-  // Fungsi saat layanan diklik
+  // Fungsi Helper: Memperbaiki URL Gambar agar Muncul
+  const getOptimizedImage = (url) => {
+    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
+    // Trik: Gunakan layanan proxy gambar gratis weserv.nl untuk bypass hotlink protection & resize otomatis
+    // url=https://assets.rumahotp.com/apps/wa.png -> https://images.weserv.nl/?url=assets.rumahotp.com/apps/wa.png&w=100
+    const cleanUrl = url.replace('https://', '').replace('http://', '');
+    return `https://images.weserv.nl/?url=${cleanUrl}&w=100&h=100&fit=contain&output=webp`;
+  };
+
   const handleSelectService = (service) => {
-    // Navigasi ke halaman pemilihan negara (kita buat nanti)
-    // Kita kirim ID Service lewat URL atau State
-    // Contoh: /order/countries?service_code=13&name=WhatsApp
-    alert(`Anda memilih: ${service.service_name} (ID: ${service.service_code})`);
-    // navigate(`/order/countries?service_id=${service.service_code}`); 
+    // Navigasi ke pemilihan negara (nanti dibuat)
+    console.log("Selected:", service);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* Header Sticky */}
+      {/* Header */}
       <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 px-5 pt-6 pb-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -95,7 +90,6 @@ export default function Order() {
               {loading ? 'Memuat...' : `${services.length} Aplikasi Tersedia`}
             </p>
           </div>
-          {/* Tombol Refresh Cache Manual */}
           <button 
             onClick={() => fetchServices(true)}
             className="rounded-full bg-slate-100 p-2 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -104,7 +98,7 @@ export default function Order() {
           </button>
         </div>
 
-        {/* Search Bar */}
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
@@ -117,10 +111,9 @@ export default function Order() {
         </div>
       </div>
 
-      {/* Konten Grid Layanan */}
+      {/* Grid Layanan */}
       <div className="px-5 mt-4">
         {loading ? (
-          // Skeleton Loading Animation
           <div className="grid grid-cols-4 gap-4">
             {[...Array(12)].map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-2">
@@ -139,13 +132,13 @@ export default function Order() {
               >
                 <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-sm border border-slate-100 transition-all group-hover:shadow-md dark:border-slate-800 dark:bg-slate-800">
                   <img 
-                    src={item.service_img} 
+                    src={getOptimizedImage(item.service_img)} 
                     alt={item.service_name}
                     className="h-full w-full object-contain rounded-lg"
-                    loading="lazy" // Native Lazy Loading Browser
+                    loading="lazy"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "https://cdn-icons-png.flaticon.com/512/1176/1176425.png"; // Fallback Icon jika gambar error
+                      e.target.src = "https://cdn-icons-png.flaticon.com/512/1176/1176425.png"; 
                     }}
                   />
                 </div>
@@ -156,7 +149,6 @@ export default function Order() {
             ))}
           </div>
         ) : (
-          // Tampilan jika pencarian kosong
           <div className="mt-10 text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
               <ServerCrash size={32} className="text-slate-400" />
@@ -171,3 +163,4 @@ export default function Order() {
     </div>
   );
 }
+
