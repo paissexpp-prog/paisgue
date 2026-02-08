@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, ArrowLeft } from 'lucide-react';
+import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal } from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
@@ -22,17 +22,21 @@ export default function Order() {
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // KONTROL SHEET (URUTAN: null -> services -> countries -> operators)
+  // Kontrol Sheet & Accordion
   const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
-  const [selectedCountry, setSelectedCountry] = useState(null); // Data negara yang dipilih
+  const [expandedCountry, setExpandedCountry] = useState(null); // Negara yang dibuka
 
-  // --- MODAL & TOAST ---
+  // STATE PILIHAN OPERATOR (Yang baru!)
+  // Format: { [countryId]: { provider: object, serverId: number } }
+  const [selectedOption, setSelectedOption] = useState({}); 
+
+  // Modal & Toast
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Cache
-  const CACHE_KEY = 'otp_services_v8';
+  const CACHE_KEY = 'otp_services_v8'; // Versi baru
   const CACHE_TIME = 'otp_services_time_v8';
   const CACHE_DURATION = 60 * 60 * 1000; 
 
@@ -49,7 +53,7 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- HELPER UI ---
+  // --- HELPER LOGIC ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -58,18 +62,21 @@ export default function Order() {
   const showConfirm = (title, message, action) => {
       setConfirmModal({ show: true, title, message, onConfirm: action, loading: false });
   };
+  const closeConfirm = () => setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
 
-  const closeConfirm = () => {
-      setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
+  // Grouping Data Pricelist berdasarkan Server ID
+  const groupPricesByServer = (pricelist) => {
+      if (!pricelist) return {};
+      // Kelompokkan: { '1': [item, item], '2': [item] }
+      return pricelist.reduce((acc, item) => {
+          const sId = item.server_id || 'Unknown';
+          if (!acc[sId]) acc[sId] = [];
+          acc[sId].push(item);
+          return acc;
+      }, {});
   };
 
-  const getOptimizedImage = (url) => {
-    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
-    const cleanUrl = url.replace('https://', '').replace('http://', '');
-    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
-  };
-
-  // 1. FETCH DATA AWAL
+  // --- FETCH DATA ---
   const fetchInitialData = async () => {
     const start = Date.now();
     try {
@@ -85,7 +92,6 @@ export default function Order() {
          setActiveOrder(pending || null);
       }
     } catch (e) {}
-
     loadServicesFromCache();
   };
 
@@ -93,7 +99,6 @@ export default function Order() {
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME);
     const now = Date.now();
-
     if (cachedData && cachedTime && (now - cachedTime < CACHE_DURATION)) {
       const parsedData = JSON.parse(cachedData);
       setServices(parsedData);
@@ -108,69 +113,70 @@ export default function Order() {
           localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.data));
           localStorage.setItem(CACHE_TIME, now);
         }
-      } catch (err) {
-        console.error("Gagal load services");
-      } finally {
-        setLoadingServices(false);
-      }
+      } catch (err) { console.error("Gagal load services"); } 
+      finally { setLoadingServices(false); }
     }
   };
 
-  // 2. KLIK LAYANAN -> BUKA NEGARA
+  // --- HANDLERS ---
   const handleServiceClick = async (service) => {
     setSelectedService(service);
     setSheetMode('countries'); 
     setCountries([]);
     setLoadingCountries(true);
+    setExpandedCountry(null); 
+    setSelectedOption({}); // Reset pilihan
 
     try {
       const res = await api.get(`/countries/list?service_id=${service.service_code}`);
-      if (res.data.success) {
-        setCountries(res.data.data);
-      }
-    } catch (err) {
-      showToast("Gagal memuat negara", "error");
-    } finally {
-      setLoadingCountries(false);
-    }
+      if (res.data.success) setCountries(res.data.data);
+    } catch (err) { showToast("Gagal memuat negara", "error"); } 
+    finally { setLoadingCountries(false); }
   };
 
-  // 3. KLIK NEGARA -> BUKA PILIHAN OPERATOR/SERVER (NEW!)
-  const handleCountryClick = (country) => {
-      if (!country.pricelist || country.pricelist.length === 0) {
-          showToast("Stok kosong untuk negara ini", "error");
+  const toggleCountry = (countryId) => {
+      setExpandedCountry(expandedCountry === countryId ? null : countryId);
+      // Reset pilihan operator jika ganti negara
+      if(expandedCountry !== countryId) setSelectedOption({});
+  };
+
+  // PILIH OPERATOR (ITEM DALAM SLIDE)
+  const selectOperator = (countryId, provider) => {
+      setSelectedOption({
+          ...selectedOption,
+          [countryId]: provider
+      });
+  };
+
+  // KLIK TOMBOL ORDER
+  const handleBuyClick = (country) => {
+      const provider = selectedOption[country.number_id];
+      if (!provider) {
+          showToast("Pilih operator/harga terlebih dahulu!", "error");
           return;
       }
-      setSelectedCountry(country);
-      setSheetMode('operators'); // Pindah ke sheet ke-3
-  };
-
-  // 4. KLIK OPERATOR/SERVER -> KONFIRMASI BELI
-  const handleServerClick = (server) => {
-      if (balance < server.price) {
+      if (balance < provider.price) {
           showToast("Saldo tidak mencukupi!", "error");
           return;
       }
 
       showConfirm(
-          "Konfirmasi Pembelian",
-          `Beli nomor ${selectedCountry.name} (${selectedService.service_name})\nServer ID: ${server.server_id}\nHarga: Rp ${server.price}`,
-          () => processBuy(server)
+          "Konfirmasi Order",
+          `Beli ${selectedService.service_name} (${country.name})\nServer ${provider.server_id} - Rp ${provider.price.toLocaleString('id-ID')}?`,
+          () => processBuy(country, provider)
       );
   };
 
-  const processBuy = async (server) => {
+  const processBuy = async (country, provider) => {
       setConfirmModal(prev => ({ ...prev, loading: true }));
-      
       try {
-          // operator_id kita set 'any' karena user memilih berdasarkan server/harga spesifik di pricelist
-          const buyUrl = `/orders/buy?number_id=${selectedCountry.number_id}&provider_id=${server.provider_id}&operator_id=any&expected_price=${server.price}`;
+          const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=any&expected_price=${provider.price}`;
           const res = await api.get(buyUrl);
           
           if (res.data.success) {
               closeConfirm(); 
-              setSheetMode(null); // Tutup semua sheet
-              showToast("✅ Order Berhasil! Menunggu SMS...", "success");
+              setSheetMode(null); 
+              showToast("✅ Order Berhasil!", "success");
               fetchInitialData(); 
           } else {
               closeConfirm();
@@ -178,23 +184,37 @@ export default function Order() {
           }
       } catch (err) {
           closeConfirm();
-          const errMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
-          showToast(errMsg, "error");
+          showToast("Terjadi kesalahan koneksi", "error");
       }
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelClick = () => {
      if (!activeOrder) return;
-     if(window.confirm("Batalkan pesanan aktif?")) {
-        setActiveOrder(null); 
-        showToast("Pesanan dibatalkan", "success");
-     }
+     showConfirm("Batalkan Pesanan?", "Saldo akan dikembalikan.", async () => {
+         setConfirmModal(prev => ({ ...prev, loading: true }));
+         try {
+            setActiveOrder(null); 
+            closeConfirm();
+            showToast("Pesanan dibatalkan", "success");
+         } catch(e) { closeConfirm(); }
+     });
+  };
+
+  const getOptimizedImage = (url) => {
+    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
+    const cleanUrl = url.replace('https://', '').replace('http://', '');
+    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
+  };
+
+  const getCheapestPrice = (pricelist) => {
+      if (!pricelist || pricelist.length === 0) return 0;
+      return Math.min(...pricelist.map(p => p.price));
   };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* HEADER UTAMA */}
+      {/* HEADER */}
       <div className="sticky top-0 z-30 bg-white/80 pb-4 pt-8 backdrop-blur-md dark:bg-slate-950/80 px-5 border-b border-slate-100 dark:border-slate-800">
            <div className="flex items-center justify-between">
               <div>
@@ -215,13 +235,10 @@ export default function Order() {
 
       {/* KONTEN UTAMA */}
       <div className="px-5 mt-6 space-y-6">
-
-        {/* KARTU PENDING ORDER */}
+        {/* Active Order Card */}
         {activeOrder && (
              <div className="overflow-hidden rounded-3xl bg-white shadow-sm border border-slate-100 dark:bg-slate-950 dark:border-slate-800 relative">
-                <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">
-                    Menunggu SMS
-                </div>
+                <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-bl-xl dark:bg-amber-900/30 dark:text-amber-400">Menunggu SMS</div>
                 <div className="p-5">
                     <div className="flex items-center gap-4 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center dark:bg-slate-900">
@@ -232,24 +249,18 @@ export default function Order() {
                             <p className="text-sm text-slate-500 font-mono">{activeOrder.phone_number}</p>
                         </div>
                     </div>
-                    
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
                         <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
                     </div>
-
                     <div className="flex gap-3">
-                        <button onClick={handleCancelOrder} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400">
-                            <Trash2 size={14} /> Batalkan
-                        </button>
-                        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none">
-                            <Repeat size={14} /> Cek SMS
-                        </button>
+                        <button onClick={handleCancelClick} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"><Trash2 size={14} /> Batalkan</button>
+                        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"><Repeat size={14} /> Cek SMS</button>
                     </div>
                 </div>
              </div>
         )}
 
-        {/* TOMBOL GET VIRTUAL NUMBER */}
+        {/* Big Button */}
         <button 
             onClick={() => { setSheetMode('services'); setSearchTerm(''); }}
             className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95"
@@ -263,12 +274,10 @@ export default function Order() {
                     <Plus size={24} className="text-white" />
                 </div>
             </div>
-            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
-                <Smartphone size={120} className="text-white" />
-            </div>
+            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12"><Smartphone size={120} className="text-white" /></div>
         </button>
 
-        {/* INFO GRID */}
+        {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                 <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20"><Server size={18} /></div>
@@ -283,7 +292,7 @@ export default function Order() {
         </div>
       </div>
 
-      {/* --- CUSTOM MODAL --- */}
+      {/* --- CONFIRMATION MODAL --- */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -293,11 +302,11 @@ export default function Order() {
                       </div>
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line">{confirmModal.message}</p>
+                      
                       <div className="flex gap-3 w-full">
-                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
+                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">Batal</button>
                           <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
-                              {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
-                              {confirmModal.loading ? 'Memproses...' : 'Ya, Lanjutkan'}
+                              {confirmModal.loading ? <Loader2 size={16} className="animate-spin" /> : 'Ya, Lanjutkan'}
                           </button>
                       </div>
                   </div>
@@ -318,7 +327,7 @@ export default function Order() {
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
                 <Search size={18} className="text-slate-400" />
-                <input type="text" placeholder="Cari layanan (WhatsApp, Telegram)..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+                <input type="text" placeholder="Cari layanan..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
             </div>
          </div>
          <div className="flex-1 overflow-y-auto px-6 py-4 pb-10">
@@ -339,91 +348,108 @@ export default function Order() {
          </div>
       </div>
 
-      {/* --- SHEET 2: NEGARA --- */}
+      {/* --- SHEET 2: NEGARA (ACCORDION + SLIDE OPERATOR) --- */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
+         
+         {/* HEADER SHEET 2 */}
          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
             <div className="flex items-center gap-3">
-                <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft size={20} className="text-slate-500" /></button>
+                <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><X size={20} className="text-slate-500" /></button>
                 {selectedService && (
-                    <div className="flex items-center gap-2">
-                        <img src={getOptimizedImage(selectedService.service_img)} className="w-6 h-6 object-contain" />
-                        <h3 className="font-bold text-slate-800 dark:text-white">Pilih Negara</h3>
-                    </div>
+                    <>
+                        <img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" />
+                        <h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3>
+                    </>
                 )}
             </div>
          </div>
+
+         {/* CONTENT NEGARA */}
          <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
             {loadingCountries ? (
                 <div className="space-y-3 mt-4">{[1,2,3,4].map(i => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-800"></div>)}</div>
             ) : countries.length > 0 ? (
                 <div className="space-y-3 mt-4">
-                    {countries.map((country) => (
-                        <button key={country.number_id} onClick={() => handleCountryClick(country)} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:bg-slate-800">
-                            <div className="flex items-center gap-4">
-                                <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
-                                <div className="text-left">
-                                    <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
-                                    <p className="text-xs text-slate-400">Tersedia {country.pricelist?.length || 0} Server</p>
-                                </div>
+                    {countries.map((country) => {
+                        const startPrice = getCheapestPrice(country.pricelist);
+                        const isExpanded = expandedCountry === country.number_id;
+                        const serversMap = groupPricesByServer(country.pricelist);
+                        
+                        // Cek apakah user sudah memilih operator di negara ini
+                        const currentSelection = selectedOption[country.number_id];
+
+                        return (
+                            <div key={country.number_id} className={`overflow-hidden rounded-xl border transition-all dark:bg-slate-900/50 ${isExpanded ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900' : 'border-slate-100 bg-slate-50 dark:border-slate-800'}`}>
+                                
+                                {/* 1. HEADER NEGARA (KLIK BUKA) */}
+                                <button onClick={() => toggleCountry(country.number_id)} className="w-full flex items-center justify-between p-4">
+                                    <div className="flex items-center gap-4">
+                                        <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="flag" />
+                                        <div className="text-left">
+                                            <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p>
+                                            <p className="text-xs text-blue-600 font-medium">Mulai Rp {startPrice.toLocaleString('id-ID')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400">Stok: {country.stock_total}</span>
+                                        {isExpanded ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
+                                    </div>
+                                </button>
+
+                                {/* 2. ISI ACCORDION (LIST SERVER & SLIDE OPERATOR) */}
+                                {isExpanded && (
+                                    <div className="bg-white border-t border-slate-100 p-4 space-y-4 dark:bg-slate-950 dark:border-slate-800 animate-in slide-in-from-top-2 duration-200">
+                                        
+                                        {Object.keys(serversMap).map(serverId => (
+                                            <div key={serverId}>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Server size={14} className="text-slate-400" />
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">Server {serverId}</span>
+                                                </div>
+                                                
+                                                {/* --- HORIZONTAL SCROLL (SLIDE KIRI KANAN) --- */}
+                                                <div className="flex gap-3 overflow-x-auto pb-2 snap-x scrollbar-hide">
+                                                    {serversMap[serverId].map((provider, idx) => {
+                                                        const isSelected = currentSelection?.provider_id === provider.provider_id;
+                                                        return (
+                                                            <button 
+                                                                key={idx}
+                                                                onClick={() => selectOperator(country.number_id, provider)}
+                                                                className={`snap-center min-w-[120px] p-3 rounded-xl border-2 text-left transition-all ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 bg-white hover:border-slate-200 dark:bg-slate-900 dark:border-slate-800'}`}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <Signal size={16} className={isSelected ? "text-blue-500" : "text-slate-300"} />
+                                                                    {isSelected && <CheckCircle2 size={16} className="text-blue-500" />}
+                                                                </div>
+                                                                <p className={`font-bold text-sm ${isSelected ? 'text-blue-700' : 'text-slate-700 dark:text-slate-300'}`}>Rp {provider.price}</p>
+                                                                <p className="text-[10px] text-slate-400 mt-0.5">Stok: {provider.stock}</p>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* 3. TOMBOL BELI (MUNCUL SETELAH PILIH) */}
+                                        {currentSelection && (
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                                <button 
+                                                    onClick={() => handleBuyClick(country)}
+                                                    className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-lg hover:bg-black transition-transform active:scale-95 flex items-center justify-center gap-2 dark:bg-white dark:text-slate-900"
+                                                >
+                                                    <ShoppingBag size={16} />
+                                                    Beli Sekarang - Rp {currentSelection.price}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="bg-slate-100 p-2 rounded-full text-slate-400 dark:bg-slate-800"><ChevronRight size={16} /></div>
-                        </button>
-                    ))}
+                        );
+                    })}
                 </div>
             ) : (<div className="text-center py-10 text-slate-400"><p>Negara tidak tersedia.</p></div>)}
-         </div>
-      </div>
-
-      {/* --- SHEET 3: OPERATOR / SERVER (NEW!) --- */}
-      <div className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'operators' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('countries')}></div>
-      <div className={`fixed bottom-0 left-0 right-0 z-[70] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'operators' ? 'translate-y-0' : 'translate-y-full'}`}>
-         
-         {/* HEADER SHEET 3 */}
-         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-                <button onClick={() => setSheetMode('countries')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><ArrowLeft size={20} className="text-slate-500" /></button>
-                {selectedCountry && (
-                    <div className="flex items-center gap-2">
-                        <img src={getOptimizedImage(selectedCountry.img)} className="w-6 h-6 object-cover rounded" />
-                        <div>
-                             <h3 className="font-bold text-slate-800 dark:text-white text-sm">{selectedCountry.name}</h3>
-                             <p className="text-[10px] text-slate-400">Pilih Operator / Server</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-         </div>
-
-         {/* LIST OPERATOR / SERVER */}
-         <div className="flex-1 overflow-y-auto px-6 py-4 pb-10 space-y-3">
-             {selectedCountry?.pricelist?.filter(p => p.stock > 0 && p.available).sort((a,b) => a.price - b.price).map((server, idx) => (
-                 <button 
-                    key={idx}
-                    onClick={() => handleServerClick(server)}
-                    className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:border-blue-200 transition-colors dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-blue-900"
-                 >
-                     <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-slate-100 text-slate-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400">
-                             <Signal size={20} />
-                         </div>
-                         <div className="text-left">
-                             <p className="font-bold text-slate-700 text-sm dark:text-slate-200">Server {server.server_id}</p>
-                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 dark:bg-slate-700 dark:text-slate-300">Stok: {server.stock}</span>
-                                <span className="text-[10px] text-slate-400">Rate: {server.rate}%</span>
-                             </div>
-                         </div>
-                     </div>
-                     <div className="text-right">
-                         <p className="font-bold text-blue-600 text-sm">Rp {server.price.toLocaleString('id-ID')}</p>
-                         <p className="text-[10px] text-slate-400">Pilih</p>
-                     </div>
-                 </button>
-             ))}
-             {(!selectedCountry?.pricelist || selectedCountry.pricelist.length === 0) && (
-                 <div className="text-center py-10 text-slate-400">Stok habis untuk negara ini.</div>
-             )}
          </div>
       </div>
 
