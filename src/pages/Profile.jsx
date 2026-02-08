@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext'; // Import Context Canggih
 import { 
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
-  CreditCard, Loader2, Copy, Palette, CheckCircle 
+  CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
+  Smartphone
 } from 'lucide-react';
 
 export default function Profile() {
-  const { isDarkMode, toggleTheme } = useTheme();
+  // Ambil semua tools dari ThemeContext Anda yang canggih
+  const { mode, setMode, accent, setAccent } = useTheme(); 
   const navigate = useNavigate();
   
   const [user, setUser] = useState(null);
@@ -48,21 +50,6 @@ export default function Profile() {
     }
   };
 
-  // --- PERBAIKAN LOGIKA GANTI TEMA ---
-  const handleSetTheme = (selectedMode) => {
-    if (selectedMode === 'dark') {
-      // Jika user pilih Dark, tapi sekarang masih Light -> Toggle
-      if (!isDarkMode) {
-        toggleTheme();
-      }
-    } else if (selectedMode === 'light') {
-      // Jika user pilih Light, tapi sekarang masih Dark -> Toggle
-      if (isDarkMode) {
-        toggleTheme();
-      }
-    }
-  };
-
   const confirmLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -83,6 +70,23 @@ export default function Profile() {
     } catch (e) { return '-'; }
   };
 
+  // Helper untuk warna dinamis berdasarkan accent yang dipilih
+  const getAccentColor = () => {
+    switch(accent) {
+      case 'violet': return 'bg-violet-600 text-white';
+      case 'emerald': return 'bg-emerald-600 text-white';
+      default: return 'bg-blue-600 text-white'; // Default Blue
+    }
+  };
+
+  const getAccentText = () => {
+    switch(accent) {
+      case 'violet': return 'text-violet-600';
+      case 'emerald': return 'text-emerald-600';
+      default: return 'text-blue-600';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
       
@@ -93,8 +97,12 @@ export default function Profile() {
 
       <div className="px-5 mt-6 space-y-6">
         
-        {/* 1. KARTU USER */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white shadow-xl dark:from-blue-900 dark:to-slate-950">
+        {/* 1. KARTU USER (Dinamis Sesuai Accent) */}
+        <div className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-xl transition-all duration-500
+            ${accent === 'violet' ? 'bg-gradient-to-r from-violet-900 to-purple-900 dark:from-violet-950 dark:to-slate-950' : 
+              accent === 'emerald' ? 'bg-gradient-to-r from-emerald-900 to-teal-900 dark:from-emerald-950 dark:to-slate-950' : 
+              'bg-gradient-to-r from-slate-900 to-slate-800 dark:from-blue-900 dark:to-slate-950'}
+          `}>
           <div className="relative z-10 flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-2xl font-bold border border-white/20">
               {loading ? <Loader2 className="animate-spin" /> : user?.username?.charAt(0).toUpperCase()}
@@ -138,7 +146,7 @@ export default function Profile() {
         {/* 2. STATISTIK */}
         <div className="grid grid-cols-3 gap-3">
            <div className="rounded-2xl bg-white p-3 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800">
-              <div className="mb-2 p-2 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20">
+              <div className={`mb-2 p-2 rounded-full ${accent === 'emerald' ? 'bg-emerald-50 text-emerald-600' : accent === 'violet' ? 'bg-violet-50 text-violet-600' : 'bg-blue-50 text-blue-600'} dark:bg-opacity-20`}>
                 <Wallet size={18} />
               </div>
               <p className="text-[10px] text-slate-400">Sisa Saldo</p>
@@ -148,7 +156,7 @@ export default function Profile() {
            </div>
 
            <div className="rounded-2xl bg-white p-3 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800">
-              <div className="mb-2 p-2 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20">
+              <div className={`mb-2 p-2 rounded-full ${accent === 'emerald' ? 'bg-teal-50 text-teal-600' : accent === 'violet' ? 'bg-purple-50 text-purple-600' : 'bg-sky-50 text-sky-600'} dark:bg-opacity-20`}>
                 <ShoppingBag size={18} />
               </div>
               <p className="text-[10px] text-slate-400">Total Order</p>
@@ -158,7 +166,7 @@ export default function Profile() {
            </div>
 
            <div className="rounded-2xl bg-white p-3 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800">
-              <div className="mb-2 p-2 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/20">
+              <div className={`mb-2 p-2 rounded-full ${accent === 'emerald' ? 'bg-green-50 text-green-600' : accent === 'violet' ? 'bg-fuchsia-50 text-fuchsia-600' : 'bg-indigo-50 text-indigo-600'} dark:bg-opacity-20`}>
                 <CreditCard size={18} />
               </div>
               <p className="text-[10px] text-slate-400">Deposit</p>
@@ -168,14 +176,16 @@ export default function Profile() {
            </div>
         </div>
 
-        {/* 3. KONTAK & SUPPORT */}
+        {/* 3. PUSAT BANTUAN */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Pusat Bantuan</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
             
             <a href="https://t.me/ruangotp" target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30"><Send size={18} className="-ml-0.5 mt-0.5" /></div>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300`}>
+                    <Send size={18} className="-ml-0.5 mt-0.5" />
+                </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Saluran Telegram</span>
               </div>
               <ChevronRight size={18} className="text-slate-400" />
@@ -183,7 +193,9 @@ export default function Profile() {
 
             <a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30"><MessageCircle size={18} /></div>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300`}>
+                    <MessageCircle size={18} />
+                </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Hubungi CS</span>
               </div>
               <ChevronRight size={18} className="text-slate-400" />
@@ -192,7 +204,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. PENGATURAN APLIKASI */}
+        {/* 4. APLIKASI */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Aplikasi</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
@@ -203,14 +215,14 @@ export default function Profile() {
               className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full ${accent === 'violet' ? 'bg-violet-100 text-violet-600' : accent === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'} dark:bg-opacity-20`}>
                   <Palette size={18} />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Tampilan Aplikasi</span>
               </div>
               <div className="flex items-center gap-2">
-                 <span className="text-xs text-slate-400 font-medium">
-                   {isDarkMode ? 'Gelap' : 'Terang'}
+                 <span className="text-xs text-slate-400 font-medium capitalize">
+                   {mode === 'system' ? 'Otomatis' : mode === 'dark' ? 'Gelap' : 'Terang'} • {accent}
                  </span>
                  <ChevronRight size={18} className="text-slate-400" />
               </div>
@@ -262,68 +274,72 @@ export default function Profile() {
           </div>
       )}
 
-      {/* --- CUSTOM THEME MODAL (Setting Tampilan) --- */}
+      {/* --- SUPER THEME MODAL (Setting Tampilan Lengkap) --- */}
       {showThemeModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setShowThemeModal(false)} // Klik luar untuk tutup
+          onClick={() => setShowThemeModal(false)}
         >
           <div 
             className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl transition-transform duration-300 transform translate-y-0"
-            onClick={(e) => e.stopPropagation()} // Supaya klik dalam tidak menutup
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-center mb-4">
                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
             </div>
             
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 text-center">Pilih Tema</h3>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 text-center">Tampilan Aplikasi</h3>
             
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              
-              {/* Option: LIGHT */}
-              <button 
-                onClick={() => handleSetTheme('light')}
-                className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 
-                  ${!isDarkMode 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-800'
-                  }`}
-              >
-                <div className={`mb-3 p-3 rounded-full ${!isDarkMode ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}`}>
-                   <Sun size={28} />
-                </div>
-                <span className={`text-sm font-bold ${!isDarkMode ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'}`}>Terang</span>
-                
-                {/* Check Icon jika aktif */}
-                {!isDarkMode && (
-                  <div className="absolute top-3 right-3 text-blue-500">
-                    <CheckCircle size={18} fill="currentColor" className="text-white" />
-                  </div>
-                )}
-              </button>
+            {/* 1. PILIH MODE (Light / Dark / System) */}
+            <div className="mb-6">
+               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Mode Layar</p>
+               <div className="grid grid-cols-3 gap-3">
+                  
+                  {/* Mode: LIGHT */}
+                  <button onClick={() => setMode('light')} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'light' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
+                     <Sun size={24} className={mode === 'light' ? getAccentText() : 'text-slate-400'} />
+                     <span className={`text-xs font-bold ${mode === 'light' ? getAccentText() : 'text-slate-500'}`}>Terang</span>
+                  </button>
 
-              {/* Option: DARK */}
-              <button 
-                onClick={() => handleSetTheme('dark')}
-                className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 
-                  ${isDarkMode 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                    : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-800'
-                  }`}
-              >
-                <div className={`mb-3 p-3 rounded-full ${isDarkMode ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}`}>
-                   <Moon size={28} />
-                </div>
-                <span className={`text-sm font-bold ${isDarkMode ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'}`}>Gelap</span>
+                  {/* Mode: DARK */}
+                  <button onClick={() => setMode('dark')} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'dark' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
+                     <Moon size={24} className={mode === 'dark' ? getAccentText() : 'text-slate-400'} />
+                     <span className={`text-xs font-bold ${mode === 'dark' ? getAccentText() : 'text-slate-500'}`}>Gelap</span>
+                  </button>
 
-                {/* Check Icon jika aktif */}
-                {isDarkMode && (
-                  <div className="absolute top-3 right-3 text-blue-500">
-                    <CheckCircle size={18} fill="currentColor" className="text-white dark:text-slate-900" />
-                  </div>
-                )}
-              </button>
+                  {/* Mode: SYSTEM */}
+                  <button onClick={() => setMode('system')} 
+                    className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'system' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
+                     <Smartphone size={24} className={mode === 'system' ? getAccentText() : 'text-slate-400'} />
+                     <span className={`text-xs font-bold ${mode === 'system' ? getAccentText() : 'text-slate-500'}`}>Otomatis</span>
+                  </button>
 
+               </div>
+            </div>
+
+            {/* 2. PILIH WARNA AKSEN */}
+            <div className="mb-8">
+               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Warna Tema</p>
+               <div className="grid grid-cols-3 gap-3">
+                  
+                  {/* Accent: BLUE */}
+                  <button onClick={() => setAccent('blue')} className={`relative h-12 rounded-xl bg-blue-500 flex items-center justify-center transition-transform active:scale-95`}>
+                     {accent === 'blue' && <CheckCircle className="text-white" size={20} />}
+                  </button>
+
+                  {/* Accent: VIOLET */}
+                  <button onClick={() => setAccent('violet')} className={`relative h-12 rounded-xl bg-violet-600 flex items-center justify-center transition-transform active:scale-95`}>
+                     {accent === 'violet' && <CheckCircle className="text-white" size={20} />}
+                  </button>
+
+                  {/* Accent: EMERALD */}
+                  <button onClick={() => setAccent('emerald')} className={`relative h-12 rounded-xl bg-emerald-500 flex items-center justify-center transition-transform active:scale-95`}>
+                     {accent === 'emerald' && <CheckCircle className="text-white" size={20} />}
+                  </button>
+
+               </div>
             </div>
 
             <button 
