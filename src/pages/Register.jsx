@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import { useTheme } from '../context/ThemeContext';
-import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const { color } = useTheme();
@@ -13,13 +13,15 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // State untuk Mata Password
+  const [showPassword, setShowPassword] = useState(false);
+  
   // State Toast (Notifikasi)
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Fungsi Menampilkan Toast
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
-    // Hilang otomatis setelah 3 detik
     setTimeout(() => {
         setToast(prev => ({ ...prev, show: false }));
     }, 3000);
@@ -33,10 +35,7 @@ export default function Register() {
     try {
       const res = await api.post('/auth/register', form);
       if (res.data.success) {
-        // Tampilkan Notifikasi Sukses
         showToast('✅ Registrasi Berhasil! Mengalihkan...', 'success');
-        
-        // Tunggu 1.5 detik agar user sempat baca notifikasi, lalu pindah ke Login
         setTimeout(() => {
             navigate('/login');
         }, 1500);
@@ -68,6 +67,7 @@ export default function Register() {
         )}
         
         <form onSubmit={handleRegister} className="space-y-5">
+          {/* Username */}
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Username</label>
             <input 
@@ -79,6 +79,8 @@ export default function Register() {
               required
             />
           </div>
+
+          {/* Email */}
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Email</label>
             <input 
@@ -90,16 +92,29 @@ export default function Register() {
               required
             />
           </div>
+
+          {/* Password dengan Mata */}
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Password</label>
-            <input 
-              type="password" 
-              className={`w-full rounded-xl border bg-slate-50 p-3.5 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({...form, password: e.target.value})}
-              required
-            />
+            <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  className={`w-full rounded-xl border bg-slate-50 p-3.5 pr-12 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({...form, password: e.target.value})}
+                  required
+                />
+                
+                {/* Tombol Mata */}
+                <button
+                  type="button" // PENTING: Agar tidak submit form saat diklik
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+            </div>
           </div>
           
           <button 
@@ -123,7 +138,7 @@ export default function Register() {
         </div>
       </div>
 
-      {/* --- TOAST NOTIFICATION (POPUP BAWAH) --- */}
+      {/* --- TOAST NOTIFICATION --- */}
       <div className={`fixed bottom-10 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
           <span className="text-sm font-bold">{toast.message}</span>
