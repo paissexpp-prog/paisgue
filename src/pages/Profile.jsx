@@ -6,16 +6,11 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
-  CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor
+  CreditCard, Loader2, Copy, Palette, CheckCircle 
 } from 'lucide-react';
 
 export default function Profile() {
-  const { isDarkMode, toggleTheme } = useTheme(); // Pastikan ThemeContext mendukung setMode spesifik jika mau (misal setTheme('dark')), kalau cuma toggle, kita sesuaikan logikanya.
-  // Asumsi: toggleTheme hanya bolak-balik. Untuk UI pilihan 3 opsi (Light/Dark/System), idealnya Context mendukung setTheme.
-  // Tapi untuk sekarang kita buat visualnya manual pakai toggleTheme jika belum sesuai.
-  // *UPDATE*: Agar tombol berfungsi sempurna sebagai "Pilih Dark" atau "Pilih Light", 
-  // kita akan cek kondisi isDarkMode saat tombol ditekan.
-  
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
   const [user, setUser] = useState(null);
@@ -53,15 +48,19 @@ export default function Profile() {
     }
   };
 
-  // Fungsi Helper Ganti Tema
-  const handleSetTheme = (mode) => {
-    if (mode === 'dark' && !isDarkMode) {
-      toggleTheme();
-    } else if (mode === 'light' && isDarkMode) {
-      toggleTheme();
+  // --- PERBAIKAN LOGIKA GANTI TEMA ---
+  const handleSetTheme = (selectedMode) => {
+    if (selectedMode === 'dark') {
+      // Jika user pilih Dark, tapi sekarang masih Light -> Toggle
+      if (!isDarkMode) {
+        toggleTheme();
+      }
+    } else if (selectedMode === 'light') {
+      // Jika user pilih Light, tapi sekarang masih Dark -> Toggle
+      if (isDarkMode) {
+        toggleTheme();
+      }
     }
-    // Tutup modal setelah memilih (opsional, bisa juga dibiarkan buka biar user lihat perubahannya)
-    // setShowThemeModal(false); 
   };
 
   const confirmLogout = () => {
