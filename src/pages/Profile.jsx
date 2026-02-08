@@ -4,21 +4,27 @@ import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
-  User, LogOut, Wallet, ShoppingBag, 
+  User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
-  CreditCard, Loader2, Copy, Calendar
+  CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor
 } from 'lucide-react';
 
 export default function Profile() {
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode, toggleTheme } = useTheme(); // Pastikan ThemeContext mendukung setMode spesifik jika mau (misal setTheme('dark')), kalau cuma toggle, kita sesuaikan logikanya.
+  // Asumsi: toggleTheme hanya bolak-balik. Untuk UI pilihan 3 opsi (Light/Dark/System), idealnya Context mendukung setTheme.
+  // Tapi untuk sekarang kita buat visualnya manual pakai toggleTheme jika belum sesuai.
+  // *UPDATE*: Agar tombol berfungsi sempurna sebagai "Pilih Dark" atau "Pilih Light", 
+  // kita akan cek kondisi isDarkMode saat tombol ditekan.
+  
   const navigate = useNavigate();
   
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ orders: 0, deposits: 0 });
   const [loading, setLoading] = useState(true);
   
-  // State untuk Modal Logout
+  // State Modal
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     fetchUserData();
@@ -47,12 +53,17 @@ export default function Profile() {
     }
   };
 
-  // Fungsi Buka Modal
-  const handleLogoutClick = () => {
-    setShowLogoutModal(true);
+  // Fungsi Helper Ganti Tema
+  const handleSetTheme = (mode) => {
+    if (mode === 'dark' && !isDarkMode) {
+      toggleTheme();
+    } else if (mode === 'light' && isDarkMode) {
+      toggleTheme();
+    }
+    // Tutup modal setelah memilih (opsional, bisa juga dibiarkan buka biar user lihat perubahannya)
+    // setShowThemeModal(false); 
   };
 
-  // Fungsi Eksekusi Logout
   const confirmLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -61,7 +72,6 @@ export default function Profile() {
   const handleCopyId = () => {
     if (user?.id) {
         navigator.clipboard.writeText(user.id);
-        // Bisa tambah toast disini jika mau
     }
   };
 
@@ -84,7 +94,7 @@ export default function Profile() {
 
       <div className="px-5 mt-6 space-y-6">
         
-        {/* 1. KARTU USER (TETAP SAMA) */}
+        {/* 1. KARTU USER */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white shadow-xl dark:from-blue-900 dark:to-slate-950">
           <div className="relative z-10 flex items-center gap-4">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-2xl font-bold border border-white/20">
@@ -126,7 +136,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 2. STATISTIK (TETAP SAMA) */}
+        {/* 2. STATISTIK */}
         <div className="grid grid-cols-3 gap-3">
            <div className="rounded-2xl bg-white p-3 border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800">
               <div className="mb-2 p-2 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20">
@@ -159,41 +169,7 @@ export default function Profile() {
            </div>
         </div>
 
-        {/* --- PENGATURAN TEMA BARU (DESAIN LEBIH MENARIK) --- */}
-        <div>
-          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Tampilan Aplikasi</h3>
-          
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-             <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-4">
-                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-500 ${isDarkMode ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-orange-400 text-white shadow-lg shadow-orange-400/30'}`}>
-                      {isDarkMode ? <Moon size={24} className="animate-pulse-slow" /> : <Sun size={24} className="animate-spin-slow" />}
-                   </div>
-                   <div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-                         {isDarkMode ? 'Mode Gelap Aktif' : 'Mode Terang Aktif'}
-                      </h4>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                         {isDarkMode ? 'Tampilan nyaman di mata malam hari' : 'Tampilan cerah untuk siang hari'}
-                      </p>
-                   </div>
-                </div>
-
-                {/* Custom Switch Toggle */}
-                <button 
-                  onClick={toggleTheme}
-                  className={`relative h-8 w-14 rounded-full p-1 transition-all duration-300 focus:outline-none ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                >
-                  <span 
-                    className={`block h-6 w-6 rounded-full bg-white shadow-md transition-all duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}
-                  />
-                </button>
-             </div>
-          </div>
-        </div>
-
-
-        {/* 3. KONTAK & SUPPORT (TETAP SAMA) */}
+        {/* 3. KONTAK & SUPPORT */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Pusat Bantuan</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
@@ -217,18 +193,45 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. TOMBOL LOGOUT (DIPISAH SUPAYA LEBIH RAPI) */}
-        <button 
-          onClick={handleLogoutClick} 
-          className="w-full flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-600 transition-all active:scale-95 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400"
-        >
-          <LogOut size={18} />
-          <span className="font-bold text-sm">Keluar dari Aplikasi</span>
-        </button>
+        {/* 4. PENGATURAN APLIKASI */}
+        <div>
+          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Aplikasi</h3>
+          <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+            
+            {/* BUTTON BUKA MODAL TEMA */}
+            <button 
+              onClick={() => setShowThemeModal(true)} 
+              className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <Palette size={18} />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Tampilan Aplikasi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <span className="text-xs text-slate-400 font-medium">
+                   {isDarkMode ? 'Gelap' : 'Terang'}
+                 </span>
+                 <ChevronRight size={18} className="text-slate-400" />
+              </div>
+            </button>
+
+            <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center justify-between p-4 transition-colors hover:bg-red-50 dark:hover:bg-red-900/10 group">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+                  <LogOut size={18} className="ml-0.5" />
+                </div>
+                <span className="text-sm font-medium text-red-600 dark:text-red-400">Keluar Akun</span>
+              </div>
+            </button>
+
+          </div>
+        </div>
 
       </div>
 
-      {/* --- CUSTOM LOGOUT MODAL (POPUP ANIMASI) --- */}
+      {/* --- CUSTOM LOGOUT MODAL --- */}
       {showLogoutModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -258,6 +261,80 @@ export default function Profile() {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* --- CUSTOM THEME MODAL (Setting Tampilan) --- */}
+      {showThemeModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowThemeModal(false)} // Klik luar untuk tutup
+        >
+          <div 
+            className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl transition-transform duration-300 transform translate-y-0"
+            onClick={(e) => e.stopPropagation()} // Supaya klik dalam tidak menutup
+          >
+            <div className="flex justify-center mb-4">
+               <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+            </div>
+            
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 text-center">Pilih Tema</h3>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              
+              {/* Option: LIGHT */}
+              <button 
+                onClick={() => handleSetTheme('light')}
+                className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 
+                  ${!isDarkMode 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-800'
+                  }`}
+              >
+                <div className={`mb-3 p-3 rounded-full ${!isDarkMode ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}`}>
+                   <Sun size={28} />
+                </div>
+                <span className={`text-sm font-bold ${!isDarkMode ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'}`}>Terang</span>
+                
+                {/* Check Icon jika aktif */}
+                {!isDarkMode && (
+                  <div className="absolute top-3 right-3 text-blue-500">
+                    <CheckCircle size={18} fill="currentColor" className="text-white" />
+                  </div>
+                )}
+              </button>
+
+              {/* Option: DARK */}
+              <button 
+                onClick={() => handleSetTheme('dark')}
+                className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-200 
+                  ${isDarkMode 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-800'
+                  }`}
+              >
+                <div className={`mb-3 p-3 rounded-full ${isDarkMode ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'}`}>
+                   <Moon size={28} />
+                </div>
+                <span className={`text-sm font-bold ${isDarkMode ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'}`}>Gelap</span>
+
+                {/* Check Icon jika aktif */}
+                {isDarkMode && (
+                  <div className="absolute top-3 right-3 text-blue-500">
+                    <CheckCircle size={18} fill="currentColor" className="text-white dark:text-slate-900" />
+                  </div>
+                )}
+              </button>
+
+            </div>
+
+            <button 
+              onClick={() => setShowThemeModal(false)}
+              className="w-full py-3.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
       )}
 
       <BottomNav />
