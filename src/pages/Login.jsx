@@ -40,7 +40,7 @@ export default function Login() {
         
         // Jeda sedikit biar animasi toast terlihat
         setTimeout(() => {
-            navigate('/'); // Pindah ke Dashboard
+            navigate("/dashboard"); // Pindah ke Dashboard
         }, 1000);
       }
     } catch (err) {
@@ -142,4 +142,5 @@ export default function Login() {
     </div>
   );
 }
+
 
