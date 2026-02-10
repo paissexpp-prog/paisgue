@@ -4,7 +4,7 @@ import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
   Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, 
-  Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2 
+  Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2, RefreshCw 
 } from 'lucide-react';
 
 export default function Deposit() {
@@ -16,7 +16,6 @@ export default function Deposit() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
 
-  // --- STATE MODAL & TOAST ---
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -24,7 +23,6 @@ export default function Deposit() {
     fetchHistory();
   }, []);
 
-  // --- FUNGSI HELPER UI ---
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -46,7 +44,6 @@ export default function Deposit() {
         const data = res.data.data;
         setHistory(data.slice(0, 5));
 
-        // Auto-Restore Pending QRIS
         if (data.length > 0 && data[0].status === 'pending') {
             const pendingItem = data[0];
             setQrisData({
@@ -61,6 +58,11 @@ export default function Deposit() {
       }
     } catch (err) { } 
     finally { setHistoryLoading(false); }
+  };
+
+  const handleManualRefresh = () => {
+    showToast('Mengecek status pembayaran...', 'success');
+    fetchHistory();
   };
 
   const handleDeposit = async () => {
@@ -79,7 +81,6 @@ export default function Deposit() {
     setLoading(false);
   };
 
-  // --- LOGIKA CANCEL (DENGAN MODAL KEREN) ---
   const handleCancelClick = () => {
       if (!qrisData) return;
       
@@ -125,14 +126,12 @@ export default function Deposit() {
   return (
     <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* Header */}
       <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 px-5 pb-4 pt-8 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">Isi Saldo</h1>
       </div>
 
       <div className="mx-auto mt-6 max-w-md px-5">
         
-        {/* FORM / QRIS SECTION */}
         {!qrisData ? (
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mb-6 flex items-center gap-4 border-b border-slate-50 pb-4 dark:border-slate-800">
@@ -177,15 +176,23 @@ export default function Deposit() {
             </button>
           </div>
         ) : (
-          /* TAMPILAN QRIS */
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300 relative">
+            
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                 <QrCode size={24} />
             </div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Scan Pembayaran</h3>
             <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
 
-            <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
+            <button 
+                onClick={handleManualRefresh}
+                className="mt-4 mx-auto flex items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5 text-[10px] font-bold text-blue-600 transition-transform active:scale-95 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+            >
+                <RefreshCw size={12} className={historyLoading ? "animate-spin" : ""} />
+                Cek Status Pembayaran
+            </button>
+
+            <div className="mt-4 mb-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
                <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
             </div>
 
@@ -213,7 +220,6 @@ export default function Deposit() {
           </div>
         )}
 
-        {/* --- RIWAYAT TRANSAKSI --- */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
             <History size={18} className="text-slate-400" />
@@ -261,7 +267,6 @@ export default function Deposit() {
 
       </div>
 
-      {/* --- CONFIRM MODAL (POPUP KEREN) --- */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -285,7 +290,6 @@ export default function Deposit() {
           </div>
       )}
 
-      {/* --- TOAST NOTIFICATION --- */}
       <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span className="text-sm font-bold">{toast.message}</span>
