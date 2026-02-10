@@ -184,15 +184,7 @@ export default function Deposit() {
             <h3 className="text-xl font-bold text-slate-800 dark:text-white">Scan Pembayaran</h3>
             <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
 
-            <button 
-                onClick={handleManualRefresh}
-                className="mt-4 mx-auto flex items-center gap-2 rounded-full bg-blue-50 px-4 py-1.5 text-[10px] font-bold text-blue-600 transition-transform active:scale-95 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
-            >
-                <RefreshCw size={12} className={historyLoading ? "animate-spin" : ""} />
-                Cek Status Pembayaran
-            </button>
-
-            <div className="mt-4 mb-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
+            <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
                <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
             </div>
 
@@ -211,12 +203,22 @@ export default function Deposit() {
                </div>
             </div>
 
-            <button 
-              onClick={handleCancelClick}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 py-3 font-bold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
-            >
-              <Trash2 size={18} /> Batalkan Deposit
-            </button>
+            <div className="flex flex-col gap-3">
+              <button 
+                  onClick={handleManualRefresh}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 py-3 font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40"
+              >
+                  <RefreshCw size={18} className={historyLoading ? "animate-spin" : ""} />
+                  Cek Status Pembayaran
+              </button>
+
+              <button 
+                onClick={handleCancelClick}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 py-3 font-bold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+              >
+                <Trash2 size={18} /> Batalkan Deposit
+              </button>
+            </div>
           </div>
         )}
 
