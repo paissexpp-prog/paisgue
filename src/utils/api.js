@@ -2,7 +2,7 @@ import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
 
 const api = axios.create({
-  baseURL: 'https://vucc.ruangotp.site/api', 
+  baseURL: 'https://api.paisx.site/api', 
   headers: {
     'Content-Type': 'application/json',
   },
