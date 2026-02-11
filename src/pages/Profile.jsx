@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { useTheme } from '../context/ThemeContext'; // Import Context Canggih
+import { useTheme } from '../context/ThemeContext';
 import { 
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
-  Smartphone
+  Smartphone, Eye, EyeOff
 } from 'lucide-react';
 
 export default function Profile() {
-  // Ambil semua tools dari ThemeContext Anda yang canggih
   const { mode, setMode, accent, setAccent } = useTheme(); 
   const navigate = useNavigate();
   
@@ -19,6 +18,9 @@ export default function Profile() {
   const [stats, setStats] = useState({ orders: 0, deposits: 0 });
   const [loading, setLoading] = useState(true);
   
+  // State untuk visibilitas ID
+  const [showId, setShowId] = useState(false);
+
   // State Modal
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
@@ -70,12 +72,11 @@ export default function Profile() {
     } catch (e) { return '-'; }
   };
 
-  // Helper untuk warna dinamis berdasarkan accent yang dipilih
   const getAccentColor = () => {
     switch(accent) {
       case 'violet': return 'bg-violet-600 text-white';
       case 'emerald': return 'bg-emerald-600 text-white';
-      default: return 'bg-blue-600 text-white'; // Default Blue
+      default: return 'bg-blue-600 text-white'; 
     }
   };
 
@@ -120,13 +121,29 @@ export default function Profile() {
                   <p className="text-sm text-slate-300 truncate">{user?.email}</p>
                   
                   <div className="mt-2 flex flex-wrap gap-2">
-                      <button 
-                        onClick={handleCopyId}
-                        className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1 text-[10px] text-slate-200 hover:bg-black/50 transition-colors border border-white/10"
-                      >
-                        <span className="font-mono opacity-80">ID: {user?.id}</span>
-                        <Copy size={10} />
-                      </button>
+                      <div className="flex items-center gap-2 rounded-lg bg-black/30 px-2 py-1 text-[10px] text-slate-200 border border-white/10">
+                        <span className="font-mono opacity-80">
+                            ID: {showId ? user?.id : '••••••••'}
+                        </span>
+                        
+                        {/* Tombol Mata */}
+                        <button 
+                            onClick={() => setShowId(!showId)} 
+                            className="hover:text-white transition-colors"
+                        >
+                            {showId ? <EyeOff size={10} /> : <Eye size={10} />}
+                        </button>
+
+                        <div className="h-3 w-[1px] bg-white/20 mx-0.5"></div>
+
+                        {/* Tombol Copy */}
+                        <button 
+                            onClick={handleCopyId} 
+                            className="hover:text-white transition-colors"
+                        >
+                            <Copy size={10} />
+                        </button>
+                      </div>
                   </div>
 
                   <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
