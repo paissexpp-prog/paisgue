@@ -32,29 +32,45 @@ export default function Register() {
     setLoading(true);
     setError('');
 
-    // Sanitasi Data sebelum dikirim
+    // PERBAIKAN: Sanitasi data sebelum dikirim
+    // Menghapus spasi depan/belakang dan memaksa email jadi huruf kecil
     const payload = {
         username: form.username.trim(),
-        email: form.email.trim().toLowerCase(), // Backend regex case-sensitive (@gmail.com)
+        email: form.email.trim().toLowerCase(),
         password: form.password
     };
+
+    // Debugging: Cek di Console browser apa yang sebenarnya dikirim
+    console.log("Mengirim data registrasi:", payload);
 
     try {
       const res = await api.post('/auth/register', payload);
       
       if (res.data.success) {
         showToast('✅ Registrasi Berhasil! Mengalihkan...', 'success');
+        // Reset form agar bersih
+        setForm({ username: '', email: '', password: '' });
+        
         setTimeout(() => {
             navigate('/login');
         }, 1500);
       }
     } catch (err) {
+      console.error("Error Registrasi:", err.response || err);
       const msg = err.response?.data?.error?.message || 'Registrasi gagal';
       setError(msg);
       showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper untuk update state agar lebih aman terhadap autofill
+  const handleChange = (e) => {
+    setForm(prev => ({
+        ...prev,
+        [e.target.name]: e.target.value
+    }));
   };
 
   return (
@@ -80,13 +96,13 @@ export default function Register() {
             <label htmlFor="username" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Username</label>
             <input 
               id="username"
-              name="username"
+              name="username" 
               type="text" 
               autoComplete="username"
               className={`w-full rounded-xl border bg-slate-50 p-3.5 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
               placeholder="Contoh: user123"
               value={form.username}
-              onChange={(e) => setForm({...form, username: e.target.value})}
+              onChange={handleChange}
               required
             />
           </div>
@@ -100,9 +116,9 @@ export default function Register() {
               type="email" 
               autoComplete="email"
               className={`w-full rounded-xl border bg-slate-50 p-3.5 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
-              placeholder="email@gmail.com"
+              placeholder="email@anda.com"
               value={form.email}
-              onChange={(e) => setForm({...form, email: e.target.value})}
+              onChange={handleChange}
               required
             />
           </div>
@@ -119,7 +135,7 @@ export default function Register() {
                   className={`w-full rounded-xl border bg-slate-50 p-3.5 pr-12 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
                   placeholder="••••••••"
                   value={form.password}
-                  onChange={(e) => setForm({...form, password: e.target.value})}
+                  onChange={handleChange}
                   required
                 />
                 
@@ -151,8 +167,7 @@ export default function Register() {
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          Sudah punya akun?
-          <Link to="/login" className={`font-bold hover:underline ml-1 ${color.text}`}>Login disini</Link>
+          Sudah punya akun? <Link to="/login" className={`font-bold hover:underline ml-1 ${color.text}`}>Login disini</Link>
         </div>
       </div>
 
