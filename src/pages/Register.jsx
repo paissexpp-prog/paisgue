@@ -32,8 +32,16 @@ export default function Register() {
     setLoading(true);
     setError('');
 
+    // Sanitasi Data sebelum dikirim
+    const payload = {
+        username: form.username.trim(),
+        email: form.email.trim().toLowerCase(), // Backend regex case-sensitive (@gmail.com)
+        password: form.password
+    };
+
     try {
-      const res = await api.post('/auth/register', form);
+      const res = await api.post('/auth/register', payload);
+      
       if (res.data.success) {
         showToast('✅ Registrasi Berhasil! Mengalihkan...', 'success');
         setTimeout(() => {
@@ -69,9 +77,12 @@ export default function Register() {
         <form onSubmit={handleRegister} className="space-y-5">
           {/* Username */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Username</label>
+            <label htmlFor="username" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Username</label>
             <input 
+              id="username"
+              name="username"
               type="text" 
+              autoComplete="username"
               className={`w-full rounded-xl border bg-slate-50 p-3.5 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
               placeholder="Contoh: user123"
               value={form.username}
@@ -82,11 +93,14 @@ export default function Register() {
 
           {/* Email */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Email</label>
+            <label htmlFor="email" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Email</label>
             <input 
+              id="email"
+              name="email"
               type="email" 
+              autoComplete="email"
               className={`w-full rounded-xl border bg-slate-50 p-3.5 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
-              placeholder="email@anda.com"
+              placeholder="email@gmail.com"
               value={form.email}
               onChange={(e) => setForm({...form, email: e.target.value})}
               required
@@ -95,10 +109,13 @@ export default function Register() {
 
           {/* Password dengan Mata */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Password</label>
+            <label htmlFor="password" className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-400">Password</label>
             <div className="relative">
                 <input 
+                  id="password"
+                  name="password"
                   type={showPassword ? "text" : "password"} 
+                  autoComplete="new-password"
                   className={`w-full rounded-xl border bg-slate-50 p-3.5 pr-12 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
                   placeholder="••••••••"
                   value={form.password}
@@ -108,7 +125,7 @@ export default function Register() {
                 
                 {/* Tombol Mata */}
                 <button
-                  type="button" // PENTING: Agar tidak submit form saat diklik
+                  type="button" 
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
@@ -134,7 +151,8 @@ export default function Register() {
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          Sudah punya akun? <Link to="/login" className={`font-bold hover:underline ${color.text}`}>Login disini</Link>
+          Sudah punya akun?
+          <Link to="/login" className={`font-bold hover:underline ml-1 ${color.text}`}>Login disini</Link>
         </div>
       </div>
 
@@ -147,3 +165,4 @@ export default function Register() {
     </div>
   );
 }
+
