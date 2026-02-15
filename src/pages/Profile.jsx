@@ -7,7 +7,8 @@ import {
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
-  Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X
+  Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X,
+  AlertCircle, HelpCircle
 } from 'lucide-react';
 
 export default function Profile() {
@@ -27,9 +28,11 @@ export default function Profile() {
   // State untuk visibilitas ID
   const [showId, setShowId] = useState(false);
 
-  // State Modal
+  // State Modal Global
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
 
   useEffect(() => {
     fetchUserData();
@@ -70,6 +73,11 @@ export default function Profile() {
     }
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
   const handleAddWhitelist = async () => {
     if (!ipInput) return;
     setWhitelistLoading(true);
@@ -79,23 +87,36 @@ export default function Profile() {
         setWhitelist(res.data.data);
         setIpInput('');
         setShowWhitelistModal(false);
+        showToast("IP Berhasil ditambahkan!", "success");
       }
     } catch (err) {
-      alert(err.response?.data?.error?.message || "Gagal menambah IP");
+      showToast(err.response?.data?.error?.message || "Gagal menambah IP", "error");
     } finally {
       setWhitelistLoading(false);
     }
   };
 
-  const handleRemoveWhitelist = async () => {
-    if (!window.confirm("Hapus IP ini dari whitelist?")) return;
+  const handleRemoveWhitelistRequest = () => {
+      setConfirmModal({
+          show: true,
+          title: "Hapus Whitelist?",
+          message: "Akses API dari server Anda akan ditolak jika IP ini dihapus.",
+          onConfirm: processRemoveWhitelist
+      });
+  };
+
+  const processRemoveWhitelist = async () => {
+    setConfirmModal(prev => ({ ...prev, loading: true }));
     try {
       const res = await api.post('/whitelist/remove');
       if (res.data.success) {
         setWhitelist(null);
+        showToast("IP Berhasil dihapus", "success");
       }
     } catch (err) {
-      alert("Gagal menghapus IP");
+      showToast("Gagal menghapus IP", "error");
+    } finally {
+        setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false });
     }
   };
 
@@ -107,6 +128,7 @@ export default function Profile() {
   const handleCopyId = () => {
     if (user?.id) {
         navigator.clipboard.writeText(user.id);
+        showToast("ID Berhasil disalin!", "success");
     }
   };
 
@@ -293,7 +315,7 @@ export default function Profile() {
                   </div>
                 </div>
                 <button 
-                  onClick={handleRemoveWhitelist}
+                  onClick={handleRemoveWhitelistRequest}
                   className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 transition-colors"
                 >
                    <Trash2 size={18} />
@@ -381,7 +403,41 @@ export default function Profile() {
         </div>
       )}
 
-      {/* --- CUSTOM LOGOUT MODAL --- */}
+      {/* --- CONFIRMATION MODAL (Untuk Hapus IP) --- */}
+      {confirmModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                          <HelpCircle size={32} />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                          {confirmModal.message}
+                      </p>
+                      
+                      <div className="flex gap-3 w-full">
+                          <button 
+                            onClick={() => setConfirmModal({ show: false, title: '', message: '', onConfirm: null, loading: false })}
+                            disabled={confirmModal.loading}
+                            className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                          >
+                              Batal
+                          </button>
+                          <button 
+                            onClick={confirmModal.onConfirm}
+                            disabled={confirmModal.loading}
+                            className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none flex items-center justify-center gap-2"
+                          >
+                              {confirmModal.loading ? <Loader2 size={16} className="animate-spin" /> : 'Hapus IP'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- LOGOUT MODAL --- */}
       {showLogoutModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
@@ -413,7 +469,7 @@ export default function Profile() {
           </div>
       )}
 
-      {/* --- SUPER THEME MODAL (Setting Tampilan Lengkap) --- */}
+      {/* --- THEME MODAL --- */}
       {showThemeModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
@@ -429,55 +485,43 @@ export default function Profile() {
             
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 text-center">Tampilan Aplikasi</h3>
             
-            {/* 1. PILIH MODE (Light / Dark / System) */}
             <div className="mb-6">
                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Mode Layar</p>
                <div className="grid grid-cols-3 gap-3">
-                  
-                  {/* Mode: LIGHT */}
                   <button onClick={() => setMode('light')} 
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'light' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
                      <Sun size={24} className={mode === 'light' ? getAccentText() : 'text-slate-400'} />
                      <span className={`text-xs font-bold ${mode === 'light' ? getAccentText() : 'text-slate-500'}`}>Terang</span>
                   </button>
 
-                  {/* Mode: DARK */}
                   <button onClick={() => setMode('dark')} 
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'dark' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
                      <Moon size={24} className={mode === 'dark' ? getAccentText() : 'text-slate-400'} />
                      <span className={`text-xs font-bold ${mode === 'dark' ? getAccentText() : 'text-slate-500'}`}>Gelap</span>
                   </button>
 
-                  {/* Mode: SYSTEM */}
                   <button onClick={() => setMode('system')} 
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${mode === 'system' ? `border-${accent === 'blue' ? 'blue' : accent === 'violet' ? 'violet' : 'emerald'}-500 bg-slate-50 dark:bg-slate-800` : 'border-slate-100 dark:border-slate-800'}`}>
                      <Smartphone size={24} className={mode === 'system' ? getAccentText() : 'text-slate-400'} />
                      <span className={`text-xs font-bold ${mode === 'system' ? getAccentText() : 'text-slate-500'}`}>Otomatis</span>
                   </button>
-
                </div>
             </div>
 
-            {/* 2. PILIH WARNA AKSEN */}
             <div className="mb-8">
                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Warna Tema</p>
                <div className="grid grid-cols-3 gap-3">
-                  
-                  {/* Accent: BLUE */}
                   <button onClick={() => setAccent('blue')} className={`relative h-12 rounded-xl bg-blue-500 flex items-center justify-center transition-transform active:scale-95`}>
                      {accent === 'blue' && <CheckCircle className="text-white" size={20} />}
                   </button>
 
-                  {/* Accent: VIOLET */}
                   <button onClick={() => setAccent('violet')} className={`relative h-12 rounded-xl bg-violet-600 flex items-center justify-center transition-transform active:scale-95`}>
                      {accent === 'violet' && <CheckCircle className="text-white" size={20} />}
                   </button>
 
-                  {/* Accent: EMERALD */}
                   <button onClick={() => setAccent('emerald')} className={`relative h-12 rounded-xl bg-emerald-500 flex items-center justify-center transition-transform active:scale-95`}>
                      {accent === 'emerald' && <CheckCircle className="text-white" size={20} />}
                   </button>
-
                </div>
             </div>
 
@@ -490,6 +534,12 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* --- TOAST --- */}
+      <div className={`fixed bottom-24 left-1/2 z-[110] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-bold">{toast.message}</span>
+      </div>
 
       <BottomNav />
     </div>
