@@ -3,59 +3,77 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
-import { Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, ChevronRight, ChevronDown, ChevronUp, Server, Globe, Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, Signal, Clock, Timer, Copy, MessageSquare } from 'lucide-react';
+import { 
+  Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, 
+  ChevronRight, ChevronDown, ChevronUp, Server, Globe, 
+  Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, 
+  Signal, Clock, Timer, Copy, MessageSquare 
+} from 'lucide-react';
 
 export default function Order() {
   const { color } = useTheme();
   const navigate = useNavigate();
-  
+
   // --- STATE DATA ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
-  const [activeOrder, setActiveOrder] = useState(null);
+  
+  // UBAH: activeOrder (single) jadi activeOrders (array)
+  const [activeOrders, setActiveOrders] = useState([]); 
+  
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
-  
+
   // --- STATE OPERATOR ---
   const [currentOperators, setCurrentOperators] = useState([]); 
-  const [selectedOperatorId, setSelectedOperatorId] = useState('any'); 
+  const [selectedOperatorId, setSelectedOperatorId] = useState('any');
   const [loadingOperators, setLoadingOperators] = useState(false);
 
   // --- STATE UI ---
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // --- STATE TIMER ---
-  const [cancelTimer, setCancelTimer] = useState(0); 
+
+  // --- STATE TIMER GLOBAL ---
+  // Kita pakai satu state waktu sekarang untuk menghitung mundur semua order sekaligus
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
   // UI Controls
-  const [sheetMode, setSheetMode] = useState(null); 
+  const [sheetMode, setSheetMode] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
+
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // Cache
   const CACHE_KEY = 'otp_services_v12';
   const CACHE_TIME = 'otp_services_time_v12';
-  const CACHE_DURATION = 60 * 60 * 1000; 
+  const CACHE_DURATION = 60 * 60 * 1000;
 
   useEffect(() => {
     fetchInitialData();
     
-    // --- FITUR BARU: AUTO CEK SMS SETIAP 5 DETIK ---
+    // Auto refresh data setiap 5 detik jika ada order aktif
     const interval = setInterval(() => {
-        // Hanya cek otomatis jika ada order aktif atau order baru selesai (biar kode gak ilang)
-        if (activeOrder && activeOrder.status !== 'CANCELED') {
+        if (activeOrders.length > 0) {
             fetchInitialData(true); // true = silent refresh
         }
     }, 5000);
 
-    return () => clearInterval(interval);
-  }, [activeOrder?.id]); // Re-run effect jika ID berubah
+    // Timer global update setiap 1 detik
+    const timerInterval = setInterval(() => {
+        setCurrentTime(Date.now());
+    }, 1000);
 
+    return () => {
+        clearInterval(interval);
+        clearInterval(timerInterval);
+    };
+  }, [activeOrders.length]); 
+
+  // Search Filter
   useEffect(() => {
     if (sheetMode === 'services') {
         const results = services.filter(service =>
@@ -65,26 +83,14 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- LOGIKA HITUNG MUNDUR (4 Menit) ---
-  useEffect(() => {
-    let timerInterval;
-    if (activeOrder && (activeOrder.status === 'ACTIVE' || activeOrder.status === 'PENDING')) {
-      const updateTimer = () => {
-        const createdTime = new Date(activeOrder.created_at).getTime();
-        const now = Date.now();
-        const diffSeconds = Math.floor((now - createdTime) / 1000);
-        const lockDuration = 4 * 60; // 4 Menit
-
-        const remaining = lockDuration - diffSeconds;
-        setCancelTimer(remaining > 0 ? remaining : 0);
-      };
-      updateTimer();
-      timerInterval = setInterval(updateTimer, 1000);
-    } else {
-      setCancelTimer(0);
-    }
-    return () => clearInterval(timerInterval);
-  }, [activeOrder]);
+  // --- LOGIKA HITUNG MUNDUR (Helper Function) ---
+  const getRemainingTime = (createdAt) => {
+    const createdTime = new Date(createdAt).getTime();
+    const diffSeconds = Math.floor((currentTime - createdTime) / 1000);
+    const lockDuration = 4 * 60; // 4 Menit
+    const remaining = lockDuration - diffSeconds;
+    return remaining > 0 ? remaining : 0;
+  };
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -92,7 +98,7 @@ export default function Order() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // --- FETCH DATA (DIPERBAIKI LOGIKA FILTERNYA) ---
+  // --- FETCH DATA ---
   const fetchInitialData = async (silent = false) => {
     const start = Date.now();
     try {
@@ -103,19 +109,19 @@ export default function Order() {
       // 2. Ping
       if(!silent) setPing(Date.now() - start);
 
-      // 3. Cek Order (LOGIKA BARU: TAMPILKAN JUGA COMPLETED)
-      const resHistory = await api.get('/history/list'); 
-      if (resHistory.data.success && resHistory.data.data.length > 0) {
-         // Ambil order terbaru
-         const latestOrder = resHistory.data.data[0]; // Asumsi backend sort by date desc
+      // 3. Cek Order (LOGIKA BARU: FILTER SEMUA YANG AKTIF)
+      const resHistory = await api.get('/history/list');
+      if (resHistory.data.success) {
+         const allOrders = resHistory.data.data;
          
-         // Tampilkan jika statusnya ACTIVE, PENDING, atau COMPLETED (Sukses dapat SMS)
-         // Kita sembunyikan hanya jika CANCELED atau EXPIRED
-         if (['ACTIVE', 'PENDING', 'COMPLETED', 'received'].includes(latestOrder.status)) {
-             setActiveOrder(latestOrder);
-         } else {
-             setActiveOrder(null);
-         }
+         // Ambil semua order yang statusnya belum final (atau baru selesai tapi belum ditutup user)
+         // Kita ambil status: ACTIVE, PENDING, COMPLETED, received
+         // Status CANCELED tidak perlu ditampilkan di sini
+         const activeList = allOrders.filter(order => 
+             ['ACTIVE', 'PENDING', 'COMPLETED', 'received'].includes(order.status)
+         );
+
+         setActiveOrders(activeList);
       }
     } catch (e) { console.error(e) }
 
@@ -186,6 +192,7 @@ export default function Order() {
       setSelectedOperatorId('any'); 
       setCurrentOperators([]); 
       setLoadingOperators(true);
+      
       const sampleProviderId = country.pricelist?.[0]?.provider_id;
       if (sampleProviderId) {
           try {
@@ -198,8 +205,10 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi!", "error");
+      
       const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
+
       showConfirm(
           "Konfirmasi Pembelian",
           `Beli ${country.name} - ${selectedService.service_name}?\nOperator: ${opName}\nServer: ${provider.server_id}\nHarga: Rp ${provider.price}`,
@@ -212,6 +221,7 @@ export default function Order() {
       try {
           const opIdToSend = selectedOperatorId || 'any';
           const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=${opIdToSend}&expected_price=${provider.price}`;
+          
           const res = await api.get(buyUrl);
           if (res.data.success) {
               closeConfirm();
@@ -228,18 +238,25 @@ export default function Order() {
       }
   };
 
-  const handleCancelClick = () => {
-     if (!activeOrder) return;
-     if (cancelTimer > 0) {
-         showConfirm("⏳ Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(cancelTimer)} lagi.`, closeConfirm, "Saya Mengerti");
+  const handleCancelClick = (order) => {
+     // Hitung sisa waktu untuk order spesifik ini
+     const remaining = getRemainingTime(order.created_at);
+
+     if (remaining > 0) {
+         showConfirm("⏳ Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(remaining)} lagi.`, closeConfirm, "Saya Mengerti");
          return;
      }
+
      showConfirm("Batalkan Pesanan?", "Yakin batalkan pesanan? Saldo akan dikembalikan otomatis.", async () => {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
-            const targetId = activeOrder.order_id || activeOrder.id;
+            // Gunakan order_id atau id tergantung API
+            const targetId = order.order_id || order.id;
             await api.get(`/orders/cancel?order_id=${targetId}`);
-            setActiveOrder(null); 
+            
+            // Hapus dari list local state biar responsif
+            setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
+            
             closeConfirm();
             showToast("Pesanan dibatalkan", "success");
             fetchInitialData();
@@ -250,20 +267,21 @@ export default function Order() {
      });
   };
 
+  // Fungsi untuk menutup order yang sudah selesai (hide dari list)
+  const handleCloseOrder = (orderId) => {
+      setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
+  };
+
   const handleCheckSMS = () => {
       showToast("Merefresh data...", "success");
       fetchInitialData();
   };
 
-  // Helper images
   const getOptimizedImage = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
     const cleanUrl = url.replace('https://', '').replace('http://', '');
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
-
-  // Render Check
-  const isSmsReceived = activeOrder && (activeOrder.status === 'COMPLETED' || activeOrder.status === 'received');
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
@@ -311,77 +329,95 @@ export default function Order() {
             </div>
         </div>
 
-        {/* 3. ACTIVE ORDER / SMS CARD (PALING BAWAH) */}
-        {activeOrder && (
-             <div className={`overflow-hidden rounded-3xl bg-white shadow-lg border relative animate-in slide-in-from-bottom duration-500 ${isSmsReceived ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-blue-100 dark:border-slate-800'}`}>
+        {/* --- DAFTAR ORDER AKTIF (LOOPING) --- */}
+        {activeOrders.length > 0 && (
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300">Pesanan Aktif ({activeOrders.length})</h3>
+                </div>
+
+                {activeOrders.map((order) => {
+                    const isSmsReceived = order.status === 'COMPLETED' || order.status === 'received';
+                    const remaining = getRemainingTime(order.created_at);
+                    const orderId = order.order_id || order.id;
+
+                    return (
+                        <div key={orderId} className={`overflow-hidden rounded-3xl shadow-lg border relative animate-in slide-in-from-bottom duration-500 bg-white dark:bg-slate-950 ${isSmsReceived ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-blue-100 dark:border-slate-800'}`}>
+                            
+                            {/* HEADER CARD */}
+                            <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold rounded-bl-xl flex items-center gap-1 ${isSmsReceived ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {isSmsReceived ? <CheckCircle2 size={12} /> : <Clock size={12} />} 
+                                {isSmsReceived ? 'SMS Diterima' : 'Menunggu SMS'}
+                            </div>
+
+                            <div className="p-5">
+                                {/* LAYANAN & NOMOR */}
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isSmsReceived ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 dark:bg-slate-900'}`}>
+                                        {isSmsReceived ? <MessageSquare size={24} /> : <Loader2 size={24} className="text-blue-600 animate-spin" />}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-lg truncate">
+                                            {order.service || 'Layanan'} 
+                                            <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">({order.country || 'Global'})</span>
+                                        </h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-lg font-mono font-bold text-slate-700 dark:text-slate-200 tracking-wider">
+                                                {order.phone_number}
+                                            </p>
+                                            <button onClick={() => handleCopy(order.phone_number)} className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:bg-slate-900">
+                                                <Copy size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* AREA KODE SMS (JIKA SUDAH TERIMA) */}
+                                {isSmsReceived ? (
+                                    <div className="mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center dark:bg-emerald-900/20 dark:border-emerald-900/30">
+                                        <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Kode OTP Anda</p>
+                                        <div 
+                                            onClick={() => handleCopy(order.otp_code || order.sms_content)}
+                                            className="text-3xl font-mono font-black text-emerald-700 tracking-[0.2em] cursor-pointer active:scale-95 transition-transform dark:text-emerald-400"
+                                        >
+                                            {order.otp_code || (order.sms_content ? order.sms_content.match(/\d+/)?.[0] : 'CODE')}
+                                        </div>
+                                        <p className="text-[10px] text-emerald-500 mt-2">{order.sms_content}</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
+                                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
+                                    </div>
+                                )}
+
+                                {/* TOMBOL AKSI */}
+                                {!isSmsReceived ? (
+                                    <div className="flex gap-3">
+                                        <button onClick={() => handleCancelClick(order)} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-colors ${remaining > 0 ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-500' : 'border-red-100 text-red-600 hover:bg-red-50 dark:border-red-900/30 dark:bg-red-900/10 dark:text-red-400'}`}>
+                                            {remaining > 0 ? <><Timer size={16} /> Tunggu {formatTime(remaining)}</> : <><Trash2 size={16} /> Batalkan</>}
+                                        </button>
+                                        <button onClick={handleCheckSMS} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform">
+                                            <Repeat size={16} /> Cek SMS
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => handleCloseOrder(orderId)} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900">
+                                        Selesai & Tutup
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
                 
-                {/* HEADER CARD */}
-                <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold rounded-bl-xl flex items-center gap-1 ${isSmsReceived ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {isSmsReceived ? <CheckCircle2 size={12} /> : <Clock size={12} />} 
-                    {isSmsReceived ? 'SMS Diterima' : 'Menunggu SMS'}
-                </div>
-
-                <div className="p-5">
-                    {/* LAYANAN & NOMOR */}
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isSmsReceived ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 dark:bg-slate-900'}`}>
-                             {isSmsReceived ? <MessageSquare size={24} /> : <Loader2 size={24} className="text-blue-600 animate-spin" />}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{activeOrder.service || 'Layanan'}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                                <p className="text-lg font-mono font-bold text-slate-700 dark:text-slate-200 tracking-wider">
-                                    {activeOrder.phone_number}
-                                </p>
-                                <button onClick={() => handleCopy(activeOrder.phone_number)} className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:bg-slate-900">
-                                    <Copy size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* AREA KODE SMS (JIKA SUDAH TERIMA) */}
-                    {isSmsReceived ? (
-                        <div className="mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center dark:bg-emerald-900/20 dark:border-emerald-900/30">
-                            <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Kode OTP Anda</p>
-                            <div 
-                                onClick={() => handleCopy(activeOrder.otp_code || activeOrder.sms_content)}
-                                className="text-3xl font-mono font-black text-emerald-700 tracking-[0.2em] cursor-pointer active:scale-95 transition-transform dark:text-emerald-400"
-                            >
-                                {activeOrder.otp_code || (activeOrder.sms_content ? activeOrder.sms_content.match(/\d+/)?.[0] : 'CODE')}
-                            </div>
-                            <p className="text-[10px] text-emerald-500 mt-2">{activeOrder.sms_content}</p>
-                        </div>
-                    ) : (
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
-                            <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
-                        </div>
-                    )}
-
-                    {/* TOMBOL AKSI */}
-                    {!isSmsReceived ? (
-                        <div className="flex gap-3">
-                            <button onClick={handleCancelClick} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-colors ${cancelTimer > 0 ? 'border-slate-200 text-slate-400 cursor-not-allowed' : 'border-red-100 text-red-600 hover:bg-red-50'}`}>
-                                {cancelTimer > 0 ? <><Timer size={16} /> Tunggu {formatTime(cancelTimer)}</> : <><Trash2 size={16} /> Batalkan</>}
-                            </button>
-                            <button onClick={handleCheckSMS} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-none active:scale-95 transition-transform">
-                                <Repeat size={16} /> Cek SMS
-                            </button>
-                        </div>
-                    ) : (
-                        <button onClick={() => setActiveOrder(null)} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900">
-                            Selesai & Tutup
-                        </button>
-                    )}
-                    
-                    {!isSmsReceived && <p className="text-[10px] text-slate-400 text-center mt-3">Otomatis refresh setiap 5 detik.</p>}
-                </div>
-             </div>
+                <p className="text-[10px] text-slate-400 text-center mt-3">Otomatis refresh setiap 5 detik.</p>
+            </div>
         )}
+
       </div>
 
-      {/* CONFIRM MODAL & TOAST & DRAWERS (SAMA SEPERTI SEBELUMNYA - DIBAWAH) */}
-      {/* ... (Bagian Drawer & Modal sama persis, sudah included di kode ini) ... */}
+      {/* CONFIRM MODAL & TOAST */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
@@ -390,7 +426,7 @@ export default function Order() {
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50">Batal</button>}
+                          {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>}
                           <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
                               {confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}
@@ -400,11 +436,12 @@ export default function Order() {
               </div>
           </div>
       )}
+  
       <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-500 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span className="text-sm font-bold">{toast.message}</span>
       </div>
       
-      {/* DRAWER SERVICES & COUNTRIES (INCLUDE SAMA SEPERTI SEBELUMNYA) */}
+      {/* DRAWER SERVICES */}
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
          <div className="pt-3 pb-2 px-6 bg-white rounded-t-[2rem] z-10 dark:bg-slate-900">
@@ -432,6 +469,7 @@ export default function Order() {
          </div>
       </div>
 
+      {/* DRAWER COUNTRIES */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-900 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white rounded-t-[2rem] dark:bg-slate-900 dark:border-slate-800">
