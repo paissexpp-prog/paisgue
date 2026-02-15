@@ -27,12 +27,17 @@ export default function Order() {
   // --- LOCAL STORAGE KEY ---
   const HIDDEN_ORDERS_KEY = 'ruangotp_hidden_orders';
 
-  // --- REF UNTUK MENYIMPAN ID YANG SUDAH DITUTUP ---
-  // Inisialisasi langsung dari LocalStorage agar anti-refresh
-  const closedIdsRef = useRef(() => {
-      const saved = localStorage.getItem(HIDDEN_ORDERS_KEY);
-      return saved ? JSON.parse(saved) : [];
-  });
+  // --- PERBAIKAN FATAL DISINI ---
+  // Inisialisasi Ref harus nilai langsung, bukan fungsi arrow
+  const getSavedHiddenOrders = () => {
+      try {
+          const saved = localStorage.getItem(HIDDEN_ORDERS_KEY);
+          return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+          return [];
+      }
+  };
+  const closedIdsRef = useRef(getSavedHiddenOrders());
 
   // --- STATE OPERATOR ---
   const [currentOperators, setCurrentOperators] = useState([]); 
@@ -61,12 +66,7 @@ export default function Order() {
   const CACHE_DURATION = 60 * 60 * 1000;
 
   useEffect(() => {
-    // Pastikan ref terisi dari storage saat mount pertama kali
-    const saved = localStorage.getItem(HIDDEN_ORDERS_KEY);
-    if (saved) {
-        closedIdsRef.current = JSON.parse(saved);
-    }
-
+    // Refresh data saat pertama kali buka
     fetchInitialData();
     
     // Auto refresh data setiap 5 detik
@@ -126,21 +126,24 @@ export default function Order() {
       if (resHistory.data.success) {
          const allOrders = resHistory.data.data;
          
-         // Ambil daftar hidden terbaru dari ref (yang sudah sinkron dengan localStorage)
-         const hiddenList = closedIdsRef.current || [];
+         // Ambil daftar hidden terbaru dari ref
+         // Pastikan ini Array, jika tidak set ke array kosong (Safe Guard)
+         const hiddenList = Array.isArray(closedIdsRef.current) ? closedIdsRef.current : [];
 
-         // PERBAIKAN: Filter order, pastikan ID-nya tidak ada di hiddenList
          const activeList = allOrders.filter(order => {
              const orderId = order.order_id || order.id;
              const isHidden = hiddenList.includes(orderId);
              
-             // Tampilkan jika status Aktif/Sukses DAN TIDAK disembunyikan user
-             return ['ACTIVE', 'PENDING', 'COMPLETED', 'received'].includes(order.status) && !isHidden;
+             // Normalisasi status ke uppercase biar 'active' dan 'ACTIVE' terbaca semua
+             const status = order.status ? order.status.toUpperCase() : '';
+             
+             // Tampilkan jika status Valid DAN TIDAK disembunyikan user
+             return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(status) && !isHidden;
          });
 
          setActiveOrders(activeList);
       }
-    } catch (e) { console.error(e) }
+    } catch (e) { console.error("Error fetching orders:", e) }
 
     if(!silent) loadServicesFromCache();
   };
@@ -271,9 +274,8 @@ export default function Order() {
             const targetId = order.order_id || order.id;
             await api.get(`/orders/cancel?order_id=${targetId}`);
             
-            // Masukkan ke daftar tutup agar tidak muncul lagi saat refresh
             // Logic: Ambil data lama -> tambah yg baru -> simpan
-            const currentHidden = closedIdsRef.current || [];
+            const currentHidden = Array.isArray(closedIdsRef.current) ? closedIdsRef.current : [];
             const newHidden = [...currentHidden, targetId];
             
             // Simpan ke State/Ref dan LocalStorage
@@ -293,10 +295,10 @@ export default function Order() {
      });
   };
 
-  // PERBAIKAN UTAMA: Fungsi Close Order dengan LocalStorage
+  // FUNGSI CLOSE ORDER (FIXED)
   const handleCloseOrder = (orderId) => {
       // 1. Ambil data hidden yang sekarang ada di Ref
-      const currentHidden = closedIdsRef.current || [];
+      const currentHidden = Array.isArray(closedIdsRef.current) ? closedIdsRef.current : [];
       
       // 2. Tambahkan ID baru ke array
       const newHidden = [...currentHidden, orderId];
@@ -304,7 +306,7 @@ export default function Order() {
       // 3. Update Ref (agar memory realtime tahu)
       closedIdsRef.current = newHidden;
 
-      // 4. Update LocalStorage (agar browser ingat selamanya/sampai dihapus)
+      // 4. Update LocalStorage (agar browser ingat selamanya)
       localStorage.setItem(HIDDEN_ORDERS_KEY, JSON.stringify(newHidden));
       
       // 5. Hapus dari tampilan sekarang
@@ -377,7 +379,8 @@ export default function Order() {
                 </div>
 
                 {activeOrders.map((order) => {
-                    const isSmsReceived = order.status === 'COMPLETED' || order.status === 'received';
+                    const statusUpper = order.status ? order.status.toUpperCase() : '';
+                    const isSmsReceived = statusUpper === 'COMPLETED' || statusUpper === 'RECEIVED';
                     const remaining = getRemainingTime(order.created_at);
                     const orderId = order.order_id || order.id;
 
