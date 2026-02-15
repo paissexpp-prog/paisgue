@@ -5,7 +5,7 @@ import {
   ChevronLeft, Terminal, Server, ShieldCheck, 
   Key, Globe, Code2, Copy, ExternalLink, 
   ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
-  ShoppingCart, MessageSquare, XCircle
+  ShoppingCart, MessageSquare, XCircle, Wallet, RefreshCw, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,8 +16,8 @@ export default function Dokumentasi() {
   // State Accordion Utama
   const [expandedIndex, setExpandedIndex] = useState(null);
   
-  // State Sub-Tab untuk Transaksi (0: Order, 1: Cek SMS, 2: Cancel)
-  const [activeTransTab, setActiveTransTab] = useState(0);
+  // State Sub-Tab (Reusable untuk Order & Deposit)
+  const [activeSubTab, setActiveSubTab] = useState(0);
   
   // State Toast
   const [toast, setToast] = useState({ show: false, message: '' });
@@ -37,8 +37,8 @@ export default function Dokumentasi() {
         setExpandedIndex(null);
     } else {
         setExpandedIndex(index);
-        // Reset tab transaksi ke awal (Order) saat menu dibuka
-        if (index === 3) setActiveTransTab(0); 
+        // Reset tab ke 0 setiap kali buka menu baru
+        setActiveSubTab(0); 
     }
   };
 
@@ -99,9 +99,10 @@ export default function Dokumentasi() {
   ]
 }`
     },
-    // --- SPECIAL MULTI-TAB ITEM (TRANSAKSI) ---
+    
+    // --- TRANSAKSI NOMOR (MULTI TAB) ---
     {
-        id: "transaksi", // Marker unik
+        id: "transaksi_order",
         title: "Transaksi Nomor (Order)",
         desc: "Menu lengkap untuk melakukan pembelian, pengecekan SMS, dan pembatalan.",
         tabs: [
@@ -133,7 +134,7 @@ export default function Dokumentasi() {
                 desc: "Mengecek apakah SMS OTP sudah masuk atau status pesanan.",
                 headers: "x-user-id: [User_ID_Anda]",
                 params: "Query: order_id",
-                response: `// Jika Status ACTIVE (Menunggu SMS)
+                response: `// KONDISI 1: Menunggu SMS (ACTIVE)
 {
   "success": true,
   "data": {
@@ -142,7 +143,7 @@ export default function Dokumentasi() {
   }
 }
 
-// Jika Status COMPLETED (Ada OTP)
+// KONDISI 2: SMS Diterima (COMPLETED)
 {
   "success": true,
   "data": {
@@ -160,7 +161,7 @@ export default function Dokumentasi() {
                 desc: "Membatalkan pesanan dan mengembalikan saldo (Refund).",
                 headers: "x-user-id: [User_ID_Anda]",
                 params: "Query: order_id",
-                response: `// Jika Berhasil Cancel
+                response: `// JIKA SUKSES
 {
   "success": true,
   "message": "Order berhasil dibatalkan",
@@ -170,7 +171,7 @@ export default function Dokumentasi() {
   }
 }
 
-// Jika Gagal (Masih periode lock)
+// JIKA GAGAL (Masih waktu tunggu)
 {
   "success": false,
   "error": {
@@ -180,15 +181,22 @@ export default function Dokumentasi() {
             }
         ]
     },
-    // ------------------------------------------
+
+    // --- TRANSAKSI DEPOSIT (MULTI TAB) ---
     {
-        title: "Buat Deposit (QRIS)",
-        method: "GET",
-        url: "/deposit/create",
-        desc: "Membuat tagihan deposit otomatis via QRIS.",
-        headers: "x-user-id: [User_ID_Anda]",
-        params: "Query: amount (min 500)",
-        response: `{
+        id: "transaksi_deposit",
+        title: "Transaksi Deposit",
+        desc: "Kelola pembayaran deposit otomatis via QRIS.",
+        tabs: [
+            {
+                name: "1. Buat Tagihan",
+                icon: <Wallet size={14}/>,
+                method: "GET",
+                url: "/deposit/create",
+                desc: "Membuat tagihan deposit otomatis via QRIS.",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: amount (min 500)",
+                response: `{
   "success": true,
   "message": "QRIS Berhasil dibuat",
   "data": {
@@ -199,6 +207,48 @@ export default function Dokumentasi() {
     "expired_at": 1771138644404
   }
 }`
+            },
+            {
+                name: "2. Cek Status",
+                icon: <RefreshCw size={14}/>,
+                method: "GET",
+                url: "/deposit/cekstatus",
+                desc: "Mengecek status pembayaran deposit (Pending/Success/Canceled).",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: deposit_id",
+                response: `{
+  "success": true,
+  "message": "Status deposit ditemukan",
+  "data": {
+    "deposit_id": "DEP-815271",
+    "status": "pending",
+    "method": "qris",
+    "amount_received": 5000,
+    "total_pay": 5598,
+    "created_at": 1742099999999,
+    "expired_at": 1742100899999
+  }
+}
+// Status bisa: 'pending', 'success', 'canceled', 'expired'`
+            },
+            {
+                name: "3. Batalkan",
+                icon: <Trash2 size={14}/>,
+                method: "GET",
+                url: "/deposit/cancel",
+                desc: "Membatalkan tagihan deposit yang masih pending.",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: deposit_id",
+                response: `{
+  "success": true,
+  "message": "Deposit berhasil dibatalkan",
+  "data": {
+    "deposit_id": "DEP-815271",
+    "status": "canceled"
+  }
+}`
+            }
+        ]
     }
   ];
 
@@ -286,10 +336,10 @@ export default function Dokumentasi() {
             
             {API_DOCS.map((api, index) => {
                 const isExpanded = expandedIndex === index;
-                const isMulti = api.id === "transaksi";
+                const isMulti = api.tabs && api.tabs.length > 0;
                 
-                // Jika multi tab, ambil data dari tab aktif
-                const currentData = isMulti ? api.tabs[activeTransTab] : api;
+                // Jika multi tab, ambil data dari tab aktif, jika tidak ambil data langsung
+                const currentData = isMulti ? api.tabs[activeSubTab] : api;
 
                 return (
                     <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 border-blue-500/30 shadow-lg ring-1 ring-blue-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
@@ -318,21 +368,21 @@ export default function Dokumentasi() {
                         </button>
 
                         {/* Konten Accordion */}
-                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                             <div className="px-5 pb-6 space-y-5">
                                 <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
                                 
-                                {/* 3 BUTTONS NAVIGASI (KHUSUS TRANSAKSI) */}
+                                {/* SUB-NAVIGASI BUTTONS (KHUSUS MULTI TAB) */}
                                 {isMulti && (
                                     <div className="grid grid-cols-3 gap-2 mb-4">
                                         {api.tabs.map((tab, idx) => (
                                             <button
                                                 key={idx}
-                                                onClick={() => setActiveTransTab(idx)}
-                                                className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeTransTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
+                                                onClick={() => setActiveSubTab(idx)}
+                                                className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeSubTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
                                             >
                                                 {tab.icon}
-                                                <span>{idx === 0 ? "Order" : idx === 1 ? "Cek SMS" : "Cancel"}</span>
+                                                <span>{tab.name.split('. ')[1]}</span>
                                             </button>
                                         ))}
                                     </div>
