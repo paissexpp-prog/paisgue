@@ -7,17 +7,23 @@ import {
   User, LogOut, Wallet, ShoppingBag, Calendar, 
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
-  Smartphone, Eye, EyeOff
+  Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X
 } from 'lucide-react';
 
 export default function Profile() {
-  const { mode, setMode, accent, setAccent } = useTheme(); 
+  const { mode, setMode, accent, setAccent, color } = useTheme(); 
   const navigate = useNavigate();
   
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ orders: 0, deposits: 0 });
   const [loading, setLoading] = useState(true);
   
+  // Whitelist States
+  const [whitelist, setWhitelist] = useState(null);
+  const [whitelistLoading, setWhitelistLoading] = useState(false);
+  const [showWhitelistModal, setShowWhitelistModal] = useState(false);
+  const [ipInput, setIpInput] = useState('');
+
   // State untuk visibilitas ID
   const [showId, setShowId] = useState(false);
 
@@ -27,6 +33,7 @@ export default function Profile() {
 
   useEffect(() => {
     fetchUserData();
+    fetchWhitelist();
   }, []);
 
   const fetchUserData = async () => {
@@ -52,6 +59,46 @@ export default function Profile() {
     }
   };
 
+  const fetchWhitelist = async () => {
+    try {
+      const res = await api.get('/whitelist/list');
+      if (res.data.success) {
+        setWhitelist(res.data.data);
+      }
+    } catch (err) {
+      console.error("Gagal memuat whitelist", err);
+    }
+  };
+
+  const handleAddWhitelist = async () => {
+    if (!ipInput) return;
+    setWhitelistLoading(true);
+    try {
+      const res = await api.post('/whitelist/add', { ip: ipInput });
+      if (res.data.success) {
+        setWhitelist(res.data.data);
+        setIpInput('');
+        setShowWhitelistModal(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error?.message || "Gagal menambah IP");
+    } finally {
+      setWhitelistLoading(false);
+    }
+  };
+
+  const handleRemoveWhitelist = async () => {
+    if (!window.confirm("Hapus IP ini dari whitelist?")) return;
+    try {
+      const res = await api.post('/whitelist/remove');
+      if (res.data.success) {
+        setWhitelist(null);
+      }
+    } catch (err) {
+      alert("Gagal menghapus IP");
+    }
+  };
+
   const confirmLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -70,14 +117,6 @@ export default function Profile() {
         day: 'numeric', month: 'long', year: 'numeric'
       });
     } catch (e) { return '-'; }
-  };
-
-  const getAccentColor = () => {
-    switch(accent) {
-      case 'violet': return 'bg-violet-600 text-white';
-      case 'emerald': return 'bg-emerald-600 text-white';
-      default: return 'bg-blue-600 text-white'; 
-    }
   };
 
   const getAccentText = () => {
@@ -221,7 +260,51 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. APLIKASI */}
+        {/* 4. KEAMANAN (WHITELIST IP) */}
+        <div>
+          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Keamanan Api</h3>
+          <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+            
+            {!whitelist ? (
+              <button 
+                onClick={() => setShowWhitelistModal(true)} 
+                className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-opacity-20`}>
+                    <ShieldCheck size={18} />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Whitelist IP</span>
+                </div>
+                <div className="flex items-center gap-2">
+                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800">Belum Set</span>
+                   <Plus size={18} className="text-slate-400" />
+                </div>
+              </button>
+            ) : (
+              <div className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-950">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-opacity-20`}>
+                    <Globe size={18} />
+                  </div>
+                  <div>
+                    <span className="text-xs block font-bold text-slate-400 uppercase tracking-tighter">Whitelisted IP</span>
+                    <span className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">{whitelist.ip}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleRemoveWhitelist}
+                  className="p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 transition-colors"
+                >
+                   <Trash2 size={18} />
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* 5. APLIKASI */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Aplikasi</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
@@ -259,10 +342,49 @@ export default function Profile() {
 
       </div>
 
+      {/* --- WHITELIST IP MODAL --- */}
+      {showWhitelistModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Tambah Whitelist</h3>
+                <button onClick={() => setShowWhitelistModal(false)} className="text-slate-400"><X size={20}/></button>
+              </div>
+              
+              <div className="mb-6">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Alamat IP (v4/v6)</label>
+                <div className="relative">
+                  <input 
+                    type="text"
+                    value={ipInput}
+                    onChange={(e) => setIpInput(e.target.value)}
+                    placeholder="Contoh: 1.1.1.1"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl py-4 px-5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all"
+                  />
+                </div>
+                <p className="mt-3 text-[10px] text-slate-400 leading-relaxed">
+                  Hanya 1 IP yang diizinkan. IP ini akan digunakan untuk mengakses API RuangOTP dari server Anda.
+                </p>
+              </div>
+
+              <button 
+                onClick={handleAddWhitelist}
+                disabled={whitelistLoading || !ipInput}
+                className={`w-full py-4 rounded-2xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${color.btn} disabled:opacity-50 disabled:grayscale`}
+              >
+                {whitelistLoading ? <Loader2 size={18} className="animate-spin"/> : <CheckCircle size={18}/>}
+                Simpan Alamat IP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- CUSTOM LOGOUT MODAL --- */}
       {showLogoutModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
                   <div className="flex flex-col items-center text-center">
                       <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
                           <LogOut size={32} />
