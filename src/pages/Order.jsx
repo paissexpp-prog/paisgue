@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
@@ -18,12 +18,15 @@ export default function Order() {
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
   
-  // UBAH: activeOrder (single) jadi activeOrders (array)
   const [activeOrders, setActiveOrders] = useState([]); 
   
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
+
+  // --- REF UNTUK MENYIMPAN ID YANG SUDAH DITUTUP ---
+  // Kita pakai useRef agar nilainya tetap terbaca meski di dalam interval
+  const closedIdsRef = useRef([]);
 
   // --- STATE OPERATOR ---
   const [currentOperators, setCurrentOperators] = useState([]); 
@@ -36,7 +39,6 @@ export default function Order() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // --- STATE TIMER GLOBAL ---
-  // Kita pakai satu state waktu sekarang untuk menghitung mundur semua order sekaligus
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // UI Controls
@@ -55,11 +57,10 @@ export default function Order() {
   useEffect(() => {
     fetchInitialData();
     
-    // Auto refresh data setiap 5 detik jika ada order aktif
+    // Auto refresh data setiap 5 detik
     const interval = setInterval(() => {
-        if (activeOrders.length > 0) {
-            fetchInitialData(true); // true = silent refresh
-        }
+        // Kita refresh silent
+        fetchInitialData(true); 
     }, 5000);
 
     // Timer global update setiap 1 detik
@@ -71,7 +72,7 @@ export default function Order() {
         clearInterval(interval);
         clearInterval(timerInterval);
     };
-  }, [activeOrders.length]); 
+  }, []); // Dependency array dikosongkan agar interval tidak reset terus menerus
 
   // Search Filter
   useEffect(() => {
@@ -109,17 +110,18 @@ export default function Order() {
       // 2. Ping
       if(!silent) setPing(Date.now() - start);
 
-      // 3. Cek Order (LOGIKA BARU: FILTER SEMUA YANG AKTIF)
+      // 3. Cek Order
       const resHistory = await api.get('/history/list');
       if (resHistory.data.success) {
          const allOrders = resHistory.data.data;
          
-         // Ambil semua order yang statusnya belum final (atau baru selesai tapi belum ditutup user)
-         // Kita ambil status: ACTIVE, PENDING, COMPLETED, received
-         // Status CANCELED tidak perlu ditampilkan di sini
-         const activeList = allOrders.filter(order => 
-             ['ACTIVE', 'PENDING', 'COMPLETED', 'received'].includes(order.status)
-         );
+         // PERBAIKAN: Filter order, pastikan ID-nya tidak ada di closedIdsRef
+         const activeList = allOrders.filter(order => {
+             const orderId = order.order_id || order.id;
+             const isClosed = closedIdsRef.current.includes(orderId);
+             
+             return ['ACTIVE', 'PENDING', 'COMPLETED', 'received'].includes(order.status) && !isClosed;
+         });
 
          setActiveOrders(activeList);
       }
@@ -254,6 +256,9 @@ export default function Order() {
             const targetId = order.order_id || order.id;
             await api.get(`/orders/cancel?order_id=${targetId}`);
             
+            // Masukkan ke daftar tutup agar tidak muncul lagi saat refresh
+            closedIdsRef.current = [...closedIdsRef.current, targetId];
+
             // Hapus dari list local state biar responsif
             setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
             
@@ -267,8 +272,12 @@ export default function Order() {
      });
   };
 
-  // Fungsi untuk menutup order yang sudah selesai (hide dari list)
+  // PERBAIKAN: Fungsi Close Order
   const handleCloseOrder = (orderId) => {
+      // 1. Masukkan ID ke 'Blacklist' Ref agar fetchInitialData tidak mengambilnya lagi
+      closedIdsRef.current = [...closedIdsRef.current, orderId];
+      
+      // 2. Hapus dari State UI saat ini
       setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
   };
 
