@@ -508,9 +508,14 @@ axios.get('https://api.ruangotp.site/api/v1/countries/list?service_id=13', {
                 <h3 className="font-bold">Butuh Bantuan?</h3>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed mb-4">Pastikan IP Server Anda sudah terdaftar di menu <strong>Whitelist IP</strong> sebelum melakukan request API.</p>
-            <button className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${color.btn}`}>
+            <a 
+              href="https://t.me/cs_ruangotp" 
+              target="_blank" 
+              rel="noreferrer"
+              className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${color.btn}`}
+            >
                 <ExternalLink size={14} /> Hubungi Developer CS
-            </button>
+            </a>
         </div>
 
       </div>
