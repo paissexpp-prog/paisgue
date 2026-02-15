@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 
-// Lazy Loading Pages - Memecah bundle agar lebih ringan
+// Lazy Loading Pages
 const Welcome = lazy(() => import('./pages/Welcome'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -13,7 +13,9 @@ const History = lazy(() => import('./pages/History'));
 const Order = lazy(() => import('./pages/Order'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-// Komponen Loading saat transisi halaman
+// HALAMAN BARU: Dokumentasi API
+const Dokumentasi = lazy(() => import('./pages/Dokumentasi'));
+
 const PageLoader = () => (
   <div className="flex min-h-[80vh] items-center justify-center bg-slate-50 dark:bg-slate-900">
     <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
@@ -42,7 +44,7 @@ function App() {
 
             <Route path="/login" element={
               <AuthRoute>
-                <Login />
+                  <Login />
               </AuthRoute>
             } />
             
@@ -79,6 +81,13 @@ function App() {
             <Route path="/history" element={
               <PrivateRoute>
                   <History />
+              </PrivateRoute>
+            } />
+
+            {/* RUTEN BARU: DOKUMENTASI API */}
+            <Route path="/api/dev" element={
+              <PrivateRoute>
+                  <Dokumentasi />
               </PrivateRoute>
             } />
 

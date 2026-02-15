@@ -8,7 +8,7 @@ import {
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
   Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X,
-  AlertCircle, HelpCircle
+  AlertCircle, HelpCircle, Code2
 } from 'lucide-react';
 
 export default function Profile() {
@@ -282,15 +282,16 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. KEAMANAN (WHITELIST IP) */}
+        {/* 4. KEAMANAN (WHITELIST IP & DOKUMENTASI) */}
         <div>
-          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Keamanan Api</h3>
+          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Developer Tools</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
             
+            {/* Whitelist IP Row */}
             {!whitelist ? (
               <button 
                 onClick={() => setShowWhitelistModal(true)} 
-                className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+                className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800"
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-opacity-20`}>
@@ -304,7 +305,7 @@ export default function Profile() {
                 </div>
               </button>
             ) : (
-              <div className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-950">
+              <div className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-opacity-20`}>
                     <Globe size={18} />
@@ -322,6 +323,20 @@ export default function Profile() {
                 </button>
               </div>
             )}
+
+            {/* DOKUMENTASI API ROW (BARU) */}
+            <button 
+              onClick={() => navigate('/api/dev')} 
+              className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-opacity-20`}>
+                  <Code2 size={18} />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Dokumentasi API</span>
+              </div>
+              <ChevronRight size={18} className="text-slate-400" />
+            </button>
 
           </div>
         </div>
@@ -403,7 +418,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* --- CONFIRMATION MODAL (Untuk Hapus IP) --- */}
+      {/* --- CONFIRMATION MODAL --- */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
