@@ -4,7 +4,8 @@ import { useTheme } from '../context/ThemeContext';
 import { 
   ChevronLeft, Terminal, Server, ShieldCheck, 
   Key, Globe, Code2, Copy, ExternalLink, 
-  ChevronDown, ChevronUp, CheckCircle2, AlertTriangle
+  ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
+  ShoppingCart, MessageSquare, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,8 +13,11 @@ export default function Dokumentasi() {
   const { color } = useTheme();
   const navigate = useNavigate();
 
-  // State Accordion
+  // State Accordion Utama
   const [expandedIndex, setExpandedIndex] = useState(null);
+  
+  // State Sub-Tab untuk Transaksi (0: Order, 1: Cek SMS, 2: Cancel)
+  const [activeTransTab, setActiveTransTab] = useState(0);
   
   // State Toast
   const [toast, setToast] = useState({ show: false, message: '' });
@@ -29,10 +33,16 @@ export default function Dokumentasi() {
   };
 
   const toggleAccordion = (index) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
+    if (expandedIndex === index) {
+        setExpandedIndex(null);
+    } else {
+        setExpandedIndex(index);
+        // Reset tab transaksi ke awal (Order) saat menu dibuka
+        if (index === 3) setActiveTransTab(0); 
+    }
   };
 
-  // DATA DOKUMENTASI REAL (SESUAI JSON ANDA)
+  // DATA DOKUMENTASI
   const API_DOCS = [
     {
         title: "Daftar Layanan",
@@ -46,9 +56,7 @@ export default function Dokumentasi() {
   "data": [
     { "service_code": 13, "service_name": "WhatsApp", "category": "Social", "status": true },
     { "service_code": 5, "service_name": "Telegram", "category": "Social", "status": true },
-    { "service_code": 4, "service_name": "Instagram", "category": "Social", "status": true },
-    { "service_code": 59, "service_name": "DANA", "category": "E-wallet", "status": true },
-    { "service_code": 147, "service_name": "OpenAI (ChatGPT)", "category": "AI Platform", "status": true }
+    { "service_code": 59, "service_name": "DANA", "category": "E-wallet", "status": true }
   ]
 }`
     },
@@ -69,18 +77,7 @@ export default function Dokumentasi() {
       "iso_code": "id",
       "stock_total": 3306,
       "pricelist": [
-        { "provider_id": 3237, "server_id": 2, "stock": 7, "price": 750, "price_format": "Rp750", "available": true },
-        { "provider_id": 2413, "server_id": 2, "stock": 1, "price": 2550, "price_format": "Rp2.550", "available": true }
-      ]
-    },
-    {
-      "number_id": 866,
-      "name": "Malaysia",
-      "prefix": "+60",
-      "iso_code": "my",
-      "stock_total": 1003,
-      "pricelist": [
-        { "provider_id": "6994", "server_id": 3, "stock": 49, "price": 6900, "price_format": "Rp6.900", "available": true }
+        { "provider_id": 3237, "server_id": 2, "stock": 7, "price": 750, "price_format": "Rp750", "available": true }
       ]
     }
   ]
@@ -98,30 +95,92 @@ export default function Dokumentasi() {
   "data": [
     { "id": 1, "name": "any", "image": "https://ruangotp.site/file/3Q_M1nug.jpeg" },
     { "id": 2, "name": "indosat", "image": "https://www.imei.info/media/op/im3_.jpg" },
-    { "id": 3, "name": "telkomsel", "image": "https://www.imei.info/media/op/telkomsel.jpg" },
-    { "id": 4, "name": "axis", "image": "https://www.imei.info/media/op/Axis.png" }
+    { "id": 3, "name": "telkomsel", "image": "https://www.imei.info/media/op/telkomsel.jpg" }
   ]
 }`
     },
+    // --- SPECIAL MULTI-TAB ITEM (TRANSAKSI) ---
     {
-      title: "Beli Nomor",
-      method: "GET",
-      url: "/orders/buy",
-      desc: "Melakukan pembelian nomor virtual baru.",
-      headers: "x-user-id: [User_ID_Anda]",
-      params: "Query: number_id, provider_id, operator_id, expected_price",
-      response: `{
+        id: "transaksi", // Marker unik
+        title: "Transaksi Nomor (Order)",
+        desc: "Menu lengkap untuk melakukan pembelian, pengecekan SMS, dan pembatalan.",
+        tabs: [
+            {
+                name: "1. Order Nomor",
+                icon: <ShoppingCart size={14}/>,
+                method: "GET",
+                url: "/orders/buy",
+                desc: "Melakukan pembelian nomor virtual baru.",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: number_id, provider_id, operator_id, expected_price",
+                response: `{
   "success": true,
   "message": "Pembelian berhasil",
   "data": {
-    "order_id": "RUANGOTP752928",
-    "phone_number": "+62 858 0291 8226",
+    "order_id": "RUANGOTP405817",
+    "phone_number": "+62 857 2105 2792",
     "price": 750,
-    "formatted_price": "Rp750",
+    "price_format": "Rp750",
     "remaining_balance": 6500
   }
 }`
+            },
+            {
+                name: "2. Cek Status SMS",
+                icon: <MessageSquare size={14}/>,
+                method: "GET",
+                url: "/orders/check-status",
+                desc: "Mengecek apakah SMS OTP sudah masuk atau status pesanan.",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: order_id",
+                response: `// Jika Status ACTIVE (Menunggu SMS)
+{
+  "success": true,
+  "data": {
+    "order_id": "RUANGOTP405817",
+    "status": "ACTIVE"
+  }
+}
+
+// Jika Status COMPLETED (Ada OTP)
+{
+  "success": true,
+  "data": {
+    "order_id": "RUANGOTP405817",
+    "status": "COMPLETED",
+    "otp_code": "4585"
+  }
+}`
+            },
+            {
+                name: "3. Cancel Order",
+                icon: <XCircle size={14}/>,
+                method: "GET",
+                url: "/orders/cancel",
+                desc: "Membatalkan pesanan dan mengembalikan saldo (Refund).",
+                headers: "x-user-id: [User_ID_Anda]",
+                params: "Query: order_id",
+                response: `// Jika Berhasil Cancel
+{
+  "success": true,
+  "message": "Order berhasil dibatalkan",
+  "data": {
+    "order_id": "RUANGOTP405817",
+    "status": "CANCELLED"
+  }
+}
+
+// Jika Gagal (Masih periode lock)
+{
+  "success": false,
+  "error": {
+    "message": "Harap tunggu 4 menit lagi untuk membatalkan."
+  }
+}`
+            }
+        ]
     },
+    // ------------------------------------------
     {
         title: "Buat Deposit (QRIS)",
         method: "GET",
@@ -147,7 +206,7 @@ export default function Dokumentasi() {
       {
           title: "Error: IP Tidak Terdaftar",
           code: 403,
-          desc: "Terjadi jika IP server Anda belum dimasukkan ke Whitelist.",
+          desc: "Terjadi jika IP server Anda belum dimasukkan ke Whitelist di menu Profile.",
           response: `{
   "success": false,
   "error": {
@@ -192,7 +251,6 @@ export default function Dokumentasi() {
 
         {/* INFO CARDS */}
         <div className="grid grid-cols-1 gap-4">
-            {/* BASE URL CARD */}
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                 <div className="flex items-center gap-2 text-blue-500 mb-2">
                     <Server size={18} />
@@ -204,7 +262,6 @@ export default function Dokumentasi() {
                 </div>
             </div>
 
-            {/* AUTH METHOD CARD */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                     <div className="flex items-center gap-2 text-emerald-500 mb-2">
@@ -229,18 +286,30 @@ export default function Dokumentasi() {
             
             {API_DOCS.map((api, index) => {
                 const isExpanded = expandedIndex === index;
+                const isMulti = api.id === "transaksi";
+                
+                // Jika multi tab, ambil data dari tab aktif
+                const currentData = isMulti ? api.tabs[activeTransTab] : api;
+
                 return (
                     <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 border-blue-500/30 shadow-lg ring-1 ring-blue-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
                         
-                        {/* Judul / Header Accordion */}
+                        {/* Judul Accordion */}
                         <button 
                             onClick={() => toggleAccordion(index)}
                             className="w-full p-5 flex items-center justify-between outline-none group"
                         >
                             <div className="flex items-center gap-4">
-                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${api.method === 'GET' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-orange-50 text-orange-600'}`}>
-                                    {api.method}
-                                </span>
+                                {!isMulti && (
+                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${api.method === 'GET' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-orange-50 text-orange-600'}`}>
+                                        {api.method}
+                                    </span>
+                                )}
+                                {isMulti && (
+                                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-violet-50 text-violet-600 dark:bg-violet-900/30">
+                                        MULTI
+                                    </span>
+                                )}
                                 <h4 className={`font-bold text-sm transition-colors ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200 group-hover:text-blue-600'}`}>
                                     {api.title}
                                 </h4>
@@ -249,23 +318,42 @@ export default function Dokumentasi() {
                         </button>
 
                         {/* Konten Accordion */}
-                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'}`}>
                             <div className="px-5 pb-6 space-y-5">
                                 <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
                                 
+                                {/* 3 BUTTONS NAVIGASI (KHUSUS TRANSAKSI) */}
+                                {isMulti && (
+                                    <div className="grid grid-cols-3 gap-2 mb-4">
+                                        {api.tabs.map((tab, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setActiveTransTab(idx)}
+                                                className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeTransTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
+                                            >
+                                                {tab.icon}
+                                                <span>{idx === 0 ? "Order" : idx === 1 ? "Cek SMS" : "Cancel"}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {/* URL Endpoint */}
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Endpoint URL</p>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Endpoint URL</p>
+                                        {isMulti && <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded dark:bg-blue-900/30">{currentData.method}</span>}
+                                    </div>
                                     <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                                        <code className="text-xs font-mono text-blue-600 dark:text-blue-400">{api.url}</code>
-                                        <button onClick={() => handleCopy(api.url)} className="text-slate-400 hover:text-blue-500 p-1"><Copy size={14} /></button>
+                                        <code className="text-xs font-mono text-blue-600 dark:text-blue-400">{currentData.url}</code>
+                                        <button onClick={() => handleCopy(currentData.url)} className="text-slate-400 hover:text-blue-500 p-1"><Copy size={14} /></button>
                                     </div>
                                 </div>
 
                                 {/* Deskripsi */}
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Deskripsi</p>
-                                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{api.desc}</p>
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{currentData.desc}</p>
                                 </div>
 
                                 {/* Headers & Params */}
@@ -275,14 +363,14 @@ export default function Dokumentasi() {
                                             <ShieldCheck size={12} className="text-emerald-500" />
                                             <span className="font-bold uppercase">Header Wajib</span>
                                         </div>
-                                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300">{api.headers}</code>
+                                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300">{currentData.headers}</code>
                                     </div>
                                     <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                                         <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-1">
                                             <Key size={12} className="text-orange-500" />
                                             <span className="font-bold uppercase">Parameter</span>
                                         </div>
-                                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300">{api.params}</code>
+                                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300">{currentData.params}</code>
                                     </div>
                                 </div>
 
@@ -290,10 +378,10 @@ export default function Dokumentasi() {
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Response</p>
-                                        <button onClick={() => handleCopy(api.response)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                                        <button onClick={() => handleCopy(currentData.response)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
                                     </div>
                                     <pre className="p-4 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 shadow-inner">
-                                        {api.response}
+                                        {currentData.response}
                                     </pre>
                                 </div>
                             </div>
@@ -303,14 +391,13 @@ export default function Dokumentasi() {
             })}
         </div>
 
-        {/* --- ERROR RESPONSES --- */}
+        {/* ERROR RESPONSES */}
         <div className="space-y-3">
             <h3 className="px-1 text-sm font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
                 <AlertTriangle size={16} /> Error Responses
             </h3>
             
             {ERROR_DOCS.map((err, index) => {
-                // Gunakan index + 100 agar key unik dan tidak bentrok dengan accordion atas
                 const itemIndex = index + 100;
                 const isExpanded = expandedIndex === itemIndex;
                 return (
@@ -347,7 +434,7 @@ export default function Dokumentasi() {
             })}
         </div>
 
-        {/* FOOTER BANTUAN */}
+        {/* FOOTER */}
         <div className="rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
             <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-xl bg-orange-50 text-orange-500 dark:bg-orange-900/20">
@@ -363,7 +450,6 @@ export default function Dokumentasi() {
 
       </div>
 
-      {/* --- CUSTOM TOAST (PENGGANTI ALERT) --- */}
       <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full bg-slate-900 dark:bg-white px-5 py-3 text-white dark:text-slate-900 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
           <CheckCircle2 size={18} className="text-emerald-400 dark:text-emerald-600" />
           <span className="text-sm font-bold">{toast.message}</span>
