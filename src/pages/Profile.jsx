@@ -88,7 +88,7 @@ export default function Profile() {
     setChangeIdLoading(true);
     try {
       // Panggil endpoint backend yang sudah kita buat sebelumnya
-      const res = await api.post('/change-id'); 
+      const res = await api.post('/change_id'); 
       
       if (res.data.success) {
         // 1. Update Token di LocalStorage (PENTING!)
@@ -640,4 +640,3 @@ export default function Profile() {
     </div>
   );
 }
-
