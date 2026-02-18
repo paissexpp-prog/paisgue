@@ -108,7 +108,7 @@ const BottomNav = () => {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-white">Channel Telegram</p>
-                                    <p className="text-[10px] text-sky-300">Info update & stok</p>
+                                    <p className="text-[10px] text-sky-300">Berita Resmi RuangOTP</p>
                                 </div>
                                 <ExternalLink size={14} className="ml-auto text-slate-500"/>
                             </a>
