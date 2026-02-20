@@ -38,6 +38,12 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(true);
 
+  // State untuk menyimpan data DNS (Banner Promo)
+  const [banners, setBanners] = useState(() => {
+    const cachedBanners = localStorage.getItem('ruangotp_dns_cache');
+    return cachedBanners ? JSON.parse(cachedBanners) : [];
+  });
+
   const fetchUserData = async () => {
     try {
       const res = await api.get('/auth/me');
@@ -53,8 +59,36 @@ const Dashboard = () => {
     }
   };
 
+  // Fungsi untuk mengambil data Banner DNS
+  const fetchBanners = async () => {
+    try {
+      const cachedTime = localStorage.getItem('ruangotp_dns_time');
+      const now = Date.now();
+      
+      // Ambil data ke server HANYA jika belum ada cache ATAU cache sudah lebih dari 5 menit (300.000 ms)
+      if (!cachedTime || (now - parseInt(cachedTime)) > 300000) {
+        const res = await api.get('/dns'); // Endpoint yang kita buat di backend
+        if (res.data && res.data.success) {
+          setBanners(res.data.data);
+          localStorage.setItem('ruangotp_dns_cache', JSON.stringify(res.data.data));
+          localStorage.setItem('ruangotp_dns_time', now.toString());
+        }
+      }
+    } catch (error) {
+      // Silent error: Jika gagal, biarkan state banners kosong atau pakai data lama dari cache
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
+    fetchBanners();
+
+    // Auto-refresh banner setiap 5 menit ketika user diam di halaman ini
+    const bannerInterval = setInterval(() => {
+      fetchBanners();
+    }, 300000);
+
+    return () => clearInterval(bannerInterval);
   }, []);
 
   const formatRupiah = (number) => {
@@ -85,7 +119,10 @@ const Dashboard = () => {
           <div className="flex gap-2">
              <button 
                 className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                onClick={fetchUserData}
+                onClick={() => {
+                  fetchUserData();
+                  fetchBanners(); // Refresh manual juga memicu fetch banner
+                }}
              >
                 <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
              </button>
@@ -95,6 +132,34 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* =========================================================
+          BANNER DNS / PROMO (SLIDER)
+          Hanya muncul jika file dns.json ada isinya (banners.length > 0)
+          ========================================================= */}
+      {banners.length > 0 && (
+        <div className="mt-6 px-5">
+          <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 pb-2">
+            {banners.map((item, index) => (
+              <a 
+                key={index}
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 w-full sm:w-80 snap-center overflow-hidden rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 block transition-transform active:scale-95"
+              >
+                {/* object-cover dan h-40 memastikan gambar tidak gepeng dan ukurannya seragam */}
+                <img 
+                  src={item.gambar} 
+                  alt={`Promo ${index + 1}`} 
+                  className="w-full h-40 object-cover bg-slate-200 dark:bg-slate-800"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Card Saldo */}
       <div className="mt-6 px-5">
