@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { Bell, RefreshCw, Smartphone, Globe, Gamepad2, Zap } from 'lucide-react';
@@ -43,6 +43,10 @@ const Dashboard = () => {
     const cachedBanners = localStorage.getItem('ruangotp_dns_cache');
     return cachedBanners ? JSON.parse(cachedBanners) : [];
   });
+
+  // State dan Ref untuk fungsi Slider Dots (Titik Indikator)
+  const [activeBanner, setActiveBanner] = useState(0);
+  const sliderRef = useRef(null);
 
   const fetchUserData = async () => {
     try {
@@ -99,6 +103,17 @@ const Dashboard = () => {
     }).format(number);
   };
 
+  // Fungsi untuk mendeteksi scroll dan mengubah titik aktif
+  const handleScroll = () => {
+    if (sliderRef.current) {
+      const scrollLeft = sliderRef.current.scrollLeft;
+      const width = sliderRef.current.clientWidth;
+      // Membulatkan index berdasarkan posisi scroll saat ini
+      const activeIndex = Math.round(scrollLeft / width);
+      setActiveBanner(activeIndex);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
@@ -134,12 +149,17 @@ const Dashboard = () => {
       </div>
 
       {/* =========================================================
-          BANNER DNS / PROMO (SLIDER)
+          BANNER DNS / PROMO (SLIDER DENGAN DOTS)
           Hanya muncul jika file dns.json ada isinya (banners.length > 0)
           ========================================================= */}
       {banners.length > 0 && (
         <div className="mt-6 px-5">
-          <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 pb-2">
+          {/* Slider Container */}
+          <div 
+            ref={sliderRef}
+            onScroll={handleScroll}
+            className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 pb-1"
+          >
             {banners.map((item, index) => (
               <a 
                 key={index}
@@ -158,6 +178,22 @@ const Dashboard = () => {
               </a>
             ))}
           </div>
+
+          {/* Dots Indicator (Hanya muncul jika gambar lebih dari 1) */}
+          {banners.length > 1 && (
+            <div className="flex justify-center items-center gap-1.5 mt-3">
+              {banners.map((_, index) => (
+                <div 
+                  key={index}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    activeBanner === index 
+                      ? 'w-4 bg-slate-800 dark:bg-slate-200' 
+                      : 'w-1.5 bg-slate-300 dark:bg-slate-700'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
