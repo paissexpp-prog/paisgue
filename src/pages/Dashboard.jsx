@@ -44,6 +44,9 @@ const Dashboard = () => {
     return cachedBanners ? JSON.parse(cachedBanners) : [];
   });
 
+  // State untuk Layanan Populer
+  const [popularServices, setPopularServices] = useState([]);
+
   // State dan Ref untuk fungsi Slider Dots (Titik Indikator)
   const [activeBanner, setActiveBanner] = useState(0);
   const sliderRef = useRef(null);
@@ -83,9 +86,35 @@ const Dashboard = () => {
     }
   };
 
+  // Fungsi untuk mengambil Layanan Populer (Sama seperti Order.jsx)
+  const loadPopularServices = async () => {
+    const CACHE_KEY = 'otp_services_v12';
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    
+    // Cek cache dulu biar cepat
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        // Ambil 3 layanan teratas saja
+        setPopularServices(parsed.slice(0, 3));
+        return;
+      } catch (e) {}
+    }
+
+    // Jika belum ada cache, request ke server
+    try {
+      const res = await api.get('/services/list');
+      if (res.data && res.data.success) {
+        setPopularServices(res.data.data.slice(0, 3));
+        localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.data));
+      }
+    } catch (err) {}
+  };
+
   useEffect(() => {
     fetchUserData();
     fetchBanners();
+    loadPopularServices();
 
     // Auto-refresh banner setiap 5 menit ketika user diam di halaman ini
     const bannerInterval = setInterval(() => {
@@ -114,6 +143,13 @@ const Dashboard = () => {
     }
   };
 
+  // Fungsi optimasi gambar dari Order.jsx
+  const getOptimizedImage = (url) => {
+    if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
+    const cleanUrl = url.replace('https://', '').replace('http://', '');
+    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
@@ -137,6 +173,7 @@ const Dashboard = () => {
                 onClick={() => {
                   fetchUserData();
                   fetchBanners(); // Refresh manual juga memicu fetch banner
+                  loadPopularServices();
                 }}
              >
                 <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
@@ -248,34 +285,43 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Lagi Populer */}
+      {/* Lagi Populer - Otomatis mengambil data dari API */}
       <div className="mt-8 px-5">
         <div className="mb-4 flex items-center justify-between">
            <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">🔥 Lagi Populer</h3>
-           <button className={`text-sm font-medium ${color.text}`}>Lihat Semua</button>
+           <button onClick={() => navigate('/order')} className={`text-sm font-medium ${color.text}`}>Lihat Semua</button>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                 <Zap size={24} />
-              </div>
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">DANA</span>
-           </div>
-
-           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
-                 <Gamepad2 size={24} />
-              </div>
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Free Fire</span>
-           </div>
-
-           <div className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                  <Smartphone size={24} />
-              </div>
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">WhatsApp</span>
-           </div>
+           {popularServices.length > 0 ? (
+             popularServices.map((item, index) => (
+               <div 
+                 key={index}
+                 onClick={() => navigate('/order')}
+                 className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 active:scale-95"
+               >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 p-2 dark:bg-slate-900">
+                      <img 
+                        src={getOptimizedImage(item.service_img)} 
+                        alt={item.service_name} 
+                        className="h-full w-full object-contain" 
+                        loading="lazy" 
+                      />
+                  </div>
+                  <span className="truncate w-full text-center text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {item.service_name}
+                  </span>
+               </div>
+             ))
+           ) : (
+             // Skeleton Loading jika data sedang diambil
+             [1, 2, 3].map((i) => (
+               <div key={i} className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                  <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-900 animate-pulse"></div>
+                  <div className="h-3 w-16 rounded bg-slate-100 dark:bg-slate-900 animate-pulse"></div>
+               </div>
+             ))
+           )}
         </div>
       </div>
 
