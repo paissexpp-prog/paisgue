@@ -4,10 +4,10 @@ import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
-  Search, Wifi, X, Trash2, Repeat, Plus, 
-  ChevronDown, ChevronUp, Server, Globe, 
+  Search, Wifi, X, ShoppingBag, Trash2, Repeat, Plus, 
+  ChevronRight, ChevronDown, ChevronUp, Server, Globe, 
   Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, 
-  Signal, Clock, Copy, Settings, RefreshCw, Box, Check, Info
+  Signal, Clock, Timer, Copy, MessageSquare 
 } from 'lucide-react';
 
 export default function Order() {
@@ -17,12 +17,15 @@ export default function Order() {
   // --- STATE DATA ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
+  
+  // Perbaikan: Gunakan Array agar bisa menampung banyak pesanan sekaligus
   const [activeOrders, setActiveOrders] = useState([]); 
+  
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
 
-  // Logika Anti-Muncul Lagi (Local & Backend)
+  // Logika Anti-Muncul Lagi: Simpan ID yang sudah di-close user ke LocalStorage (sebagai fallback & update UI instan)
   const HIDDEN_ORDERS_KEY = 'ruangotp_closed_orders_v1';
   const closedIdsRef = useRef([]);
 
@@ -31,16 +34,13 @@ export default function Order() {
   const [selectedOperatorId, setSelectedOperatorId] = useState('any');
   const [loadingOperators, setLoadingOperators] = useState(false);
 
-  // --- STATE UI & FITUR BARU ---
+  // --- STATE UI ---
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // State Format Nomor & Popover
-  const [numberFormat, setNumberFormat] = useState('plus'); // 'plus', 'noplus', 'local'
-  const [showSettings, setShowSettings] = useState(false);
 
   // --- STATE TIMER GLOBAL ---
+  // Menggunakan satu state waktu untuk menghitung mundur semua pesanan secara realtime
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   // UI Controls
@@ -57,19 +57,23 @@ export default function Order() {
   const CACHE_DURATION = 60 * 60 * 1000;
 
   useEffect(() => {
+    // Load ID yang pernah di-close agar tidak muncul lagi (local)
     const savedHidden = localStorage.getItem(HIDDEN_ORDERS_KEY);
     if (savedHidden) {
         closedIdsRef.current = JSON.parse(savedHidden);
     }
-    
-    // Load settingan format nomor jika ada
-    const savedFormat = localStorage.getItem('ruangotp_number_format');
-    if (savedFormat) setNumberFormat(savedFormat);
 
     fetchInitialData();
     
-    const interval = setInterval(() => { fetchInitialData(true); }, 5000);
-    const timerInterval = setInterval(() => { setCurrentTime(Date.now()); }, 1000);
+    // Auto refresh data setiap 5 detik
+    const interval = setInterval(() => {
+        fetchInitialData(true); 
+    }, 5000);
+
+    // Detak jantung timer (1 detik)
+    const timerInterval = setInterval(() => {
+        setCurrentTime(Date.now());
+    }, 1000);
 
     return () => {
         clearInterval(interval);
@@ -77,6 +81,7 @@ export default function Order() {
     };
   }, []);
 
+  // Search Filter
   useEffect(() => {
     if (sheetMode === 'services') {
         const results = services.filter(service =>
@@ -86,22 +91,12 @@ export default function Order() {
     }
   }, [searchTerm, services, sheetMode]);
 
-  // --- LOGIKA HITUNG MUNDUR (DISEMPURNAKAN) ---
-  // Waktu tunggu batal (4 menit)
-  const getCooldownTime = (createdAt) => {
+  // --- LOGIKA HITUNG MUNDUR ---
+  const getRemainingTime = (createdAt) => {
     const createdTime = new Date(createdAt).getTime();
     const diffSeconds = Math.floor((currentTime - createdTime) / 1000);
-    const lockDuration = 4 * 60; 
+    const lockDuration = 4 * 60; // 4 Menit
     const remaining = lockDuration - diffSeconds;
-    return remaining > 0 ? remaining : 0;
-  };
-
-  // Waktu kadaluarsa order (Asumsi 20 menit / 1200 detik dari provider)
-  const getExpiringTime = (createdAt) => {
-    const createdTime = new Date(createdAt).getTime();
-    const diffSeconds = Math.floor((currentTime - createdTime) / 1000);
-    const expireDuration = 20 * 60; 
-    const remaining = expireDuration - diffSeconds;
     return remaining > 0 ? remaining : 0;
   };
 
@@ -111,55 +106,50 @@ export default function Order() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // Logika Format Nomor
-  const getFormattedNumber = (num, format) => {
-      if (!num) return '';
-      let clean = String(num).replace(/[^0-9]/g, ''); 
-      if (format === 'plus') return `+${clean}`;
-      if (format === 'noplus') return clean;
-      if (format === 'local') {
-          if (clean.startsWith('62')) return `0${clean.slice(2)}`;
-          return `0${clean}`; 
-      }
-      return num;
-  };
-
-  const handleFormatChange = (format) => {
-      setNumberFormat(format);
-      localStorage.setItem('ruangotp_number_format', format);
-      setShowSettings(false);
-  };
-
   // --- FETCH DATA ---
   const fetchInitialData = async (silent = false) => {
     const start = Date.now();
     try {
+      // 1. Ambil Saldo User
       const resUser = await api.get('/auth/me');
-      if (resUser.data.success) setBalance(resUser.data.data.balance);
+      if (resUser.data.success) {
+          setBalance(resUser.data.data.balance);
+      }
       
+      // 2. Latency
       if(!silent) setPing(Date.now() - start);
 
+      // 3. Ambil data order yang SUDAH DITUTUP dari backend (saveorder.json)
       let closedBackendIds = [];
       try {
           const resSelesai = await api.get('/cekselesai/list');
           if (resSelesai.data.success && Array.isArray(resSelesai.data.data)) {
               closedBackendIds = resSelesai.data.data.map(o => o.order_id);
           }
-      } catch (err) {}
+      } catch (err) {
+          console.error("Gagal load saveorder:", err);
+      }
 
+      // 4. Ambil Riwayat Pesanan Asli
       const resHistory = await api.get('/history/list');
       if (resHistory.data.success) {
          const allOrders = resHistory.data.data;
+         
+         // Filter: Hanya tampilkan status aktif/selesai DAN yang belum di-close user (di local mapun di backend)
          const filtered = allOrders.filter(order => {
              const id = order.order_id || order.id;
              const isHiddenLocal = closedIdsRef.current.includes(id);
              const isHiddenBackend = closedBackendIds.includes(id);
              const status = (order.status || '').toUpperCase();
+             
              return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(status) && !isHiddenLocal && !isHiddenBackend;
          });
+
          setActiveOrders(filtered);
       }
-    } catch (e) { }
+    } catch (e) { 
+        console.error("Fetch Error:", e);
+    }
 
     if(!silent) loadServicesFromCache();
   };
@@ -241,6 +231,7 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi!", "error");
+      
       const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
 
@@ -274,7 +265,8 @@ export default function Order() {
   };
 
   const handleCancelClick = (order) => {
-     const remaining = getCooldownTime(order.created_at);
+     const remaining = getRemainingTime(order.created_at);
+
      if (remaining > 0) {
          showConfirm("⏳ Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(remaining)} lagi.`, closeConfirm, "Saya Mengerti");
          return;
@@ -285,7 +277,10 @@ export default function Order() {
          try {
             const targetId = order.order_id || order.id;
             await api.get(`/orders/cancel?order_id=${targetId}`);
+            
+            // Hapus dari list
             setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
+            
             closeConfirm();
             showToast("Pesanan dibatalkan", "success");
             fetchInitialData();
@@ -296,12 +291,22 @@ export default function Order() {
      });
   };
 
+  // Fungsi untuk menutup order yang sudah selesai (Tembak ke backend & update local)
   const handleCloseOrder = async (orderId) => {
+      // 1. Optimistic Update (Sembunyikan dari UI secara instan biar cepat)
       const newHidden = [...closedIdsRef.current, orderId];
       closedIdsRef.current = newHidden;
       localStorage.setItem(HIDDEN_ORDERS_KEY, JSON.stringify(newHidden));
+      
       setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
-      try { await api.post('/cekselesai/tutup', { order_id: orderId }); } catch (err) {}
+
+      // 2. Request ke Backend untuk salin ke saveorder.json
+      try {
+          await api.post('/cekselesai/tutup', { order_id: orderId });
+      } catch (err) {
+          console.error("Gagal sinkronisasi tutup order ke backend:", err);
+          // Jika gagal ke backend, tidak apa-apa, UI sudah terlanjur bersih (karena LocalStorage)
+      }
   };
 
   const handleCheckSMS = () => {
@@ -318,194 +323,135 @@ export default function Order() {
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
-      {/* HEADER ATAS */}
-      <div className="sticky top-0 z-30 bg-slate-50/90 pb-4 pt-8 backdrop-blur-md dark:bg-slate-900/90 px-5 border-b border-slate-200 dark:border-slate-800">
+      {/* HEADER */}
+      <div className="sticky top-0 z-30 bg-white/80 pb-4 pt-8 backdrop-blur-md dark:bg-slate-950/80 px-5 border-b border-slate-100 dark:border-slate-800">
            <div className="flex items-center justify-between">
               <div>
-                  <h1 className="text-xl font-extrabold text-slate-800 dark:text-white">Order OTP</h1>
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-white">Order Baru</h1>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><Wifi size={10} /> {ping}ms</span>
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><Wifi size={10} /> Data Center</span>
+                    <span className="text-[10px] text-slate-400">{ping}ms latency</span>
                   </div>
               </div>
               <div className="text-right">
-                  <p className="text-[10px] text-slate-500 font-medium">Saldo Anda</p>
-                  <p className="text-lg font-black text-blue-600 dark:text-blue-400">Rp {balance.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-slate-400">Saldo Anda</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">Rp {balance.toLocaleString('id-ID')}</p>
               </div>
            </div>
       </div>
 
-      {/* KONTEN UTAMA */}
-      <div className="px-5 mt-5 space-y-6">
+      {/* KONTEN */}
+      <div className="px-5 mt-6 space-y-6">
         
-        {/* CONTAINER PESANAN AKTIF (DESAIN BARU) */}
-        <div className="bg-white dark:bg-slate-950 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-1">
-            
-            {/* Header Container */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800/50">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-black text-slate-800 dark:text-white">Pesanan Aktif</h2>
-                    <button onClick={handleCheckSMS} className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:text-blue-400">
-                        <RefreshCw size={14} className={loadingServices ? "animate-spin" : ""} />
-                    </button>
-                </div>
-                
-                {/* Tombol Pengaturan Format Nomor */}
-                <div className="relative">
-                    <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors dark:bg-slate-900 dark:text-slate-400">
-                        <Settings size={18} />
-                    </button>
-                    
-                    {/* Popover Settings */}
-                    {showSettings && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)}></div>
-                            <div className="absolute right-0 top-12 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-                                    <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300">Format Nomor</h3>
-                                </div>
-                                <div className="p-2 space-y-1">
-                                    <button onClick={() => handleFormatChange('plus')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 transition-colors">
-                                        <div className="text-left">
-                                            <p className="font-medium text-xs">Dengan kode negara</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">(+62898892...)</p>
-                                        </div>
-                                        {numberFormat === 'plus' && <Check size={16} className="text-blue-600" />}
-                                    </button>
-                                    <button onClick={() => handleFormatChange('noplus')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 transition-colors">
-                                        <div className="text-left">
-                                            <p className="font-medium text-xs">Tanpa tanda +</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">(62898892...)</p>
-                                        </div>
-                                        {numberFormat === 'noplus' && <Check size={16} className="text-blue-600" />}
-                                    </button>
-                                    <button onClick={() => handleFormatChange('local')} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 transition-colors">
-                                        <div className="text-left">
-                                            <p className="font-medium text-xs">Nomor lokal</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">(0898892...)</p>
-                                        </div>
-                                        {numberFormat === 'local' && <Check size={16} className="text-blue-600" />}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
+        {/* BUTTON GET NUMBER */}
+        <button onClick={() => { setSheetMode('services'); setSearchTerm(''); }} className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95">
+            <div className="relative z-10 flex items-center justify-between">
+                <div><h2 className="text-2xl font-bold text-white mb-1">Get Virtual Number</h2><p className="text-slate-300 text-sm">Pilih layanan dari 190+ negara</p></div>
+                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all"><Plus size={24} className="text-white" /></div>
             </div>
+            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12"><Smartphone size={120} className="text-white" /></div>
+        </button>
 
-            {/* List Order atau Empty State */}
-            <div className="p-2">
-                {activeOrders.length > 0 ? (
-                    <div className="space-y-2">
-                        {activeOrders.map((order, index) => {
-                            const status = (order.status || '').toUpperCase();
-                            const isSmsReceived = status === 'COMPLETED' || status === 'RECEIVED';
-                            const cooldownRemaining = getCooldownTime(order.created_at);
-                            const expireRemaining = getExpiringTime(order.created_at);
-                            const orderId = order.order_id || order.id;
-                            const formattedPhone = getFormattedNumber(order.phone_number, numberFormat);
-
-                            return (
-                                <div key={orderId} className={`p-4 rounded-2xl ${index !== activeOrders.length - 1 ? 'border-b border-slate-100 dark:border-slate-800/60 pb-5 mb-2' : ''}`}>
-                                    
-                                    {/* Baris 1: Layanan, Negara, Status */}
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-slate-700 dark:text-slate-200 text-base">{order.service || 'Layanan'}</h3>
-                                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">{order.country || 'Global'}</span>
-                                        </div>
-                                        <span className={`px-3 py-1 text-[10px] font-bold rounded-full ${isSmsReceived ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                                            {isSmsReceived ? 'Selesai' : 'Menunggu'}
-                                        </span>
-                                    </div>
-
-                                    {/* Baris 2: Nomor HP */}
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <p className="text-2xl font-mono font-medium text-slate-800 dark:text-slate-100 tracking-wide">
-                                            {formattedPhone}
-                                        </p>
-                                        <button onClick={() => handleCopy(formattedPhone)} className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-95 transition-all dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
-                                            <Copy size={18} />
-                                        </button>
-                                    </div>
-
-                                    {/* Baris 3: Waktu & Harga */}
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-500">
-                                            <Clock size={14} />
-                                            <span>{formatTime(expireRemaining)} menit lagi</span>
-                                        </div>
-                                        <div className="text-sm font-bold text-slate-600 dark:text-slate-400">
-                                            Rp {order.total_price}
-                                        </div>
-                                    </div>
-
-                                    {/* Area Kode SMS / Tombol Aksi */}
-                                    {isSmsReceived ? (
-                                        <div className="space-y-3 mt-2">
-                                            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center dark:bg-emerald-900/10 dark:border-emerald-900/30 relative overflow-hidden">
-                                                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-                                                <p className="text-[10px] text-emerald-600 font-bold uppercase mb-1 tracking-wider">Kode OTP Diterima</p>
-                                                <div 
-                                                    onClick={() => handleCopy(order.otp_code || order.sms_content)}
-                                                    className="text-3xl font-mono font-black text-emerald-700 tracking-[0.2em] cursor-pointer active:scale-95 transition-transform dark:text-emerald-400"
-                                                >
-                                                    {order.otp_code || (order.sms_content ? order.sms_content.match(/\d+/)?.[0] : 'CODE')}
-                                                </div>
-                                                <p className="text-[10px] text-emerald-500 mt-2 italic truncate px-2">{order.sms_content}</p>
-                                            </div>
-                                            <button onClick={() => handleCloseOrder(orderId)} className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900 active:scale-95 transition-transform">
-                                                Selesai & Tutup
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button 
-                                                    onClick={() => handleCancelClick(order)} 
-                                                    className={`py-3 rounded-xl font-bold text-sm transition-all border flex items-center justify-center gap-2 ${cooldownRemaining > 0 ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-600' : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-900/30 dark:hover:bg-red-900/40 active:scale-95'}`}
-                                                >
-                                                    <Trash2 size={16} /> Batal
-                                                </button>
-                                                <button 
-                                                    onClick={handleCheckSMS} 
-                                                    className="py-3 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 font-bold text-sm hover:bg-blue-100 transition-all flex items-center justify-center gap-2 dark:bg-blue-900/20 dark:border-blue-900/30 dark:text-blue-400 active:scale-95"
-                                                >
-                                                    <MessageSquare size={16} /> Kirim SMS
-                                                </button>
-                                            </div>
-                                            {cooldownRemaining > 0 && (
-                                                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg w-fit">
-                                                    <Clock size={12} />
-                                                    <span>Tunggu <strong className="text-amber-600 dark:text-amber-500">{formatTime(cooldownRemaining)}</strong> untuk mengaktifkan tombol batal</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ) : (
-                    // TAMPILAN KOSONG (EMPTY STATE)
-                    <div className="py-12 px-4 flex flex-col items-center justify-center text-center animate-in fade-in duration-500">
-                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4 border border-slate-100 dark:border-slate-800">
-                            <Box size={28} className="text-slate-300 dark:text-slate-600" />
-                        </div>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">Tidak ada pesanan aktif</p>
-                        <button onClick={() => { setSheetMode('services'); setSearchTerm(''); }} className="px-6 py-3 rounded-xl border-2 border-blue-100 text-blue-600 font-bold text-sm hover:bg-blue-50 transition-colors flex items-center gap-2 dark:border-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/20">
-                            <Plus size={18} /> Buat Pesanan Baru
-                        </button>
-                    </div>
-                )}
+        {/* INFO CARDS */}
+        <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+                <div className="p-2 w-fit rounded-lg bg-emerald-50 text-emerald-600 mb-2 dark:bg-emerald-900/20"><Server size={18} /></div>
+                <p className="text-xs text-slate-400">Server Status</p>
+                <p className="font-bold text-slate-700 dark:text-slate-200">Online 100%</p>
             </div>
-            
-            {/* Tutorial Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/20 rounded-b-3xl">
-                <button className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline">
-                    <Info size={14} /> Tutorial Penggunaan
-                </button>
+            <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+                <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20"><Globe size={18} /></div>
+                <p className="text-xs text-slate-400">Total Negara</p>
+                <p className="font-bold text-slate-700 dark:text-slate-200">193 Negara</p>
             </div>
         </div>
+
+        {/* DAFTAR ORDER AKTIF (LOOPING) */}
+        {activeOrders.length > 0 && (
+            <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Pesanan Aktif ({activeOrders.length})</h3>
+                </div>
+
+                {activeOrders.map((order) => {
+                    const status = (order.status || '').toUpperCase();
+                    const isSmsReceived = status === 'COMPLETED' || status === 'RECEIVED';
+                    const remaining = getRemainingTime(order.created_at);
+                    const orderId = order.order_id || order.id;
+
+                    return (
+                        <div key={orderId} className={`overflow-hidden rounded-3xl shadow-lg border relative animate-in slide-in-from-bottom duration-500 bg-white dark:bg-slate-950 ${isSmsReceived ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-blue-100 dark:border-slate-800'}`}>
+                            
+                            {/* HEADER CARD */}
+                            <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold rounded-bl-xl flex items-center gap-1 ${isSmsReceived ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {isSmsReceived ? <CheckCircle2 size={12} /> : <Clock size={12} />} 
+                                {isSmsReceived ? 'SMS Diterima' : 'Menunggu SMS'}
+                            </div>
+
+                            <div className="p-5">
+                                {/* LAYANAN & NOMOR */}
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isSmsReceived ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 dark:bg-slate-900'}`}>
+                                        {isSmsReceived ? <MessageSquare size={24} /> : <Loader2 size={24} className="text-blue-600 animate-spin" />}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="font-bold text-slate-800 dark:text-white text-lg truncate">
+                                            {order.service || 'Layanan'} 
+                                            <span className="ml-2 text-[10px] font-normal text-slate-400 uppercase">({order.country || 'Global'})</span>
+                                        </h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-lg font-mono font-bold text-slate-700 dark:text-slate-200 tracking-wider">
+                                                {order.phone_number}
+                                            </p>
+                                            <button onClick={() => handleCopy(order.phone_number)} className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:bg-slate-900">
+                                                <Copy size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* AREA KODE SMS */}
+                                {isSmsReceived ? (
+                                    <div className="mb-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center dark:bg-emerald-900/20 dark:border-emerald-900/30">
+                                        <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Kode OTP Anda</p>
+                                        <div 
+                                            onClick={() => handleCopy(order.otp_code || order.sms_content)}
+                                            className="text-3xl font-mono font-black text-emerald-700 tracking-[0.2em] cursor-pointer active:scale-95 transition-transform dark:text-emerald-400"
+                                        >
+                                            {order.otp_code || (order.sms_content ? order.sms_content.match(/\d+/)?.[0] : 'CODE')}
+                                        </div>
+                                        <p className="text-[10px] text-emerald-500 mt-2 italic truncate px-2">{order.sms_content}</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4 dark:bg-slate-900">
+                                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
+                                    </div>
+                                )}
+
+                                {/* TOMBOL AKSI */}
+                                {!isSmsReceived ? (
+                                    <div className="flex gap-3">
+                                        <button onClick={() => handleCancelClick(order)} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-xs font-bold transition-colors ${remaining > 0 ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800' : 'border-red-100 text-red-600 hover:bg-red-50'}`}>
+                                            {remaining > 0 ? <><Timer size={16} /> Tunggu {formatTime(remaining)}</> : <><Trash2 size={16} /> Batalkan</>}
+                                        </button>
+                                        <button onClick={handleCheckSMS} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg active:scale-95 transition-transform">
+                                            <Repeat size={16} /> Cek SMS
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => handleCloseOrder(orderId)} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900 transition-colors">
+                                        Selesai & Tutup
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+                <p className="text-[10px] text-slate-400 text-center mt-3">Otomatis refresh setiap 5 detik.</p>
+            </div>
+        )}
+
       </div>
 
       {/* CONFIRM MODAL & TOAST */}
@@ -517,8 +463,8 @@ export default function Order() {
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line leading-relaxed">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 transition-colors">Batal</button>}
-                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2 transition-colors">
+                          {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">Batal</button>}
+                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
                               {confirmModal.loading ? 'Memproses...' : confirmModal.confirmText}
                           </button>
