@@ -25,7 +25,7 @@ export default function Order() {
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
 
-  // Logika Anti-Muncul Lagi: Simpan ID yang sudah di-close user ke LocalStorage
+  // Logika Anti-Muncul Lagi: Simpan ID yang sudah di-close user ke LocalStorage (sebagai fallback & update UI instan)
   const HIDDEN_ORDERS_KEY = 'ruangotp_closed_orders_v1';
   const closedIdsRef = useRef([]);
 
@@ -57,7 +57,7 @@ export default function Order() {
   const CACHE_DURATION = 60 * 60 * 1000;
 
   useEffect(() => {
-    // Load ID yang pernah di-close agar tidak muncul lagi
+    // Load ID yang pernah di-close agar tidak muncul lagi (local)
     const savedHidden = localStorage.getItem(HIDDEN_ORDERS_KEY);
     if (savedHidden) {
         closedIdsRef.current = JSON.parse(savedHidden);
@@ -119,18 +119,30 @@ export default function Order() {
       // 2. Latency
       if(!silent) setPing(Date.now() - start);
 
-      // 3. Ambil Riwayat Pesanan
+      // 3. Ambil data order yang SUDAH DITUTUP dari backend (saveorder.json)
+      let closedBackendIds = [];
+      try {
+          const resSelesai = await api.get('/cekselesai/list');
+          if (resSelesai.data.success && Array.isArray(resSelesai.data.data)) {
+              closedBackendIds = resSelesai.data.data.map(o => o.order_id);
+          }
+      } catch (err) {
+          console.error("Gagal load saveorder:", err);
+      }
+
+      // 4. Ambil Riwayat Pesanan Asli
       const resHistory = await api.get('/history/list');
       if (resHistory.data.success) {
          const allOrders = resHistory.data.data;
          
-         // Filter: Hanya tampilkan status aktif/selesai DAN yang belum di-close user
+         // Filter: Hanya tampilkan status aktif/selesai DAN yang belum di-close user (di local mapun di backend)
          const filtered = allOrders.filter(order => {
              const id = order.order_id || order.id;
-             const isHidden = closedIdsRef.current.includes(id);
+             const isHiddenLocal = closedIdsRef.current.includes(id);
+             const isHiddenBackend = closedBackendIds.includes(id);
              const status = (order.status || '').toUpperCase();
              
-             return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(status) && !isHidden;
+             return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(status) && !isHiddenLocal && !isHiddenBackend;
          });
 
          setActiveOrders(filtered);
@@ -279,13 +291,22 @@ export default function Order() {
      });
   };
 
-  // Fungsi untuk menutup order yang sudah selesai (Simpan di LocalStorage agar tidak muncul lagi)
-  const handleCloseOrder = (orderId) => {
+  // Fungsi untuk menutup order yang sudah selesai (Tembak ke backend & update local)
+  const handleCloseOrder = async (orderId) => {
+      // 1. Optimistic Update (Sembunyikan dari UI secara instan biar cepat)
       const newHidden = [...closedIdsRef.current, orderId];
       closedIdsRef.current = newHidden;
       localStorage.setItem(HIDDEN_ORDERS_KEY, JSON.stringify(newHidden));
       
       setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
+
+      // 2. Request ke Backend untuk salin ke saveorder.json
+      try {
+          await api.post('/cekselesai/tutup', { order_id: orderId });
+      } catch (err) {
+          console.error("Gagal sinkronisasi tutup order ke backend:", err);
+          // Jika gagal ke backend, tidak apa-apa, UI sudah terlanjur bersih (karena LocalStorage)
+      }
   };
 
   const handleCheckSMS = () => {
