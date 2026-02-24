@@ -8,7 +8,7 @@ export default function Welcome() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       <Helmet>
-        <title>RuangOTP - Layanan Verifikasi OTP Indonesia Tercepat</title>
+        <title>RuangOTP.site - Layanan Verifikasi OTP Indonesia Tercepat</title>
         <meta name="description" content="Platform penyedia nomor virtual untuk verifikasi OTP WhatsApp, Telegram, Google, dan 1000+ aplikasi lainnya. Harga termurah, otomatis 24 jam, dan privasi aman." />
         <meta name="keywords" content="beli nomor otp, otp whatsapp murah, verifikasi telegram, nomor virtual indonesia, otp bypass, sms verification service" />
         <link rel="canonical" href="https://ruangotp.site/" />
