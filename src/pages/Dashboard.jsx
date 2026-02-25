@@ -123,11 +123,13 @@ const Dashboard = () => {
     try {
       const res = await api.get('/history/list');
       if (res.data.success) {
-        // Filter hanya status aktif
-        const aktif = res.data.data.filter(order => {
-          const s = (order.status || '').toUpperCase();
-          return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(s);
-        });
+        // Filter hanya status aktif, ambil 5 terbaru saja
+        const aktif = res.data.data
+          .filter(order => {
+            const s = (order.status || '').toUpperCase();
+            return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(s);
+          })
+          .slice(0, 5);
         setActiveOrders(aktif);
       }
     } catch (err) {
