@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Monitor, Palette, LogOut, Menu, X, Home, ShoppingBag, Wallet, Activity, User, Code2 } from 'lucide-react';
+import { Sun, Moon, Monitor, Palette, LogOut, Menu, X, Home, ShoppingBag, Wallet, Activity, User, Code2, FileText } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -207,6 +207,14 @@ export default function Navbar() {
                 <p className="mb-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
                   Lainnya
                 </p>
+
+                <button 
+                  onClick={() => handleSideNav('/ketentuan')} 
+                  className="flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+                >
+                  <FileText size={20} className="shrink-0" />
+                  <span className="font-semibold">Ketentuan</span>
+                </button>
 
                 <button 
                   onClick={() => handleSideNav('/api/dev')} 
