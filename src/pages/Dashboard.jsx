@@ -161,6 +161,14 @@ const Dashboard = () => {
     };
   }, []);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 4 && hour < 11)  return { text: 'Selamat pagi', emoji: '☀️' };
+    if (hour >= 11 && hour < 15) return { text: 'Selamat siang', emoji: '🌤️' };
+    if (hour >= 15 && hour < 19) return { text: 'Selamat sore', emoji: '🌅' };
+    return { text: 'Selamat malam', emoji: '🌙' };
+  };
+
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -207,7 +215,7 @@ const Dashboard = () => {
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-800 dark:text-white">{user.username}</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Selamat sore 🌤️</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{getGreeting().text} {getGreeting().emoji}</p>
             </div>
           </div>
           <div className="flex gap-2">
