@@ -8,16 +8,127 @@ export default function Welcome() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       <Helmet>
-        <title>RuangOTP.site - Layanan Verifikasi OTP Indonesia Tercepat</title>
-        <meta name="description" content="Platform penyedia nomor virtual untuk verifikasi OTP WhatsApp, Telegram, Google, dan 1000+ aplikasi lainnya. Harga termurah, otomatis 24 jam, dan privasi aman." />
-        <meta name="keywords" content="beli nomor otp, otp whatsapp murah, verifikasi telegram, nomor virtual indonesia, otp bypass, sms verification service" />
+        {/* =============================================
+            TITLE — Konsisten dengan index.html
+            ============================================= */}
+        <title>RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia</title>
+
+        {/* =============================================
+            META DESCRIPTION — Jelas, mengandung brand
+            ============================================= */}
+        <meta
+          name="description"
+          content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah. Daftar gratis sekarang!"
+        />
+
+        {/* =============================================
+            META KEYWORDS — Brand name lengkap + variasi
+            ============================================= */}
+        <meta
+          name="keywords"
+          content="RuangOTP, ruangotp, ruang otp, ruang-otp, jasa otp, beli otp, otp murah, layanan otp indonesia, verifikasi otp, nomor virtual indonesia, beli nomor otp, otp whatsapp murah, verifikasi telegram, otp google, nomor virtual sekali pakai, sms verification indonesia, otp bypass, sms otp service, virtual number indonesia"
+        />
+
+        {/* =============================================
+            CANONICAL
+            ============================================= */}
         <link rel="canonical" href="https://ruangotp.site/" />
+
+        {/* =============================================
+            OPEN GRAPH — Konsisten pakai "RuangOTP"
+            ============================================= */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://ruangotp.site/" />
+        <meta property="og:site_name" content="RuangOTP" />
+        <meta property="og:title" content="RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia" />
+        <meta
+          property="og:description"
+          content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah."
+        />
+        <meta property="og:image" content="https://cdn.nekohime.site/file/HsGrgzQf.jpeg" />
+        <meta property="og:locale" content="id_ID" />
+
+        {/* =============================================
+            TWITTER CARD
+            ============================================= */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@ruangotp" />
+        <meta name="twitter:title" content="RuangOTP - Layanan OTP Tercepat & Termurah" />
+        <meta
+          name="twitter:description"
+          content="RuangOTP - Layanan OTP otomatis, termurah, dan tercepat di Indonesia. Online 24 jam."
+        />
+        <meta name="twitter:image" content="https://cdn.nekohime.site/file/HsGrgzQf.jpeg" />
+
+        {/* =============================================
+            ROBOTS & LANGUAGE
+            ============================================= */}
+        <meta name="robots" content="index, follow" />
+        <meta name="language" content="Indonesian" />
+        <meta name="author" content="RuangOTP" />
+        <meta name="copyright" content="RuangOTP" />
+        <html lang="id" />
+
+        {/* =============================================
+            JSON-LD STRUCTURED DATA
+            Ini penting agar Google tahu brand name resmi = "RuangOTP"
+            ============================================= */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebSite",
+                "@id": "https://ruangotp.site/#website",
+                "url": "https://ruangotp.site/",
+                "name": "RuangOTP",
+                "description": "Layanan OTP Tercepat & Termurah di Indonesia",
+                "inLanguage": "id-ID",
+                "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": "https://ruangotp.site/?s={search_term_string}",
+                  "query-input": "required name=search_term_string"
+                }
+              },
+              {
+                "@type": "Organization",
+                "@id": "https://ruangotp.site/#organization",
+                "name": "RuangOTP",
+                "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"],
+                "url": "https://ruangotp.site/",
+                "logo": {
+                  "@type": "ImageObject",
+                  "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg"
+                },
+                "contactPoint": {
+                  "@type": "ContactPoint",
+                  "contactType": "customer service",
+                  "url": "https://t.me/cs_ruangotp",
+                  "availableLanguage": "Indonesian"
+                },
+                "sameAs": [
+                  "https://t.me/ruangotp",
+                  "https://t.me/cs_ruangotp"
+                ]
+              },
+              {
+                "@type": "WebPage",
+                "@id": "https://ruangotp.site/#webpage",
+                "url": "https://ruangotp.site/",
+                "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia",
+                "isPartOf": { "@id": "https://ruangotp.site/#website" },
+                "about": { "@id": "https://ruangotp.site/#organization" },
+                "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah.",
+                "inLanguage": "id-ID"
+              }
+            ]
+          })}
+        </script>
       </Helmet>
 
       <div className="relative isolate pt-14">
         <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80">
-          <div className={`relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr ${color.gradient} opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]`} 
- />
+          <div className={`relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr ${color.gradient} opacity-30 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]`} />
         </div>
 
         <div className="mx-auto max-w-6xl px-6 py-20 lg:px-8">
@@ -26,23 +137,21 @@ export default function Welcome() {
               🚀 Platform OTP #1 di Indonesia
             </div>
           
-   <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
               Verifikasi Akun Digital <br/>
               <span className={`bg-gradient-to-r ${color.gradient} bg-clip-text text-transparent`}>
                 Tanpa Batas
               </span>
             </h1>
-            <p className="mt-6 text-lg leading-8 
- text-slate-600 dark:text-slate-400">
+            <p className="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-400">
               Solusi verifikasi instan untuk WhatsApp, Telegram, Google, dan 1000+ layanan lainnya.
- Privasi terjaga, harga termurah, dan aktif 24 jam.
+              Privasi terjaga, harga termurah, dan aktif 24 jam.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <Link to="/register" className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition-all hover:scale-105 ${color.btn}`}>
                 Mulai Sekarang
               </Link>
-              <Link to="/login" className="text-sm font-semibold leading-6 text-slate-900 
- dark:text-white">
+              <Link to="/login" className="text-sm font-semibold leading-6 text-slate-900 dark:text-white">
                 Masuk Member <span aria-hidden="true">→</span>
               </Link>
             </div>
@@ -51,61 +160,50 @@ export default function Welcome() {
       </div>
 
       <div className="relative py-24 sm:py-32">
-      
-   <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-2xl lg:text-center">
             <h2 className={`text-base font-semibold leading-7 ${color.text}`}>Kenapa Kami?</h2>
             <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
               Segala yang Anda butuhkan untuk verifikasi
             </p>
           </div>
-    
-       
+
           <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
             <div className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
               
               <div className="flex flex-col rounded-2xl bg-slate-50 p-8 transition-colors dark:bg-slate-900/50">
-       
-          <div className={`mb-6 flex h-10 w-10 items-center justify-center rounded-lg ${color.btn}`}>
+                <div className={`mb-6 flex h-10 w-10 items-center justify-center rounded-lg ${color.btn}`}>
                   <Globe className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <div className="text-base font-semibold leading-7 text-slate-900 dark:text-white">
                   Akses Global
-     
-            </div>
+                </div>
                 <div className="mt-1 flex flex-auto flex-col text-base leading-7 text-slate-600 dark:text-slate-400">
-                  <p className="flex-auto">Tersedia nomor dari 50+ negara di seluruh dunia.
- Indonesia, USA, UK, dan banyak lagi.</p>
+                  <p className="flex-auto">Tersedia nomor dari 50+ negara di seluruh dunia. Indonesia, USA, UK, dan banyak lagi.</p>
                 </div>
               </div>
 
               <div className="flex flex-col rounded-2xl bg-slate-50 p-8 transition-colors dark:bg-slate-900/50">
                 <div className={`mb-6 flex h-10 w-10 items-center justify-center rounded-lg ${color.btn}`}>
-   
-                <Zap className="h-6 w-6" aria-hidden="true" />
+                  <Zap className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <div className="text-base font-semibold leading-7 text-slate-900 dark:text-white">
                   Koneksi Kilat
                 </div>
-         
-        <div className="mt-1 flex flex-auto flex-col text-base leading-7 text-slate-600 dark:text-slate-400">
-                  <p className="flex-auto">Sistem otomatis memproses SMS OTP dalam hitungan detik.
- Tanpa delay, tanpa ribet.</p>
+                <div className="mt-1 flex flex-auto flex-col text-base leading-7 text-slate-600 dark:text-slate-400">
+                  <p className="flex-auto">Sistem otomatis memproses SMS OTP dalam hitungan detik. Tanpa delay, tanpa ribet.</p>
                 </div>
               </div>
 
               <div className="flex flex-col rounded-2xl bg-slate-50 p-8 transition-colors dark:bg-slate-900/50">
                 <div className={`mb-6 flex h-10 w-10 items-center justify-center rounded-lg ${color.btn}`}>
-     
-              <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+                  <ShieldCheck className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <div className="text-base font-semibold leading-7 text-slate-900 dark:text-white">
                   Privasi & Aman
                 </div>
-          
-       <div className="mt-1 flex flex-auto flex-col text-base leading-7 text-slate-600 dark:text-slate-400">
-                  <p className="flex-auto">Lindungi nomor pribadi Anda dari spam.
- Gunakan nomor virtual sekali pakai yang aman.</p>
+                <div className="mt-1 flex flex-auto flex-col text-base leading-7 text-slate-600 dark:text-slate-400">
+                  <p className="flex-auto">Lindungi nomor pribadi Anda dari spam. Gunakan nomor virtual sekali pakai yang aman.</p>
                 </div>
               </div>
 
@@ -115,20 +213,17 @@ export default function Welcome() {
       </div>
 
       <footer className="mt-auto border-t border-slate-200 py-12 dark:border-slate-800">
-      
-   <div className="mx-auto max-w-7xl px-6 text-center md:flex md:items-center md:justify-between lg:px-8">
+        <div className="mx-auto max-w-7xl px-6 text-center md:flex md:items-center md:justify-between lg:px-8">
           <div className="mt-8 md:order-1 md:mt-0">
             <p className="text-xs leading-5 text-slate-500">
-              &copy;
- 2026 RuangOTP. All rights reserved.
+              &copy; 2026 RuangOTP. All rights reserved.
             </p>
           </div>
           <div className="flex justify-center space-x-6 md:order-2">
-             <span className="text-xs text-slate-400">Made with ❤️ for Privacy</span>
+            <span className="text-xs text-slate-400">Made with ❤️ for Privacy</span>
           </div>
         </div>
       </footer>
     </div>
   );
 }
-
