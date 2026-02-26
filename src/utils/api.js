@@ -36,14 +36,24 @@ api.interceptors.request.use((config) => {
 // RESPONSE INTERCEPTOR
 // Kalau backend return 401 (token invalid / akun tidak ada)
 // → otomatis clear localStorage dan redirect ke /login
+//
+// Tambahan: kalau backend return 404 dari endpoint /auth/me
+// (akun sudah dihapus worker), juga otomatis logout
 // ================================================================
 api.interceptors.response.use(
   (response) => response, // Response normal, langsung teruskan
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    if (
+      status === 401 ||
+      (status === 404 && requestUrl.includes('/auth/me'))
+    ) {
       localStorage.clear();
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
