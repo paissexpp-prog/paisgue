@@ -256,11 +256,21 @@ export default function Order() {
               fetchInitialData(); 
           } else {
               closeConfirm();
-              showToast(res.data.error?.message || "Order Gagal", "error");
+              // --- PERBAIKAN PESAN ERROR (Mencegat pesan bahasa inggris) ---
+              let errorMsg = res.data.error?.message || "Order Gagal";
+              if (errorMsg.toLowerCase().includes("rate limit") || errorMsg.toLowerCase().includes("please wait")) {
+                  errorMsg = "Sistem pusat sedang sibuk. Silakan coba klik Beli lagi dalam 1-2 detik ya! ⏳";
+              }
+              showToast(errorMsg, "error");
           }
       } catch (err) {
           closeConfirm();
-          showToast(err.response?.data?.error?.message || "Terjadi kesalahan koneksi", "error");
+          // --- PERBAIKAN PESAN ERROR (Mencegat pesan bahasa inggris) ---
+          let errorMsg = err.response?.data?.error?.message || "Terjadi kesalahan koneksi";
+          if (errorMsg.toLowerCase().includes("rate limit") || errorMsg.toLowerCase().includes("please wait")) {
+              errorMsg = "Sistem pusat sedang sibuk. Silakan coba klik Beli lagi dalam 1-2 detik ya! ⏳";
+          }
+          showToast(errorMsg, "error");
       }
   };
 
@@ -570,3 +580,4 @@ export default function Order() {
     </div>
   );
 }
+
