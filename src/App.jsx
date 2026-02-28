@@ -94,12 +94,8 @@ function App() {
               </PrivateRoute>
             } />
 
-            {/* RUTEN BARU: KETENTUAN LAYANAN */}
-            <Route path="/ketentuan" element={
-              <PrivateRoute>
-                  <Ketentuan />
-              </PrivateRoute>
-            } />
+            {/* KETENTUAN LAYANAN: Bisa diakses tanpa login */}
+            <Route path="/ketentuan" element={<Ketentuan />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
