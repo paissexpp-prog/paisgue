@@ -10,6 +10,7 @@ import {
 export default function Deposit() {
   const { color } = useTheme();
   const [amount, setAmount] = useState(5000);
+  const [selectedProvider, setSelectedProvider] = useState('qris1'); // Tambahan state provider
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -50,7 +51,8 @@ export default function Deposit() {
                 deposit_id: pendingItem.id,
                 qr_image: pendingItem.qr_image,
                 total_pay: pendingItem.total_bill,
-                amount_received: pendingItem.request_amount
+                amount_received: pendingItem.request_amount,
+                merchant: pendingItem.merchant // Tambahan: Ambil merchant untuk tahu arah cancel
             });
         } else {
             setQrisData(null);
@@ -69,14 +71,22 @@ export default function Deposit() {
     if (amount < 500) return showToast('Minimal deposit Rp500', 'error');
     setLoading(true);
     try {
-      const res = await api.get(`/deposit/create?amount=${amount}`);
+      // Logika switch endpoint berdasarkan QRIS yang dipilih
+      const endpoint = selectedProvider === 'qris2' 
+        ? `/atlantic/create?amount=${amount}` 
+        : `/deposit/create?amount=${amount}`;
+
+      const res = await api.get(endpoint);
       if (res.data.success) {
-        setQrisData(res.data.data);
+        setQrisData({
+            ...res.data.data,
+            merchant: selectedProvider === 'qris2' ? 'Atlantic' : 'RumahOTP'
+        });
         fetchHistory();
         showToast('Tagihan berhasil dibuat', 'success');
       }
     } catch (err) {
-      showToast('Gagal membuat deposit', 'error');
+      showToast(err.response?.data?.error?.message || 'Gagal membuat deposit', 'error');
     }
     setLoading(false);
   };
@@ -90,7 +100,12 @@ export default function Deposit() {
           async () => {
               setConfirmModal(prev => ({ ...prev, loading: true }));
               try {
-                  const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
+                  // Logika switch endpoint cancel berdasarkan merchant
+                  const cancelEndpoint = qrisData.merchant === 'Atlantic' 
+                    ? '/atlantic/cancel' 
+                    : '/deposit/cancel';
+
+                  const res = await api.get(`${cancelEndpoint}?deposit_id=${qrisData.deposit_id}`);
                   if (res.data.success) {
                       closeConfirm();
                       setQrisData(null);
@@ -156,6 +171,44 @@ export default function Deposit() {
                   placeholder="5000"
                   min="500"
                 />
+              </div>
+            </div>
+
+            {/* Menu Pilihan Provider QRIS */}
+            <div className="mb-6">
+              <label className="mb-3 block text-xs font-bold text-slate-500 dark:text-slate-400">Pilih Server QRIS</label>
+              <div className="space-y-3">
+                {/* QRIS 1 */}
+                <div 
+                  onClick={() => setSelectedProvider('qris1')}
+                  className={`cursor-pointer flex items-center justify-between rounded-xl border-2 p-4 transition-all dark:bg-slate-900 ${selectedProvider === 'qris1' ? 'border-slate-800 bg-slate-50 dark:border-slate-200 dark:bg-slate-800' : 'border-slate-100 dark:border-slate-800'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selectedProvider === 'qris1' ? 'border-slate-800 dark:border-slate-200' : 'border-slate-300 dark:border-slate-600'}`}>
+                        {selectedProvider === 'qris1' && <div className="h-2.5 w-2.5 rounded-full bg-slate-800 dark:bg-slate-200" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 1</p>
+                      <p className="text-[10px] text-slate-400">Server Utama (Lebih Cepat)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* QRIS 2 */}
+                <div 
+                  onClick={() => setSelectedProvider('qris2')}
+                  className={`cursor-pointer flex items-center justify-between rounded-xl border-2 p-4 transition-all dark:bg-slate-900 ${selectedProvider === 'qris2' ? 'border-slate-800 bg-slate-50 dark:border-slate-200 dark:bg-slate-800' : 'border-slate-100 dark:border-slate-800'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selectedProvider === 'qris2' ? 'border-slate-800 dark:border-slate-200' : 'border-slate-300 dark:border-slate-600'}`}>
+                        {selectedProvider === 'qris2' && <div className="h-2.5 w-2.5 rounded-full bg-slate-800 dark:bg-slate-200" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 2</p>
+                      <p className="text-[10px] text-slate-400">Server Alternatif (Atlantic)</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
