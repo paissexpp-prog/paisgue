@@ -10,7 +10,8 @@ import {
 export default function Deposit() {
   const { color } = useTheme();
   const [amount, setAmount] = useState(5000);
-  const [selectedProvider, setSelectedProvider] = useState('qris1'); // Tambahan state provider
+  const [selectedProvider, setSelectedProvider] = useState('qris1'); 
+  const [isProviderOpen, setIsProviderOpen] = useState(false); // State untuk buka/tutup dropdown
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -52,7 +53,7 @@ export default function Deposit() {
                 qr_image: pendingItem.qr_image,
                 total_pay: pendingItem.total_bill,
                 amount_received: pendingItem.request_amount,
-                merchant: pendingItem.merchant // Tambahan: Ambil merchant untuk tahu arah cancel
+                merchant: pendingItem.merchant 
             });
         } else {
             setQrisData(null);
@@ -71,7 +72,6 @@ export default function Deposit() {
     if (amount < 500) return showToast('Minimal deposit Rp500', 'error');
     setLoading(true);
     try {
-      // Logika switch endpoint berdasarkan QRIS yang dipilih
       const endpoint = selectedProvider === 'qris2' 
         ? `/atlantic/create?amount=${amount}` 
         : `/deposit/create?amount=${amount}`;
@@ -100,7 +100,6 @@ export default function Deposit() {
           async () => {
               setConfirmModal(prev => ({ ...prev, loading: true }));
               try {
-                  // Logika switch endpoint cancel berdasarkan merchant
                   const cancelEndpoint = qrisData.merchant === 'Atlantic' 
                     ? '/atlantic/cancel' 
                     : '/deposit/cancel';
@@ -174,42 +173,46 @@ export default function Deposit() {
               </div>
             </div>
 
-            {/* Menu Pilihan Provider QRIS */}
-            <div className="mb-6">
-              <label className="mb-3 block text-xs font-bold text-slate-500 dark:text-slate-400">Pilih Server QRIS</label>
-              <div className="space-y-3">
-                {/* QRIS 1 */}
-                <div 
-                  onClick={() => setSelectedProvider('qris1')}
-                  className={`cursor-pointer flex items-center justify-between rounded-xl border-2 p-4 transition-all dark:bg-slate-900 ${selectedProvider === 'qris1' ? 'border-slate-800 bg-slate-50 dark:border-slate-200 dark:bg-slate-800' : 'border-slate-100 dark:border-slate-800'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selectedProvider === 'qris1' ? 'border-slate-800 dark:border-slate-200' : 'border-slate-300 dark:border-slate-600'}`}>
-                        {selectedProvider === 'qris1' && <div className="h-2.5 w-2.5 rounded-full bg-slate-800 dark:bg-slate-200" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 1</p>
-                      <p className="text-[10px] text-slate-400">Server Utama (Lebih Cepat)</p>
-                    </div>
-                  </div>
+            {/* Menu Dropdown Pilihan Provider QRIS */}
+            <div className="mb-6 relative">
+              <label className="mb-2 block text-xs font-bold text-slate-500 dark:text-slate-400">Pilih Server QRIS</label>
+              
+              {/* Tombol Dropdown Utama */}
+              <div 
+                onClick={() => setIsProviderOpen(!isProviderOpen)}
+                className={`flex w-full cursor-pointer items-center justify-between rounded-xl border bg-slate-50 p-4 transition-all dark:bg-slate-900 ${color.border} ${isProviderOpen ? `ring-1 ${color.ring}` : ''}`}
+              >
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white">
+                    {selectedProvider === 'qris1' ? 'QRIS 1' : 'QRIS 2'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {selectedProvider === 'qris1' ? 'Server Utama' : 'Server Alternatif'}
+                  </p>
                 </div>
-
-                {/* QRIS 2 */}
-                <div 
-                  onClick={() => setSelectedProvider('qris2')}
-                  className={`cursor-pointer flex items-center justify-between rounded-xl border-2 p-4 transition-all dark:bg-slate-900 ${selectedProvider === 'qris2' ? 'border-slate-800 bg-slate-50 dark:border-slate-200 dark:bg-slate-800' : 'border-slate-100 dark:border-slate-800'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${selectedProvider === 'qris2' ? 'border-slate-800 dark:border-slate-200' : 'border-slate-300 dark:border-slate-600'}`}>
-                        {selectedProvider === 'qris2' && <div className="h-2.5 w-2.5 rounded-full bg-slate-800 dark:bg-slate-200" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 2</p>
-                      <p className="text-[10px] text-slate-400">Server Alternatif (Atlantic)</p>
-                    </div>
-                  </div>
-                </div>
+                <ChevronDown size={18} className={`text-slate-400 transition-transform ${isProviderOpen ? 'rotate-180' : ''}`} />
               </div>
+
+              {/* Isi Dropdown yang Menggulir ke Bawah */}
+              {isProviderOpen && (
+                <div className="absolute left-0 top-full z-10 mt-2 w-full overflow-hidden rounded-xl border border-slate-100 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900 animate-in slide-in-from-top-2 fade-in duration-200">
+                  <div 
+                    onClick={() => { setSelectedProvider('qris1'); setIsProviderOpen(false); }}
+                    className={`cursor-pointer p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedProvider === 'qris1' ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
+                  >
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 1</p>
+                    <p className="text-[10px] text-slate-400">Server Utama</p>
+                  </div>
+                  <div className="border-t border-slate-50 dark:border-slate-800/50"></div>
+                  <div 
+                    onClick={() => { setSelectedProvider('qris2'); setIsProviderOpen(false); }}
+                    className={`cursor-pointer p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedProvider === 'qris2' ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
+                  >
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 2</p>
+                    <p className="text-[10px] text-slate-400">Server Alternatif</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={`mb-6 flex gap-3 rounded-xl p-4 ${color.bg}`}>
