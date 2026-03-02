@@ -85,6 +85,7 @@ export default function Login() {
           <div>
             <div className="mb-1.5 flex justify-between">
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-400">Password</label>
+                {/* PERBAIKAN DI SINI: to="/forgot-password" */}
                 <Link to="/forgot-password" title="Klik untuk reset password" className="text-[10px] font-bold text-blue-600 cursor-pointer hover:underline dark:text-blue-400">
                   Lupa sandi?
                 </Link>
@@ -92,24 +93,20 @@ export default function Login() {
             
             <div className="relative">
                 <input 
-                  type={showPassword ?
- "text" : "password"} 
+                  type={showPassword ? "text" : "password"} 
                   className={`w-full rounded-xl border bg-slate-50 p-3.5 pr-12 font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-950 ${color.border} ${color.ring}`}
                   placeholder="••••••••"
                   value={form.password}
                   onChange={(e) => setForm({...form, password: e.target.value})}
-      
                   required
                 />
                 
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-  
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
-                  {showPassword ?
- <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
             </div>
           </div>
@@ -117,36 +114,31 @@ export default function Login() {
           <button 
             type="submit" 
             disabled={loading}
-          
             className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 ${color.btn}`}
           >
-            {loading ?
- (
+            {loading ? (
                 <>
                     <Loader2 size={20} className="animate-spin" />
                     Masuk...
                 </>
             ) : (
-           
-      'Masuk Sekarang'
+                'Masuk Sekarang'
             )}
           </button>
         </form>
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
           Belum punya akun?
- <Link to="/register" className={`font-bold hover:underline ${color.text}`}>Daftar disini</Link>
+          <Link to="/register" className={`font-bold hover:underline ${color.text} ml-1`}>Daftar disini</Link>
         </div>
       </div>
 
-      <div className={`fixed bottom-10 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${toast.show ?
- 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ?
- 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ?
- <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+      <div className={`fixed bottom-10 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-500 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
           <span className="text-sm font-bold">{toast.message}</span>
       </div>
 
     </div>
   );
 }
+
