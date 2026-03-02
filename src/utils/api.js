@@ -39,12 +39,23 @@ api.interceptors.request.use((config) => {
 //
 // Tambahan: kalau backend return 404 dari endpoint /auth/me
 // (akun sudah dihapus worker), juga otomatis logout
+//
+// FITUR BARU: Tangkap Backend Mati -> Arahkan ke /maintenance
 // ================================================================
 api.interceptors.response.use(
   (response) => response, // Response normal, langsung teruskan
   (error) => {
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
+
+    // Cek jika backend mati (Network Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout)
+    if (!error.response || status === 502 || status === 503 || status === 504) {
+      // Cegah redirect loop jika sudah berada di halaman maintenance
+      if (window.location.pathname !== '/maintenance') {
+        window.location.href = '/maintenance';
+      }
+      return Promise.reject(error);
+    }
 
     if (
       status === 401 ||
@@ -59,3 +70,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+
