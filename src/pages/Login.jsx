@@ -85,8 +85,9 @@ export default function Login() {
           <div>
             <div className="mb-1.5 flex justify-between">
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-400">Password</label>
-                <span className="text-[10px] font-bold text-blue-600 cursor-pointer hover:underline dark:text-blue-400">Lupa 
- sandi?</span>
+                <Link to="/forgot-password" title="Klik untuk reset password" className="text-[10px] font-bold text-blue-600 cursor-pointer hover:underline dark:text-blue-400">
+                  Lupa sandi?
+                </Link>
             </div>
             
             <div className="relative">
@@ -149,4 +150,3 @@ export default function Login() {
     </div>
   );
 }
-

@@ -13,6 +13,9 @@ const History = lazy(() => import('./pages/History'));
 const Order = lazy(() => import('./pages/Order'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// HALAMAN BARU: Reset Password
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+
 // HALAMAN BARU: Dokumentasi API
 const Dokumentasi = lazy(() => import('./pages/Dokumentasi'));
 
@@ -51,6 +54,13 @@ function App() {
             <Route path="/login" element={
               <AuthRoute>
                 <Login />
+              </AuthRoute>
+            } />
+
+            {/* RUTEN BARU: FORGOT / RESET PASSWORD */}
+            <Route path="/forgot-password" element={
+              <AuthRoute>
+                <ForgotPassword />
               </AuthRoute>
             } />
             
@@ -112,4 +122,3 @@ function App() {
 }
 
 export default App;
-
