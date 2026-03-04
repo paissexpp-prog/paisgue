@@ -41,6 +41,7 @@ api.interceptors.request.use((config) => {
 // (akun sudah dihapus worker), juga otomatis logout
 //
 // FITUR BARU: Tangkap Backend Mati -> Arahkan ke /maintenance
+// PERBAIKAN: Simpan URL asal sebelum redirect ke /maintenance
 // ================================================================
 api.interceptors.response.use(
   (response) => response, // Response normal, langsung teruskan
@@ -52,6 +53,9 @@ api.interceptors.response.use(
     if (!error.response || status === 502 || status === 503 || status === 504) {
       // Cegah redirect loop jika sudah berada di halaman maintenance
       if (window.location.pathname !== '/maintenance') {
+        // PERBAIKAN: Simpan URL asal agar bisa kembali setelah backend hidup kembali
+        const originPath = window.location.pathname + window.location.search;
+        localStorage.setItem('maintenance_origin', originPath);
         window.location.href = '/maintenance';
       }
       return Promise.reject(error);
@@ -70,4 +74,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
