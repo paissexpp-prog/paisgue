@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import NetworkOverlay from './components/NetworkOverlay'; // IMPORT KOMPONEN BARU
 
 // Lazy Loading Pages
 const Welcome = lazy(() => import('./pages/Welcome'));
@@ -44,6 +45,9 @@ const AuthRoute = ({ children }) => {
 function App() {
   return (
     <Router>
+      {/* OVERLAY OFFLINE DITAMBAHKAN DI SINI AGAR AKTIF GLOBAL */}
+      <NetworkOverlay />
+      
       <Navbar /> 
       
       <div className="pt-16">
@@ -122,3 +126,4 @@ function App() {
 }
 
 export default App;
+
