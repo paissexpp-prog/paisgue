@@ -10,6 +10,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Tambahkan timeout agar tidak hang selamanya (15 detik)
+  timeout: 15000, 
 });
 
 // ================================================================
@@ -34,26 +36,28 @@ api.interceptors.request.use((config) => {
 
 // ================================================================
 // RESPONSE INTERCEPTOR
-// Kalau backend return 401 (token invalid / akun tidak ada)
-// → otomatis clear localStorage dan redirect ke /login
-//
-// Tambahan: kalau backend return 404 dari endpoint /auth/me
-// (akun sudah dihapus worker), juga otomatis logout
-//
-// FITUR BARU: Tangkap Backend Mati -> Arahkan ke /maintenance
-// PERBAIKAN: Simpan URL asal sebelum redirect ke /maintenance
 // ================================================================
 api.interceptors.response.use(
   (response) => response, // Response normal, langsung teruskan
   (error) => {
+    // 1. Abaikan error jika request sengaja dibatalkan oleh sistem
+    if (axios.isCancel(error)) return Promise.reject(error);
+
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 
-    // Cek jika backend mati (Network Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout)
-    if (!error.response || status === 502 || status === 503 || status === 504) {
-      // Cegah redirect loop jika sudah berada di halaman maintenance
+    // 2. Cek apakah perangkat user sedang tidak ada internet (Offline)
+    const isUserOffline = !navigator.onLine;
+
+    // 3. KONDISI MUTLAK MAINTENANCE:
+    // - Server mengirim status 502, 503, atau 504
+    // - ATAU tidak ada response SAMA SEKALI, BUKAN karena timeout, DAN user sedang ONLINE (Berarti backend mati total)
+    const isServerDown = status === 502 || status === 503 || status === 504;
+    const isNetworkErrorWhileOnline = !error.response && !isUserOffline && error.code !== 'ECONNABORTED';
+
+    if (isServerDown || isNetworkErrorWhileOnline) {
+      // Pastikan kita belum berada di halaman maintenance agar tidak redirect loop
       if (window.location.pathname !== '/maintenance') {
-        // PERBAIKAN: Simpan URL asal agar bisa kembali setelah backend hidup kembali
         const originPath = window.location.pathname + window.location.search;
         localStorage.setItem('maintenance_origin', originPath);
         window.location.href = '/maintenance';
@@ -61,6 +65,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // 4. Jika akun dihapus worker (404) / token invalid (401)
     if (
       status === 401 ||
       (status === 404 && requestUrl.includes('/auth/me'))
@@ -74,3 +79,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+
