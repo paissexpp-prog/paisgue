@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
-import { Bell, RefreshCw, Smartphone, Globe, CheckCircle2, Clock, MessageSquare, Loader2, ChevronRight } from 'lucide-react';
+import { 
+  Bell, RefreshCw, Smartphone, Globe, CheckCircle2, 
+  Clock, MessageSquare, Loader2, ChevronRight, Info, ShieldAlert, FileText, CheckCircle
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { jwtDecode } from 'jwt-decode';
@@ -9,30 +12,21 @@ import { jwtDecode } from 'jwt-decode';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { color } = useTheme();
-  
-  // --- BAGIAN INI RAHASIANYA ---
+
   // Kita inisialisasi data user langsung dari Token / LocalStorage
-  // Jadi tidak perlu menunggu loading, nama langsung muncul!
   const [user, setUser] = useState(() => {
-    // 1. Cek apakah ada data user tersimpan di HP?
     const savedUser = localStorage.getItem('user');
     if (savedUser) return JSON.parse(savedUser);
 
-    // 2. Jika tidak ada, Cek Token dan ambil nama dari sana
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        return { 
-          username: decoded.username || 'Member',
-          balance: 0 
-        };
+        return { username: decoded.username || 'Member', balance: 0 };
       } catch (e) { 
         return { username: 'Member', balance: 0 }; 
       }
     }
-
-    // 3. Default jika belum login
     return { username: 'Member', balance: 0 };
   });
 
@@ -47,17 +41,37 @@ const Dashboard = () => {
   // State untuk Layanan Populer
   const [popularServices, setPopularServices] = useState([]);
 
-  // =========================================================
   // STATE BARU: Pesanan Aktif
-  // =========================================================
   const [activeOrders, setActiveOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  
   // Ref untuk cache daftar service (untuk ambil gambar)
   const servicesRef = useRef([]);
 
   // State dan Ref untuk fungsi Slider Dots (Titik Indikator)
   const [activeBanner, setActiveBanner] = useState(0);
   const sliderRef = useRef(null);
+
+  // =========================================================
+  // STATE BARU: MODAL KETENTUAN (TUTORIAL & INFO)
+  // =========================================================
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsTab, setTermsTab] = useState('refund'); // 'refund', 'ketentuan', 'tutorial'
+  const [agreedTerms, setAgreedTerms] = useState(false);
+
+  useEffect(() => {
+    // Cek apakah user sudah pernah menyetujui ketentuan di sesi login ini
+    const hasAcceptedTerms = localStorage.getItem('ruangotp_terms_accepted');
+    if (!hasAcceptedTerms) {
+      setShowTerms(true);
+    }
+  }, []);
+
+  const handleFinishTerms = () => {
+    localStorage.setItem('ruangotp_terms_accepted', 'true');
+    setShowTerms(false);
+  };
+  // =========================================================
 
   const fetchUserData = async () => {
     try {
@@ -73,7 +87,6 @@ const Dashboard = () => {
     }
   };
 
-  // Fungsi untuk mengambil data Banner DNS
   const fetchBanners = async () => {
     try {
       const cachedTime = localStorage.getItem('ruangotp_dns_time');
@@ -91,7 +104,6 @@ const Dashboard = () => {
     }
   };
 
-  // Fungsi untuk mengambil Layanan Populer
   const loadPopularServices = async () => {
     const CACHE_KEY = 'otp_services_v12';
     const cachedData = localStorage.getItem(CACHE_KEY);
@@ -100,7 +112,7 @@ const Dashboard = () => {
       try {
         const parsed = JSON.parse(cachedData);
         setPopularServices(parsed.slice(0, 3));
-        servicesRef.current = parsed; // simpan ke ref untuk pencarian gambar
+        servicesRef.current = parsed; 
         return;
       } catch (e) {}
     }
@@ -115,15 +127,11 @@ const Dashboard = () => {
     } catch (err) {}
   };
 
-  // =========================================================
-  // FUNGSI BARU: Fetch Pesanan Aktif dari /history/list
-  // =========================================================
   const fetchActiveOrders = async () => {
     setOrdersLoading(true);
     try {
       const res = await api.get('/history/list');
       if (res.data.success) {
-        // Filter hanya status aktif, ambil 5 terbaru saja
         const aktif = res.data.data
           .filter(order => {
             const s = (order.status || '').toUpperCase();
@@ -145,12 +153,10 @@ const Dashboard = () => {
     loadPopularServices();
     fetchActiveOrders();
 
-    // Auto-refresh banner setiap 5 menit
     const bannerInterval = setInterval(() => {
       fetchBanners();
     }, 300000);
 
-    // Auto-refresh pesanan aktif setiap 10 detik
     const orderInterval = setInterval(() => {
       fetchActiveOrders();
     }, 10000);
@@ -192,9 +198,6 @@ const Dashboard = () => {
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
-  // =========================================================
-  // HELPER BARU: Cari gambar service berdasarkan nama
-  // =========================================================
   const getServiceImage = (serviceName) => {
     if (!serviceName) return null;
     const found = servicesRef.current.find(
@@ -237,9 +240,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* =========================================================
-          BANNER DNS / PROMO (SLIDER DENGAN DOTS)
-          ========================================================= */}
+      {/* Banner DNS / Promo */}
       {banners.length > 0 && (
         <div className="mt-6 px-5">
           <div 
@@ -372,9 +373,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* =========================================================
-          PESANAN PENDING — SEKARANG BERFUNGSI
-          ========================================================= */}
+      {/* PESANAN PENDING */}
       <div className="mb-6 mt-8 px-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white">Pesanan Pending</h3>
@@ -386,15 +385,12 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* === LOADING SKELETON === */}
         {ordersLoading ? (
           <div className="space-y-3">
             {[1, 2].map(i => (
               <div key={i} className="h-24 w-full animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
             ))}
           </div>
-
-        /* === ADA PESANAN AKTIF === */
         ) : activeOrders.length > 0 ? (
           <div className="space-y-3">
             {activeOrders.map((order) => {
@@ -413,8 +409,6 @@ const Dashboard = () => {
                   }`}
                 >
                   <div className="flex items-center gap-4 p-4">
-
-                    {/* Gambar Layanan */}
                     <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl p-2 ${
                       isSmsReceived
                         ? 'bg-emerald-50 dark:bg-emerald-900/20'
@@ -433,13 +427,11 @@ const Dashboard = () => {
                           : <Loader2 size={24} className={`animate-spin ${color.text}`} />
                       )}
 
-                      {/* Dot status di pojok gambar */}
                       <span className={`absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-white dark:border-slate-950 ${
                         isSmsReceived ? 'bg-emerald-500' : 'bg-amber-400'
                       }`} />
                     </div>
 
-                    {/* Info Pesanan */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate font-bold text-slate-800 dark:text-white">
@@ -456,7 +448,6 @@ const Dashboard = () => {
                         {order.phone_number || '—'}
                       </p>
 
-                      {/* Badge status */}
                       <div className="mt-1.5">
                         {isSmsReceived ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -470,14 +461,12 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    {/* Ikon panah ke /order */}
                     <ChevronRight size={18} className="shrink-0 text-slate-300 dark:text-slate-600" />
                   </div>
                 </div>
               );
             })}
 
-            {/* Tombol lihat semua di bawah list */}
             <button
               onClick={() => navigate('/order')}
               className={`w-full rounded-2xl border py-3 text-sm font-bold transition-all active:scale-95 ${color.bg} ${color.text} ${color.border}`}
@@ -486,7 +475,6 @@ const Dashboard = () => {
             </button>
           </div>
 
-        /* === KOSONG / TIDAK ADA PESANAN === */
         ) : (
           <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-4xl dark:bg-slate-900">
@@ -505,8 +493,172 @@ const Dashboard = () => {
       </div>
 
       <BottomNav />
+
+      {/* =========================================================
+          MODAL TUTORIAL & INFORMASI (MUNCUL SETELAH LOGIN)
+          ========================================================= */}
+      {showTerms && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-10 duration-300">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-slate-800 dark:text-white">
+                  <Info size={22} className={color.text} />
+                  <h3 className="text-lg font-bold">Tutorial dan Informasi</h3>
+                </div>
+                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded-full flex items-center gap-1">
+                  <FileText size={12} /> Penting!
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-medium">
+                Pahami segala informasi yang telah kami berikan serta perhatikan segala syarat dan ketentuan yang berlaku pada website termasuk segala resiko yang anda alami jika akan membeli nomor virtual.
+              </p>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex px-2 pt-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <button 
+                onClick={() => setTermsTab('refund')}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2 ${termsTab === 'refund' ? `${color.border} ${color.text}` : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Refund
+              </button>
+              <button 
+                onClick={() => setTermsTab('ketentuan')}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2 ${termsTab === 'ketentuan' ? `${color.border} ${color.text}` : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Ketentuan
+              </button>
+              <button 
+                onClick={() => setTermsTab('tutorial')}
+                className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors flex items-center justify-center gap-2 ${termsTab === 'tutorial' ? `${color.border} ${color.text}` : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Tutorial
+              </button>
+            </div>
+
+            {/* Modal Content Scrollable Area */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50 dark:bg-slate-950/50">
+              
+              {termsTab === 'refund' && (
+                <>
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                      <ShieldAlert size={16} className="text-slate-600 dark:text-slate-300" />
+                      <span className="font-bold text-sm text-slate-700 dark:text-slate-200">Refund Otomatis</span>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div className="flex gap-3 items-start">
+                        <CheckCircle size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Pesanan belum pernah menerima SMS ataupun kode verifikasi sebelumnya.</p>
+                      </div>
+                      <div className="flex gap-3 items-start">
+                        <CheckCircle size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Status orderan bukan resend yang telah menerima SMS ataupun code verifikasi.</p>
+                      </div>
+                      <div className="flex gap-3 items-start">
+                        <CheckCircle size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Saldo dikembalikan 100% sesuai dengan nominal pembelian nomor tanpa potongan sedikitpun.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                      <Info size={16} className="text-slate-600 dark:text-slate-300" />
+                      <span className="font-bold text-sm text-slate-700 dark:text-slate-200">Refund Manual / Admin</span>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div className="flex gap-3 items-start">
+                        <CheckCircle size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Mengalami bug sistem error karena maintenance di luar kendali user.</p>
+                      </div>
+                      <div className="flex gap-3 items-start">
+                        <CheckCircle size={18} className="text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Deposit yang tidak masuk otomatis bisa di-refund dengan menghubungi Admin/CS.</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {termsTab === 'ketentuan' && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-4">
+                  <div className="flex gap-3 items-start border-b border-slate-50 dark:border-slate-800 pb-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Penggunaan untuk aktivitas ilegal, penipuan, spam, atau tindakan yang merugikan pihak lain sangat dilarang.</p>
+                  </div>
+                  <div className="flex gap-3 items-start border-b border-slate-50 dark:border-slate-800 pb-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Setiap akun RuangOTP bersifat personal dan tidak boleh dipindahtangankan atau digunakan bersama.</p>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0"></div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Pelanggaran terhadap larangan akan mengakibatkan pemblokiran akun permanen tanpa pengembalian saldo.</p>
+                  </div>
+                </div>
+              )}
+
+              {termsTab === 'tutorial' && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 space-y-4">
+                  <div className="flex gap-3 items-start border-b border-slate-50 dark:border-slate-800 pb-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed"><strong className="text-slate-800 dark:text-slate-200">Isi Saldo (Deposit)</strong><br/>Masuk ke menu Deposit, buat tagihan QRIS, dan bayar. Saldo akan otomatis masuk dalam hitungan detik.</p>
+                  </div>
+                  <div className="flex gap-3 items-start border-b border-slate-50 dark:border-slate-800 pb-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed"><strong className="text-slate-800 dark:text-slate-200">Beli Nomor</strong><br/>Pergi ke menu Order (Logo Tas di tengah), cari layanan (contoh: WhatsApp), pilih negara, lalu klik Beli.</p>
+                  </div>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed"><strong className="text-slate-800 dark:text-slate-200">Tunggu SMS OTP</strong><br/>Masukkan nomor yang didapat ke aplikasi yang dituju. Tunggu hingga kode OTP muncul di halaman Dashboard / Order ini.</p>
+                  </div>
+                </div>
+              )}
+              
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+              <label className="flex items-center gap-3 cursor-pointer mb-5 group">
+                <div className="relative flex items-center justify-center">
+                  <input 
+                    type="checkbox" 
+                    className="peer sr-only"
+                    checked={agreedTerms}
+                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                  />
+                  <div className="w-5 h-5 rounded border-2 border-slate-300 dark:border-slate-600 peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all"></div>
+                  <CheckCircle2 size={14} className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Saya telah membaca semuanya</span>
+              </label>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowTerms(false)}
+                  className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Tutup
+                </button>
+                <button 
+                  onClick={handleFinishTerms}
+                  disabled={!agreedTerms}
+                  className={`flex-1 py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all ${!agreedTerms ? 'bg-slate-300 dark:bg-slate-800 cursor-not-allowed' : `${color.btn} shadow-lg active:scale-95`}`}
+                >
+                  Selesai {agreedTerms && <CheckCircle2 size={16} />}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
 
 export default Dashboard;
+
