@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useTheme } from '../context/ThemeContext';
@@ -17,7 +17,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // State untuk alur setelah request (Bagian 2)
   const [resetData, setResetData] = useState(null); // Menyimpan wa_link & token
   const [statusReset, setStatusReset] = useState(''); // 'proses' atau 'completed'
@@ -25,10 +25,49 @@ export default function ForgotPassword() {
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
+  // REF UNTUK POLLING REALTIME
+  const pollingIntervalRef = useRef(null);
+
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
+
+  // --- EFEK POLLING REALTIME ---
+  useEffect(() => {
+    // Hanya jalankan polling otomatis jika sudah ada data reset dan status masih proses
+    if (resetData && statusReset === 'proses') {
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const res = await api.post('/auth/check-reset-status', { email: form.email });
+          if (res.data.success) {
+            const newStatus = res.data.data.status;
+            
+            // Update state jika status berubah dari backend
+            if (newStatus !== statusReset) {
+              setStatusReset(newStatus);
+            }
+            
+            // Jika status sudah selesai, hentikan interval dan arahkan ke login
+            if (newStatus === 'completed') {
+              clearInterval(pollingIntervalRef.current);
+              showToast('Password Berhasil Reset! Silakan Login', 'success');
+              setTimeout(() => navigate('/login'), 2000);
+            }
+          }
+        } catch (err) {
+          // Silent error saat polling otomatis agar tidak mengganggu UI dengan toast
+        }
+      }, 5000); // Cek setiap 5 detik
+    }
+
+    // Cleanup interval saat komponen dilepas atau saat status berubah
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [resetData, statusReset, form.email, navigate]);
 
   // --- FUNGSI 1: REQUEST RESET ---
   const handleRequestReset = async (e) => {
@@ -61,7 +100,7 @@ export default function ForgotPassword() {
     }
   };
 
-  // --- FUNGSI 2: CEK STATUS ---
+  // --- FUNGSI 2: CEK STATUS MANUAL (Tombol) ---
   const handleCheckStatus = async () => {
     setCheckLoading(true);
     try {
@@ -71,6 +110,7 @@ export default function ForgotPassword() {
         setStatusReset(newStatus);
         
         if (newStatus === 'completed') {
+          clearInterval(pollingIntervalRef.current); // Hentikan polling otomatis jika selesai manual
           showToast('Password Berhasil Reset! Silakan Login', 'success');
           setTimeout(() => navigate('/login'), 2000);
         } else {
@@ -94,6 +134,7 @@ export default function ForgotPassword() {
         
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-black text-slate-900 dark:text-white">Reset Password</h2>
+          
           <p className="mt-2 text-slate-500 dark:text-slate-400">
             {resetData ? 'Langkah Terakhir Konfirmasi' : 'Masukkan detail akun baru Anda'}
           </p>
@@ -183,6 +224,7 @@ export default function ForgotPassword() {
                   <span className="text-slate-500">Token:</span>
                   <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{resetData.token.substring(0, 10)}...</span>
                 </div>
+                
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Status:</span>
                   <span className={`flex items-center gap-1 font-bold ${statusReset === 'completed' ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -212,13 +254,13 @@ export default function ForgotPassword() {
             </div>
 
             <p className="text-[10px] text-center text-slate-400 leading-relaxed italic">
-              Klik tombol hijau untuk mengirim token via WhatsApp, lalu klik "Reset Password Sekarang" untuk menyelesaikan.
+              Klik tombol hijau untuk mengirim token via WhatsApp, lalu klik "Reset Password Sekarang" untuk menyelesaikan. Sistem juga otomatis mengecek status konfirmasi Anda.
             </p>
           </div>
         )}
 
         <div className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          Tiba-tiba ingat password? 
+          Tiba-tiba ingat password?
           <Link to="/login" className={`font-bold hover:underline ml-1 ${color.text}`}>Login disini</Link>
         </div>
       </div>
