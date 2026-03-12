@@ -58,6 +58,7 @@ const Dashboard = () => {
   const [showTerms, setShowTerms] = useState(false);
   const [termsTab, setTermsTab] = useState('refund'); // 'refund', 'ketentuan', 'tutorial'
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [showWarningPopup, setShowWarningPopup] = useState(false); // State untuk Pop-up Peringatan
 
   useEffect(() => {
     // Cek apakah user sudah pernah menyetujui ketentuan di sesi login ini
@@ -67,9 +68,16 @@ const Dashboard = () => {
     }
   }, []);
 
-  const handleFinishTerms = () => {
-    localStorage.setItem('ruangotp_terms_accepted', 'true');
-    setShowTerms(false);
+  // Fungsi untuk menangani klik Tutup atau Selesai
+  const handleAttemptClose = () => {
+    if (!agreedTerms) {
+      // Jika belum centang, tampilkan pop-up peringatan elegan
+      setShowWarningPopup(true);
+    } else {
+      // Jika sudah centang, simpan persetujuan dan tutup
+      localStorage.setItem('ruangotp_terms_accepted', 'true');
+      setShowTerms(false);
+    }
   };
   // =========================================================
 
@@ -637,21 +645,43 @@ const Dashboard = () => {
 
               <div className="flex gap-3">
                 <button 
-                  onClick={() => setShowTerms(false)}
+                  onClick={handleAttemptClose}
                   className="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Tutup
                 </button>
                 <button 
-                  onClick={handleFinishTerms}
-                  disabled={!agreedTerms}
-                  className={`flex-1 py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all ${!agreedTerms ? 'bg-slate-300 dark:bg-slate-800 cursor-not-allowed' : `${color.btn} shadow-lg active:scale-95`}`}
+                  onClick={handleAttemptClose}
+                  className={`flex-1 py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all ${color.btn} shadow-lg active:scale-95`}
                 >
                   Selesai {agreedTerms && <CheckCircle2 size={16} />}
                 </button>
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          POP-UP PERINGATAN (JIKA BELUM CENTANG)
+          ========================================================= */}
+      {showWarningPopup && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-5 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xs p-6 shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mb-4 text-amber-600 dark:text-amber-400">
+              <ShieldAlert size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Konfirmasi Diperlukan</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+              Silakan centang kotak <br/> <strong className="text-slate-700 dark:text-slate-300">"Saya telah membaca semuanya"</strong> <br/> terlebih dahulu untuk melanjutkan.
+            </p>
+            <button 
+              onClick={() => setShowWarningPopup(false)}
+              className={`w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg active:scale-95 ${color.btn}`}
+            >
+              Mengerti
+            </button>
           </div>
         </div>
       )}
