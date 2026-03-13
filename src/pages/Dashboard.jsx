@@ -44,7 +44,7 @@ const Dashboard = () => {
   // STATE BARU: Pesanan Aktif
   const [activeOrders, setActiveOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
-  
+
   // Ref untuk cache daftar service (untuk ambil gambar)
   const servicesRef = useRef([]);
 
@@ -58,7 +58,8 @@ const Dashboard = () => {
   const [showTerms, setShowTerms] = useState(false);
   const [termsTab, setTermsTab] = useState('refund'); // 'refund', 'ketentuan', 'tutorial'
   const [agreedTerms, setAgreedTerms] = useState(false);
-  const [showWarningPopup, setShowWarningPopup] = useState(false); // State untuk Pop-up Peringatan
+  const [showWarningPopup, setShowWarningPopup] = useState(false);
+  // State untuk Pop-up Peringatan
 
   useEffect(() => {
     // Cek apakah user sudah pernah menyetujui ketentuan di sesi login ini
@@ -115,7 +116,7 @@ const Dashboard = () => {
   const loadPopularServices = async () => {
     const CACHE_KEY = 'otp_services_v12';
     const cachedData = localStorage.getItem(CACHE_KEY);
-    
+
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
@@ -162,16 +163,29 @@ const Dashboard = () => {
     fetchActiveOrders();
 
     const bannerInterval = setInterval(() => {
-      fetchBanners();
+      if (!document.hidden) {
+        fetchBanners();
+      }
     }, 300000);
 
     const orderInterval = setInterval(() => {
-      fetchActiveOrders();
+      if (!document.hidden) {
+        fetchActiveOrders();
+      }
     }, 10000);
+
+    // SENSOR LAYAR INSTAN: Kalau user pindah tab lalu balik lagi, langsung tembak API detik itu juga
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchActiveOrders();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(bannerInterval);
       clearInterval(orderInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

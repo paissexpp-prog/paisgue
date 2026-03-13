@@ -46,16 +46,11 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 
-    // 2. Cek apakah perangkat user sedang tidak ada internet (Offline)
-    const isUserOffline = !navigator.onLine;
-
-    // 3. KONDISI MUTLAK MAINTENANCE:
-    // - Server mengirim status 502, 503, atau 504
-    // - ATAU tidak ada response SAMA SEKALI, BUKAN karena timeout, DAN user sedang ONLINE (Berarti backend mati total)
+    // 2. KONDISI MUTLAK MAINTENANCE:
+    // HANYA jika server backend benar-benar membalas dengan status 502, 503, atau 504
     const isServerDown = status === 502 || status === 503 || status === 504;
-    const isNetworkErrorWhileOnline = !error.response && !isUserOffline && error.code !== 'ECONNABORTED';
-
-    if (isServerDown || isNetworkErrorWhileOnline) {
+    
+    if (isServerDown) {
       // Pastikan kita belum berada di halaman maintenance agar tidak redirect loop
       if (window.location.pathname !== '/maintenance') {
         const originPath = window.location.pathname + window.location.search;
@@ -65,7 +60,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 4. Jika akun dihapus worker (404) / token invalid (401)
+    // 3. Jika akun dihapus worker (404) / token invalid (401)
     if (
       status === 401 ||
       (status === 404 && requestUrl.includes('/auth/me'))

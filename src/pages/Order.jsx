@@ -17,10 +17,9 @@ export default function Order() {
   // --- STATE DATA ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
-  
   // Perbaikan: Gunakan Array agar bisa menampung banyak pesanan sekaligus
-  const [activeOrders, setActiveOrders] = useState([]); 
-  
+  const [activeOrders, setActiveOrders] = useState([]);
+
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -67,7 +66,9 @@ export default function Order() {
     
     // Auto refresh data setiap 5 detik
     const interval = setInterval(() => {
-        fetchInitialData(true); 
+        if (!document.hidden) {
+            fetchInitialData(true); 
+        }
     }, 5000);
 
     // Detak jantung timer (1 detik)
@@ -75,9 +76,18 @@ export default function Order() {
         setCurrentTime(Date.now());
     }, 1000);
 
+    // SENSOR LAYAR INSTAN: Trigger API langsung ketika user membuak tab ini kembali
+    const handleVisibilityChange = () => {
+        if (!document.hidden) {
+            fetchInitialData(true);
+        }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
         clearInterval(interval);
         clearInterval(timerInterval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -134,7 +144,7 @@ export default function Order() {
       const resHistory = await api.get('/history/list');
       if (resHistory.data.success) {
          const allOrders = resHistory.data.data;
-         
+
          // Filter: Hanya tampilkan status aktif/selesai DAN yang belum di-close user (di local mapun di backend)
          const filtered = allOrders.filter(order => {
              const id = order.order_id || order.id;
@@ -231,7 +241,7 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi!", "error");
-      
+
       const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
 
@@ -276,7 +286,6 @@ export default function Order() {
 
   const handleCancelClick = (order) => {
      const remaining = getRemainingTime(order.created_at);
-
      if (remaining > 0) {
          showConfirm("⏳ Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(remaining)} lagi.`, closeConfirm, "Saya Mengerti");
          return;
@@ -531,6 +540,7 @@ export default function Order() {
                     {countries.map((country) => {
                         const startPrice = country.pricelist?.[0]?.price || 0;
                         const isExpanded = expandedCountry === country.number_id;
+  
                         return (
                             <div key={country.number_id} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
                                 <button onClick={() => toggleCountry(country)} className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-900">
@@ -556,13 +566,14 @@ export default function Order() {
                 </div>
             ) : <div className="text-center py-10 text-slate-400">Negara tidak tersedia</div>}
          </div>
+  
          {expandedCountry && (
              <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 p-4 shadow-2xl">
                  <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-500 uppercase tracking-tighter"><Signal size={12} /> Pilih Operator</div>
                  {loadingOperators ? <div className="flex gap-2">{[1,2,3].map(i=><div key={i} className="h-10 w-24 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div> : (
                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                          <button onClick={()=>setSelectedOperatorId('any')} className={`shrink-0 flex flex-col items-center justify-center w-20 h-14 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId==='any'?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
-                             <div className="mb-1 text-lg">🎲</div><span>Acak</span>
+                              <div className="mb-1 text-lg">🎲</div><span>Acak</span>
                          </button>
                          {currentOperators.filter(op=>op.name!=='any').map(op=>(
                              <button key={op.id} onClick={()=>setSelectedOperatorId(op.id)} className={`shrink-0 flex flex-col items-center justify-center min-w-[5rem] h-14 px-2 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId===op.id?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
