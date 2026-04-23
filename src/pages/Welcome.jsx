@@ -242,9 +242,9 @@ export default function Welcome() {
         <title>RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia</title>
         <meta name="description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah. Daftar gratis sekarang!" />
         <meta name="keywords" content="RuangOTP, ruangotp, ruang otp, ruang-otp, jasa otp, beli otp, otp murah, layanan otp indonesia, verifikasi otp, nomor virtual indonesia, beli nomor otp, otp whatsapp murah, verifikasi telegram, otp google, nomor virtual sekali pakai, sms verification indonesia, otp bypass, sms otp service, virtual number indonesia" />
-        <link rel="canonical" href="https://ruangotp.site/" />
+        <link rel="canonical" href="https://ruangotp.net/" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://ruangotp.site/" />
+        <meta property="og:url" content="https://ruangotp.net/" />
         <meta property="og:site_name" content="RuangOTP" />
         <meta property="og:title" content="RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia" />
         <meta property="og:description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah." />
@@ -264,9 +264,9 @@ export default function Welcome() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@graph": [
-              { "@type": "WebSite", "@id": "https://ruangotp.site/#website", "url": "https://ruangotp.site/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.site/?s={search_term_string}", "query-input": "required name=search_term_string" } },
-              { "@type": "Organization", "@id": "https://ruangotp.site/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.site/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_ruangotp", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_ruangotp"] },
-              { "@type": "WebPage", "@id": "https://ruangotp.site/#webpage", "url": "https://ruangotp.site/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.site/#website" }, "about": { "@id": "https://ruangotp.site/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
+              { "@type": "WebSite", "@id": "https://ruangotp.net/#website", "url": "https://ruangotp.net/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.net/?s={search_term_string}", "query-input": "required name=search_term_string" } },
+              { "@type": "Organization", "@id": "https://ruangotp.net/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.net/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_ruangotp", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_ruangotp"] },
+              { "@type": "WebPage", "@id": "https://ruangotp.net/#webpage", "url": "https://ruangotp.net/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.net/#website" }, "about": { "@id": "https://ruangotp.net/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
             ]
           })}
         </script>
@@ -299,7 +299,7 @@ export default function Welcome() {
             </h1>
 
             <p className="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-              Nomor virtual murah dan berkualitas untuk ribuan aplikasi dari seluruh negara. OTP instan untuk WhatsApp, Telegram, Google, TikTok, dan 1000+ layanan lainnya. Privasi terjaga, harga termurah, aktif 24 jam.
+              RuangOTP adalah layanan penyedia Nomor virtual murah dan berkualitas untuk ribuan aplikasi dari seluruh negara. OTP instan untuk WhatsApp, Telegram, Google, TikTok, dan 1000+ layanan lainnya. Privasi terjaga, harga termurah, aktif 24 jam.
             </p>
 
             {/* CTA */}
@@ -687,7 +687,7 @@ export default function Welcome() {
                 <span className="text-lg font-bold text-slate-900 dark:text-white">RuangOTP</span>
               </div>
               <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                Nomor virtual murah dan berkualitas untuk ribuan aplikasi dari seluruh negara. Mulai dari Rp 500.
+                RuangOTP adalah layanan penyedia Nomor virtual murah dan berkualitas untuk ribuan aplikasi dari seluruh negara. Mulai dari Rp 500.
               </p>
               <div className="mt-5 flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
