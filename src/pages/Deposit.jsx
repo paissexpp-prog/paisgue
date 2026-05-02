@@ -121,7 +121,7 @@ export default function Deposit() {
         showToast('Tagihan berhasil dibuat', 'success');
       }
     } catch (err) {
-      showToast(err.response?.data?.error?.message || 'Gagal membuat deposit', 'error');
+      showToast(err.response?.data?.error?.message || 'Sedang Dalam Maintenance', 'error');
     }
     setLoading(false);
   };
