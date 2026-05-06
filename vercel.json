@@ -35,7 +35,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.nekohime.site https://images.weserv.nl https://cdn-icons-png.flaticon.com https://atlantich2h.com https://cdn.ruangotp.site https://www.rumahotp.io https://assets.cindigital.id; connect-src 'self' https://api.ruangotp.site https://api.ruangotp.id wss://api.ruangotp.site wss://api.ruangotp.id; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.nekohime.site https://images.weserv.nl https://cdn-icons-png.flaticon.com https://mustikapayment.com https://cdn.ruangotp.site https://www.rumahotp.io https://assets.cindigital.id; connect-src 'self' https://api.ruangotp.site https://api.ruangotp.id wss://api.ruangotp.site wss://api.ruangotp.id; frame-ancestors 'none';"
         }
       ]
     }
