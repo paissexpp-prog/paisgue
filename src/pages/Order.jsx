@@ -62,9 +62,7 @@ export default function Order() {
   const CACHE_TIME = 'otp_services_time_v12';
   const CACHE_DURATION = 60 * 60 * 1000;
 
-  // ================================================================
-  // Cache Countries — per service_code, simpan 1 JAM di localStorage
-  // ================================================================
+  // Cache Countries
   const COUNTRIES_CACHE_PREFIX      = 'otp_countries_v2_';
   const COUNTRIES_CACHE_TIME_PREFIX = 'otp_countries_time_v2_';
   const COUNTRIES_CACHE_DURATION    = 60 * 60 * 1000;
@@ -72,7 +70,7 @@ export default function Order() {
   // ================================================================
   // --- STATE PROVIDER 2 (SERVER GLOBAL / VIRTUSIM) ---
   // ================================================================
-  const [activeServer, setActiveServer] = useState('utama'); // 'utama' | 'global'
+  const [activeServer, setActiveServer] = useState('utama'); 
   const [globalCountries, setGlobalCountries] = useState([]);
   const [globalServices, setGlobalServices] = useState([]);
   const [loadingGlobalCountries, setLoadingGlobalCountries] = useState(false);
@@ -146,9 +144,7 @@ export default function Order() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // ================================================================
     // KONEKSI SOCKET.IO UNTUK OTP REALTIME
-    // ================================================================
     let userId = null;
     try {
         const token = localStorage.getItem('token');
@@ -408,7 +404,8 @@ export default function Order() {
         if (cached && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
             setGlobalCountries(JSON.parse(cached));
         } else {
-            const res = await api.get('/virtusim/countries/list');
+            // FIX: Menambahkan /v2 agar tidak terjadi 404 Error
+            const res = await api.get('/v2/virtusim/countries/list');
             if (res.data.status) {
                 setGlobalCountries(res.data.data);
                 localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
@@ -441,7 +438,8 @@ export default function Order() {
           if (cached && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
               setGlobalServices(JSON.parse(cached));
           } else {
-              const res = await api.get(`/virtusim/services/list?country=${country.country_name}`);
+              // FIX: Menambahkan /v2 agar tidak terjadi 404 Error
+              const res = await api.get(`/v2/virtusim/services/list?country=${country.country_name}`);
               if (res.data.status) {
                   setGlobalServices(res.data.data);
                   localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
@@ -466,7 +464,8 @@ export default function Order() {
       setLoadingOperators(true);
 
       try {
-          const res = await api.get(`/virtusim/operators/list?country=${selectedGlobalCountry.country_name}`);
+          // FIX: Menambahkan /v2 agar tidak terjadi 404 Error
+          const res = await api.get(`/v2/virtusim/operators/list?country=${selectedGlobalCountry.country_name}`);
           if (res.data.status) {
               const ops = res.data.data.map(op => ({ id: op, name: op }));
               setCurrentOperators(ops);
@@ -491,7 +490,8 @@ export default function Order() {
   const processBuyGlobal = async (service) => {
       setConfirmModal(prev => ({ ...prev, loading: true }));
       const opIdToSend = selectedOperatorId || 'any';
-      const buyUrl = `/virtusim/orders/buy?service_id=${service.id}&operator_id=${opIdToSend}&expected_price=${service.price}&country=${selectedGlobalCountry.country_name}`;
+      // FIX: Menambahkan /v2 agar tidak terjadi 404 Error
+      const buyUrl = `/v2/virtusim/orders/buy?service_id=${service.id}&operator_id=${opIdToSend}&expected_price=${service.price}&country=${selectedGlobalCountry.country_name}`;
       
       try {
           const res = await api.get(buyUrl);
@@ -550,9 +550,9 @@ export default function Order() {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
             const targetId = order.order_id || order.id;
-            // Deteksi otomatis jika itu orderan Virtusim (melalui rute yang berbeda)
             const isVirtusim = order.vendor === 'VIRTUSIM' || (order.order_id && order.order_id.includes('RUANGOTP')); 
-            const cancelUrl = isVirtusim ? `/virtusim/orders/cancel?order_id=${targetId}` : `/orders/cancel?order_id=${targetId}`;
+            // FIX: Menambahkan /v2 pada URL cancel Virtusim
+            const cancelUrl = isVirtusim ? `/v2/virtusim/orders/cancel?order_id=${targetId}` : `/orders/cancel?order_id=${targetId}`;
 
             await api.get(cancelUrl);
             setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
@@ -1193,7 +1193,12 @@ export default function Order() {
                     {globalCountries.filter(c => c.country_name.toLowerCase().includes(searchGlobalCountry.toLowerCase())).map((country) => (
                         <button key={country.id} onClick={() => handleGlobalCountryClick(country)} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-blue-200 transition-colors active:scale-95">
                             <div className="flex items-center gap-4">
-                                <img src={getOptimizedImage(country.img_link)} className="w-8 h-6 object-cover rounded shadow-sm" />
+                                {/* FIX: Penambahan fungsi fallback onError agar gambar yang rusak langsung diganti otomatis */}
+                                <img 
+                                  src={getOptimizedImage(country.img_link)} 
+                                  onError={(e) => { e.target.onerror = null; e.target.src="https://cdn.nekohime.site/file/HsGrgzQf.jpeg"; }}
+                                  className="w-8 h-6 object-cover rounded shadow-sm bg-white" 
+                                />
                                 <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.country_name}</span>
                             </div>
                             <ChevronRight size={18} className="text-slate-400" />
@@ -1213,7 +1218,17 @@ export default function Order() {
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setSheetMode('global_countries')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"><ChevronRight size={20} className="text-slate-500 rotate-180" /></button>
-                    {selectedGlobalCountry && (<><img src={getOptimizedImage(selectedGlobalCountry.img_link)} className="w-8 h-6 object-cover rounded shadow-sm" /><h3 className="font-bold text-slate-800 dark:text-white">{selectedGlobalCountry.country_name}</h3></>)}
+                    {selectedGlobalCountry && (
+                        <>
+                            {/* FIX: Penambahan fungsi fallback onError di bagian Header */}
+                            <img 
+                              src={getOptimizedImage(selectedGlobalCountry.img_link)} 
+                              onError={(e) => { e.target.onerror = null; e.target.src="https://cdn.nekohime.site/file/HsGrgzQf.jpeg"; }}
+                              className="w-8 h-6 object-cover rounded shadow-sm bg-white" 
+                            />
+                            <h3 className="font-bold text-slate-800 dark:text-white">{selectedGlobalCountry.country_name}</h3>
+                        </>
+                    )}
                 </div>
              </div>
              <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
