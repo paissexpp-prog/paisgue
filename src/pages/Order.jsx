@@ -1,3 +1,6 @@
+// ================================================================
+// 📄 FILE PATH: src/pages/Order.jsx
+// ================================================================
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -45,7 +48,6 @@ export default function Order() {
   const [sheetMode, setSheetMode] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
-
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -66,6 +68,20 @@ export default function Order() {
   const COUNTRIES_CACHE_PREFIX      = 'otp_countries_v2_';
   const COUNTRIES_CACHE_TIME_PREFIX = 'otp_countries_time_v2_';
   const COUNTRIES_CACHE_DURATION    = 60 * 60 * 1000;
+
+  // ================================================================
+  // --- STATE PROVIDER 2 (SERVER GLOBAL / VIRTUSIM) ---
+  // ================================================================
+  const [activeServer, setActiveServer] = useState('utama'); // 'utama' | 'global'
+  const [globalCountries, setGlobalCountries] = useState([]);
+  const [globalServices, setGlobalServices] = useState([]);
+  const [loadingGlobalCountries, setLoadingGlobalCountries] = useState(false);
+  const [loadingGlobalServices, setLoadingGlobalServices] = useState(false);
+  
+  const [selectedGlobalCountry, setSelectedGlobalCountry] = useState(null);
+  const [expandedGlobalService, setExpandedGlobalService] = useState(null);
+  const [searchGlobalCountry, setSearchGlobalCountry] = useState('');
+  const [searchGlobalService, setSearchGlobalService] = useState('');
 
   // ================================================================
   // DATA FAQ
@@ -111,7 +127,6 @@ export default function Order() {
 
     fetchInitialData();
     
-    // INTERVAL DIUBAH DARI 15 DETIK KE 3 MENIT (180000 ms) SEBAGAI SAFETY NET
     const interval = setInterval(() => {
         if (!document.hidden) {
             fetchInitialData(true); 
@@ -124,7 +139,6 @@ export default function Order() {
 
     const handleVisibilityChange = () => {
         if (!document.hidden) {
-            // DITAMBAHKAN COOLDOWN 15 DETIK AGAR TIDAK SPAM REQUEST SAAT PINDAH TAB
             if (Date.now() - lastFetchRef.current > 15000) {
                 fetchInitialData(true);
             }
@@ -146,7 +160,7 @@ export default function Order() {
 
     const socket = io('https://api.ruangotp.site', {
         auth: { userId },
-        transports: ['websocket'], // FIX: paksa WebSocket agar tidak memakan slot koneksi HTTP
+        transports: ['websocket'],
         reconnectionAttempts: 5,
         reconnectionDelay: 3000,
     });
@@ -200,7 +214,7 @@ export default function Order() {
 
   // --- FETCH DATA ---
   const fetchInitialData = async (silent = false) => {
-    lastFetchRef.current = Date.now(); // MENCATAT WAKTU TERAKHIR REQUEST API
+    lastFetchRef.current = Date.now();
     const start = Date.now();
 
     try {
@@ -217,9 +231,7 @@ export default function Order() {
           if (resSelesai.data.success && Array.isArray(resSelesai.data.data)) {
               closedBackendIds = resSelesai.data.data.map(o => o.order_id);
           }
-      } catch (err) {
-          console.error("Gagal load saveorder:", err);
-      }
+      } catch (err) {}
 
       const resHistory = await api.get('/history/list');
       if (resHistory.data.success) {
@@ -284,8 +296,7 @@ export default function Order() {
       showToast("Berhasil disalin! 📋", "success");
   };
 
-  // --- ACTIONS ---
-  // Cache countries per service_code selama 1 JAM di localStorage
+  // --- ACTIONS PROVIDER 1 ---
   const handleServiceClick = async (service) => {
     setSelectedService(service);
     setSheetMode('countries'); 
@@ -300,7 +311,6 @@ export default function Order() {
     try {
       const cachedCountries     = localStorage.getItem(cacheKey);
       const cachedCountriesTime = localStorage.getItem(cacheTimeKey);
-
       if (
         cachedCountries &&
         cachedCountriesTime &&
@@ -344,7 +354,6 @@ export default function Order() {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
       const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
-
       showConfirm(
           "Konfirmasi Pembelian",
           `Beli ${country.name} - ${selectedService.service_name}?\nOperator: ${opName}\nServer: ${provider.server_id}\nHarga: Rp ${provider.price}`,
@@ -356,7 +365,7 @@ export default function Order() {
       setConfirmModal(prev => ({ ...prev, loading: true }));
       const opIdToSend = selectedOperatorId || 'any';
       const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=${opIdToSend}&expected_price=${provider.price}`;
-
+      
       try {
           const res = await api.get(buyUrl);
           if (res.data.success) {
@@ -372,12 +381,9 @@ export default function Order() {
               }
               showToast(errorMsg, "error");
           }
-
       } catch (err) {
           closeConfirm();
-          const errorMsg = err.response?.data?.error?.message
-                        || err.response?.data?.message
-                        || "Gagal memproses order coba lagi .";
+          const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || "Gagal memproses order coba lagi .";
           let finalMsg = errorMsg;
           if (finalMsg.toLowerCase().includes("rate limit") || finalMsg.toLowerCase().includes("please wait")) {
               finalMsg = "Sistem pusat sedang sibuk. Silakan coba klik Beli lagi dalam 1-2 detik ya! ⏳";
@@ -387,6 +393,152 @@ export default function Order() {
       }
   };
 
+  // ================================================================
+  // --- FUNGSI PROVIDER 2 (SERVER GLOBAL / VIRTUSIM) ---
+  // ================================================================
+  const fetchGlobalCountries = async () => {
+    setLoadingGlobalCountries(true);
+    try {
+        const cacheKey = 'global_countries_v1';
+        const cacheTimeKey = 'global_countries_time_v1';
+        const now = Date.now();
+        const cached = localStorage.getItem(cacheKey);
+        const cachedTime = localStorage.getItem(cacheTimeKey);
+        
+        if (cached && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
+            setGlobalCountries(JSON.parse(cached));
+        } else {
+            const res = await api.get('/virtusim/countries/list');
+            if (res.data.status) {
+                setGlobalCountries(res.data.data);
+                localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                localStorage.setItem(cacheTimeKey, now.toString());
+            }
+        }
+    } catch (err) {
+        showToast("Gagal memuat negara Server Global", "error");
+    } finally {
+        setLoadingGlobalCountries(false);
+    }
+  };
+
+  const handleGlobalCountryClick = async (country) => {
+      setSelectedGlobalCountry(country);
+      setSheetMode('global_services');
+      setSearchGlobalService('');
+      setGlobalServices([]);
+      setLoadingGlobalServices(true);
+      setExpandedGlobalService(null);
+
+      const safeCountry = country.country_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const cacheKey = `global_services_v1_${safeCountry}`;
+      const cacheTimeKey = `global_services_time_v1_${safeCountry}`;
+      const now = Date.now();
+
+      try {
+          const cached = localStorage.getItem(cacheKey);
+          const cachedTime = localStorage.getItem(cacheTimeKey);
+          if (cached && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
+              setGlobalServices(JSON.parse(cached));
+          } else {
+              const res = await api.get(`/virtusim/services/list?country=${country.country_name}`);
+              if (res.data.status) {
+                  setGlobalServices(res.data.data);
+                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                  localStorage.setItem(cacheTimeKey, now.toString());
+              }
+          }
+      } catch (err) {
+          showToast("Gagal memuat layanan Server Global", "error");
+      } finally {
+          setLoadingGlobalServices(false);
+      }
+  };
+
+  const toggleGlobalService = async (service) => {
+      if (expandedGlobalService === service.id) {
+          setExpandedGlobalService(null);
+          return;
+      }
+      setExpandedGlobalService(service.id);
+      setSelectedOperatorId('any');
+      setCurrentOperators([]);
+      setLoadingOperators(true);
+
+      try {
+          const res = await api.get(`/virtusim/operators/list?country=${selectedGlobalCountry.country_name}`);
+          if (res.data.status) {
+              const ops = res.data.data.map(op => ({ id: op, name: op }));
+              setCurrentOperators(ops);
+          }
+      } catch (err) {}
+      setLoadingOperators(false);
+  };
+
+  const handleBuyGlobalClick = (service) => {
+      if (balance < parseInt(service.price)) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
+      
+      const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
+      const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
+      
+      showConfirm(
+          "Konfirmasi Pembelian",
+          `Beli ${selectedGlobalCountry.country_name} - ${service.name}?\nOperator: ${opName}\nHarga: Rp ${service.price}`,
+          () => processBuyGlobal(service)
+      );
+  };
+
+  const processBuyGlobal = async (service) => {
+      setConfirmModal(prev => ({ ...prev, loading: true }));
+      const opIdToSend = selectedOperatorId || 'any';
+      const buyUrl = `/virtusim/orders/buy?service_id=${service.id}&operator_id=${opIdToSend}&expected_price=${service.price}&country=${selectedGlobalCountry.country_name}`;
+      
+      try {
+          const res = await api.get(buyUrl);
+          if (res.data.success) {
+              closeConfirm();
+              setSheetMode(null);
+              showToast("✅ Order Berhasil! Menunggu SMS...", "success");
+              fetchInitialData();
+          } else {
+              closeConfirm();
+              let errorMsg = res.data.error?.message || res.data.message || "Order Gagal";
+              showToast(errorMsg, "error");
+          }
+      } catch (err) {
+          closeConfirm();
+          const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || "Gagal memproses order, coba lagi nanti.";
+          showToast(errorMsg, "error");
+          fetchInitialData(true);
+      }
+  };
+
+  // UI Avatar Generator elegan untuk Layanan Provider 2
+  const getServiceAvatar = (name) => {
+      const letter = name ? name.charAt(0).toUpperCase() : 'V';
+      const gradients = [
+          'from-emerald-400 to-emerald-600',
+          'from-blue-400 to-blue-600',
+          'from-violet-400 to-violet-600',
+          'from-rose-400 to-rose-600',
+          'from-amber-400 to-amber-600',
+          'from-cyan-400 to-cyan-600'
+      ];
+      
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) {
+          hash = (name || '').charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const colorClass = gradients[Math.abs(hash) % gradients.length];
+
+      return (
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${colorClass} text-xl font-black text-white shadow-md border border-white/20 dark:border-white/10`}>
+              {letter}
+          </div>
+      );
+  };
+
+  // --- ACTIONS CANCEL & REORDER ---
   const handleCancelClick = (order) => {
      const remaining = getRemainingTime(order.created_at);
      if (remaining > 0) {
@@ -398,16 +550,19 @@ export default function Order() {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
             const targetId = order.order_id || order.id;
-            await api.get(`/orders/cancel?order_id=${targetId}`);
+            // Deteksi otomatis jika itu orderan Virtusim (melalui rute yang berbeda)
+            const isVirtusim = order.vendor === 'VIRTUSIM' || (order.order_id && order.order_id.includes('RUANGOTP')); 
+            const cancelUrl = isVirtusim ? `/virtusim/orders/cancel?order_id=${targetId}` : `/orders/cancel?order_id=${targetId}`;
+
+            await api.get(cancelUrl);
             setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
+            
             closeConfirm();
             showToast("Pesanan dibatalkan", "success");
             fetchInitialData();
          } catch(e) { 
             closeConfirm();
-            const errorMsg = e.response?.data?.error?.message 
-                          || e.response?.data?.message 
-                          || "Gagal batal";
+            const errorMsg = e.response?.data?.error?.message || e.response?.data?.message || "Gagal batal";
             showToast(errorMsg, "error");
             fetchInitialData(true);
          }
@@ -431,7 +586,7 @@ export default function Order() {
               if (attempt < maxRetry) {
                   await new Promise(resolve => setTimeout(resolve, 2000));
               } else {
-                  console.error("Gagal sinkronisasi tutup order ke backend setelah 3x percobaan:", err);
+                  console.error("Gagal sinkronisasi tutup order ke backend:", err);
               }
           }
       }
@@ -506,13 +661,47 @@ export default function Order() {
       {/* KONTEN */}
       <div className="px-5 mt-6 space-y-6">
         
+        {/* ================================================================
+            SERVER SWITCHER (UTAMA vs GLOBAL)
+            ================================================================ */}
+        <div className="flex p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl mb-4 border border-slate-200 dark:border-slate-700">
+            <button 
+                onClick={() => setActiveServer('utama')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeServer === 'utama' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            >
+                Server Utama
+            </button>
+            <button 
+                onClick={() => setActiveServer('global')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${activeServer === 'global' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm ring-1 ring-black/5' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            >
+                Server Global
+            </button>
+        </div>
+
         {/* BUTTON GET NUMBER */}
-        <button onClick={() => { setSheetMode('services'); setSearchTerm(''); }} className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-left shadow-xl dark:from-blue-900 dark:to-slate-900 transition-transform active:scale-95">
+        <button onClick={() => { 
+            if (activeServer === 'utama') {
+                setSheetMode('services');
+                setSearchTerm('');
+            } else {
+                setSheetMode('global_countries');
+                setSearchGlobalCountry('');
+                if (globalCountries.length === 0) fetchGlobalCountries();
+            }
+        }} className={`w-full group relative overflow-hidden rounded-3xl p-6 text-left shadow-xl transition-transform active:scale-95 ${activeServer === 'utama' ? 'bg-gradient-to-r from-slate-900 to-slate-800 dark:from-blue-900 dark:to-slate-900' : 'bg-gradient-to-r from-blue-700 to-indigo-800 dark:from-blue-800 dark:to-indigo-950'}`}>
             <div className="relative z-10 flex items-center justify-between">
-                <div><h2 className="text-2xl font-bold text-white mb-1">Get Virtual Number</h2><p className="text-slate-300 text-sm">Pilih layanan dari 190+ negara</p></div>
-                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all"><Plus size={24} className="text-white" /></div>
+                <div>
+                    <h2 className="text-2xl font-bold text-white mb-1">Get Virtual Number</h2>
+                    <p className="text-slate-300 text-sm">Pilih layanan dari {activeServer === 'utama' ? '190+' : '100+'} negara</p>
+                </div>
+                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                    <Plus size={24} className="text-white" />
+                </div>
             </div>
-            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12"><Smartphone size={120} className="text-white" /></div>
+            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
+                <Smartphone size={120} className="text-white" />
+            </div>
         </button>
 
         {/* INFO CARDS */}
@@ -525,7 +714,7 @@ export default function Order() {
             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
                 <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20"><Globe size={18} /></div>
                 <p className="text-xs text-slate-400">Total Negara</p>
-                <p className="font-bold text-slate-700 dark:text-slate-200">193 Negara</p>
+                <p className="font-bold text-slate-700 dark:text-slate-200">{activeServer === 'utama' ? '193 Negara' : '100+ Negara'}</p>
             </div>
         </div>
 
@@ -544,12 +733,11 @@ export default function Order() {
                     </div>
                     <button
                         onClick={() => { 
-                            // DITAMBAHKAN PROTEKSI SPAM REFRESH MANUAL 3 DETIK
-                            if (Date.now() - lastFetchRef.current < 3000) {
+                             if (Date.now() - lastFetchRef.current < 3000) {
                                 showToast("Tunggu sebentar sebelum refresh lagi ⏳", "error");
                                 return;
-                            }
-                            showToast("Merefresh data...", "success"); 
+                             }
+                            showToast("Merefresh data...", "success");
                             fetchInitialData(true); 
                         }}
                         className="flex items-center justify-center w-9 h-9 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -566,6 +754,7 @@ export default function Order() {
                     const orderId = order.order_id || order.id;
                     const serviceImg = getServiceImg(order.service);
                     const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
+                    const isVirtusim = order.vendor === 'VIRTUSIM' || (order.order_id && order.order_id.includes('RUANGOTP'));
 
                     return (
                         <div
@@ -591,9 +780,9 @@ export default function Order() {
                                             onClick={() => handleCopy(order.phone_number)}
                                             className="shrink-0 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700"
                                         >
-                                            <Copy size={13} />
+                                             <Copy size={13} />
                                         </button>
-                                    </div>
+                                     </div>
                                     
                                     {/* Timer 20 menit */}
                                     <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${
@@ -615,13 +804,16 @@ export default function Order() {
                                             🎲
                                         </div>
                                         <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">any</span>
+                                        {isVirtusim && (
+                                            <span className="ml-1 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-bold uppercase">GLOBAL</span>
+                                        )}
                                     </div>
                                     <div className={`px-3 py-1 rounded-xl text-xs font-bold text-white ${color.btn}`}>
                                         {order.total_price
                                             ? `Rp${order.total_price.toLocaleString('id-ID')}`
                                             : '—'
                                         }
-                                    </div>
+                                     </div>
                                 </div>
 
                                 {/* ── INNER BOX: Info Layanan ── */}
@@ -632,8 +824,10 @@ export default function Order() {
                                 }`}>
                                     {/* Baris atas: Gambar + Nama Layanan │ Status */}
                                     <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            {serviceImg ? (
+                                         <div className="flex items-center gap-2 min-w-0">
+                                            {isVirtusim ? (
+                                                <div className="scale-75 origin-left">{getServiceAvatar(order.service)}</div>
+                                            ) : serviceImg ? (
                                                 <img
                                                     src={getOptimizedImage(serviceImg)}
                                                     className="w-8 h-8 rounded-xl object-contain bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 shrink-0"
@@ -641,9 +835,9 @@ export default function Order() {
                                                 />
                                             ) : (
                                                 <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                                                    <Smartphone size={16} className="text-blue-600 dark:text-blue-400" />
+                                                     <Smartphone size={16} className="text-blue-600 dark:text-blue-400" />
                                                 </div>
-                                            )}
+                                             )}
                                             <span className="font-bold text-slate-800 dark:text-white text-sm truncate">
                                                 {order.service || 'Layanan'}
                                             </span>
@@ -656,9 +850,9 @@ export default function Order() {
                                         ) : (
                                             <div className="shrink-0 flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-bold">
                                                 Menunggu <MessageSquare size={13} />
-                                            </div>
+                                             </div>
                                         )}
-                                    </div>
+                                     </div>
 
                                     {/* Baris bawah: OTP atau countdown batal */}
                                     {isSmsReceived ? (
@@ -681,7 +875,7 @@ export default function Order() {
                                                     {order.sms_content || 'SMS diterima ✓'}
                                                 </p>
                                             )}
-                                        </div>
+                                          </div>
                                     ) : (
                                         // ── COUNTDOWN SEBELUM BATAL ──
                                         <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -702,7 +896,7 @@ export default function Order() {
 
                                 {/* ── TOMBOL AKSI ── */}
                                 <div className="flex gap-3">
-                                    {/* Tombol Beli Lagi (selalu tampil) */}
+                                    {/* Tombol Beli Lagi */}
                                     <button
                                         onClick={() => handleReorder(order)}
                                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors ${color.border} ${color.text} hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-95`}
@@ -716,7 +910,7 @@ export default function Order() {
                                             onClick={() => handleCloseOrder(orderId)}
                                             className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900 transition-colors flex items-center justify-center gap-2 active:scale-95"
                                         >
-                                            <CheckCircle2 size={15} /> Selesai
+                                             <CheckCircle2 size={15} /> Selesai
                                         </button>
                                     ) : (
                                         <button
@@ -728,9 +922,9 @@ export default function Order() {
                                             }`}
                                         >
                                             <X size={15} /> Batal
-                                        </button>
+                                         </button>
                                     )}
-                                </div>
+                                 </div>
 
                             </div>
                         </div>
@@ -752,7 +946,16 @@ export default function Order() {
                     Anda belum memiliki pesanan virtual number yang aktif saat ini.
                 </p>
                 <button 
-                    onClick={() => { setSheetMode('services'); setSearchTerm(''); }}
+                    onClick={() => { 
+                        if (activeServer === 'utama') {
+                            setSheetMode('services');
+                            setSearchTerm('');
+                        } else {
+                            setSheetMode('global_countries');
+                            setSearchGlobalCountry('');
+                            if (globalCountries.length === 0) fetchGlobalCountries();
+                        }
+                    }}
                     className={`flex items-center gap-2 px-6 py-3 mb-6 rounded-xl text-white font-bold text-sm shadow-lg transition-transform active:scale-95 ${color.btn}`}
                 >
                     <Plus size={16} /> Beli Nomor Sekarang
@@ -766,7 +969,7 @@ export default function Order() {
                     >
                         <History size={20} />
                         <span className="text-[10px] font-bold">Riwayat OTP</span>
-                    </button>
+                     </button>
                     
                     <button 
                         onClick={() => navigate('/deposit')}
@@ -774,7 +977,7 @@ export default function Order() {
                     >
                         <Wallet size={20} />
                         <span className="text-[10px] font-bold">Isi Saldo</span>
-                    </button>
+                     </button>
                 </div>
             </div>
         )}
@@ -805,7 +1008,7 @@ export default function Order() {
                                 <div className="flex items-center gap-3">
                                     <div className={`flex h-8 w-8 items-center justify-center rounded-full ${faq.iconBg}`}>
                                         {faq.icon}
-                                    </div>
+                                     </div>
                                     <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{faq.question}</span>
                                 </div>
                                 <div className="text-slate-400">
@@ -828,7 +1031,7 @@ export default function Order() {
             ================================================================ */}
         <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-100 to-white p-5 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950 relative">
             <div className="relative z-10 flex items-center justify-between">
-                <div className="pr-4">
+                 <div className="pr-4">
                     <h3 className="mb-1 text-sm font-bold text-slate-800 dark:text-white">Baca Ketentuan Layanan</h3>
                     <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         Hindari kesalahan dan pemotongan saldo. Pahami aturan main kami agar transaksi lancar!
@@ -837,13 +1040,13 @@ export default function Order() {
                 <div className="shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-2">
                      <FileText size={24} className="text-blue-600 dark:text-blue-400"/>
                 </div>
-             </div>
+            </div>
             <button
                 onClick={() => navigate('/ketentuan')}
                 className={`mt-4 w-full rounded-xl py-3 text-sm font-bold text-white transition-transform active:scale-95 ${color.btn} flex justify-center items-center gap-2`}
             >
                 <BookOpen size={16} /> Baca Sekarang
-            </button>
+             </button>
         </div>
 
       </div>
@@ -852,11 +1055,11 @@ export default function Order() {
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
-                  <div className="flex flex-col items-center text-center">
+                   <div className="flex flex-col items-center text-center">
                       <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400"><HelpCircle size={32} /></div>
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line leading-relaxed">{confirmModal.message}</p>
-                      <div className="flex gap-3 w-full">
+                       <div className="flex gap-3 w-full">
                           {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">Batal</button>}
                           <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
@@ -872,14 +1075,16 @@ export default function Order() {
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span className="text-sm font-bold">{toast.message}</span>
       </div>
       
-      {/* DRAWER SERVICES */}
+      {/* ================================================================
+          DRAWER PROVIDER 1 (SERVER UTAMA) - SERVICES
+          ================================================================ */}
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-950 max-h-[85vh] flex flex-col ${sheetMode === 'services' ? 'translate-y-0' : 'translate-y-full'}`}>
          <div className="pt-3 pb-2 px-6 bg-white dark:bg-slate-950 rounded-t-[2rem] z-10">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
                 <Search size={18} className="text-slate-400" />
-                <input type="text" placeholder="Cari layanan..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus />
+                <input type="text" placeholder="Cari layanan..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} autoFocus={sheetMode === 'services'} />
             </div>
          </div>
          <div className="flex-1 overflow-y-auto px-6 py-4 pb-10">
@@ -900,14 +1105,16 @@ export default function Order() {
          </div>
       </div>
 
-      {/* DRAWER COUNTRIES */}
+      {/* ================================================================
+          DRAWER PROVIDER 1 (SERVER UTAMA) - COUNTRIES
+          ================================================================ */}
       <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('services')}></div>
       <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-950 max-h-[85vh] flex flex-col ${sheetMode === 'countries' ? 'translate-y-0' : 'translate-y-full'}`}>
          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-950 rounded-t-[2rem]">
             <div className="flex items-center gap-3">
                 <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"><X size={20} className="text-slate-500" /></button>
                 {selectedService && (<><img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" /><h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3></>)}
-            </div>
+             </div>
          </div>
          <div className={`flex-1 overflow-y-auto px-6 py-2 transition-all ${expandedCountry ? 'pb-24' : 'pb-10'}`}>
             {loadingCountries ? <div className="space-y-3 mt-4">{[1,2,3].map(i=><div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div> : countries.length > 0 ? (
@@ -946,13 +1153,126 @@ export default function Order() {
              <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 p-4 shadow-2xl">
                  <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-500 uppercase tracking-tighter"><Signal size={12} /> Pilih Operator</div>
                  {loadingOperators ? <div className="flex gap-2">{[1,2,3].map(i=><div key={i} className="h-10 w-24 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div> : (
-                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                     <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
                          <button onClick={()=>setSelectedOperatorId('any')} className={`shrink-0 flex flex-col items-center justify-center w-20 h-14 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId==='any'?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
                              <div className="mb-1 text-lg">🎲</div><span>Acak</span>
                          </button>
                          {currentOperators.filter(op=>op.name!=='any').map(op=>(
                              <button key={op.id} onClick={()=>setSelectedOperatorId(op.id)} className={`shrink-0 flex flex-col items-center justify-center min-w-[5rem] h-14 px-2 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId===op.id?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
                                  {op.image ? <img src={getOptimizedImage(op.image)} className="w-5 h-5 rounded-full bg-white object-cover mb-1"/> : <span className="mb-1 text-lg">📡</span>}
+                                 <span className="truncate max-w-full">{op.name}</span>
+                             </button>
+                         ))}
+                     </div>
+                 )}
+             </div>
+         )}
+      </div>
+
+      {/* ================================================================
+          DRAWER PROVIDER 2 (SERVER GLOBAL) - COUNTRIES
+          ================================================================ */}
+      <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'global_countries' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode(null)}></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-950 max-h-[85vh] flex flex-col ${sheetMode === 'global_countries' ? 'translate-y-0' : 'translate-y-full'}`}>
+         <div className="pt-3 pb-2 px-6 bg-white dark:bg-slate-950 rounded-t-[2rem] z-10">
+            <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-4 dark:bg-slate-700"></div>
+            <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-slate-800 dark:text-white">Pilih Negara (Server Global)</h3>
+                <button onClick={() => setSheetMode(null)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"><X size={20} className="text-slate-500" /></button>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                <Search size={18} className="text-slate-400" />
+                <input type="text" placeholder="Cari negara..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchGlobalCountry} onChange={(e) => setSearchGlobalCountry(e.target.value)} />
+            </div>
+         </div>
+         <div className="flex-1 overflow-y-auto px-6 py-2 pb-10">
+            {loadingGlobalCountries ? (
+                <div className="space-y-3 mt-4">{[1,2,3,4,5].map(i=><div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div>
+            ) : (
+                <div className="space-y-3 mt-4">
+                    {globalCountries.filter(c => c.country_name.toLowerCase().includes(searchGlobalCountry.toLowerCase())).map((country) => (
+                        <button key={country.id} onClick={() => handleGlobalCountryClick(country)} className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 hover:border-blue-200 transition-colors active:scale-95">
+                            <div className="flex items-center gap-4">
+                                <img src={getOptimizedImage(country.img_link)} className="w-8 h-6 object-cover rounded shadow-sm" />
+                                <span className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.country_name}</span>
+                            </div>
+                            <ChevronRight size={18} className="text-slate-400" />
+                        </button>
+                    ))}
+                </div>
+            )}
+         </div>
+      </div>
+
+      {/* ================================================================
+          DRAWER PROVIDER 2 (SERVER GLOBAL) - SERVICES
+          ================================================================ */}
+      <div className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity ${sheetMode === 'global_services' ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSheetMode('global_countries')}></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-[70] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-slate-950 max-h-[85vh] flex flex-col ${sheetMode === 'global_services' ? 'translate-y-0' : 'translate-y-full'}`}>
+         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-3 bg-white dark:bg-slate-950 rounded-t-[2rem] z-10">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setSheetMode('global_countries')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"><ChevronRight size={20} className="text-slate-500 rotate-180" /></button>
+                    {selectedGlobalCountry && (<><img src={getOptimizedImage(selectedGlobalCountry.img_link)} className="w-8 h-6 object-cover rounded shadow-sm" /><h3 className="font-bold text-slate-800 dark:text-white">{selectedGlobalCountry.country_name}</h3></>)}
+                </div>
+             </div>
+             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                <Search size={18} className="text-slate-400" />
+                <input type="text" placeholder="Cari layanan..." className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white" value={searchGlobalService} onChange={(e) => setSearchGlobalService(e.target.value)} />
+             </div>
+         </div>
+         <div className={`flex-1 overflow-y-auto px-6 py-2 transition-all ${expandedGlobalService ? 'pb-24' : 'pb-10'}`}>
+            {loadingGlobalServices ? (
+                <div className="space-y-3 mt-4">{[1,2,3,4].map(i=><div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div>
+            ) : globalServices.length > 0 ? (
+                <div className="space-y-3 mt-4">
+                    {globalServices.filter(s => s.name.toLowerCase().includes(searchGlobalService.toLowerCase())).map((service) => {
+                        const isExpanded = expandedGlobalService === service.id;
+                        return (
+                            <div key={service.id} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
+                                <button onClick={() => toggleGlobalService(service)} className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-900">
+                                    <div className="flex items-center gap-4">
+                                        {getServiceAvatar(service.name)}
+                                        <div className="text-left">
+                                            <p className="font-bold text-slate-700 text-sm dark:text-slate-200">{service.name}</p>
+                                            <p className="text-xs text-blue-600 font-medium">Rp {service.price}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400">Stok: {service.tersedia}</span>
+                                        {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                    </div>
+                                </button>
+                                {isExpanded && (
+                                    <div className="bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 p-4 flex justify-between items-center">
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Server Global</span>
+                                            <p className="text-[10px] text-slate-400">Stok {service.tersedia}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-emerald-600 text-sm">Rp {service.price}</span>
+                                            <button onClick={() => handleBuyGlobalClick(service)} className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 active:scale-95 transition-transform">Beli</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            ) : <div className="text-center py-10 text-slate-400">Layanan tidak ditemukan</div>}
+         </div>
+
+         {expandedGlobalService && (
+             <div className="absolute bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 p-4 shadow-2xl">
+                 <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-500 uppercase tracking-tighter"><Signal size={12} /> Pilih Operator</div>
+                 {loadingOperators ? <div className="flex gap-2">{[1,2,3].map(i=><div key={i} className="h-10 w-24 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div> : (
+                     <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                         <button onClick={()=>setSelectedOperatorId('any')} className={`shrink-0 flex flex-col items-center justify-center w-20 h-14 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId==='any'?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
+                             <div className="mb-1 text-lg">🎲</div><span>Acak</span>
+                         </button>
+                         {currentOperators.filter(op=>op.name!=='any').map(op=>(
+                             <button key={op.id} onClick={()=>setSelectedOperatorId(op.id)} className={`shrink-0 flex flex-col items-center justify-center min-w-[5rem] h-14 px-2 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId===op.id?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
+                                 <span className="mb-1 text-lg">📡</span>
                                  <span className="truncate max-w-full">{op.name}</span>
                              </button>
                          ))}
