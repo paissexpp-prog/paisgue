@@ -372,19 +372,27 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
-      const selectedOpObj = currentOperators.find(op => op.id == selectedOperatorId);
+      
+      // FIX: Pencarian yang lebih aman (dukung pencarian by name jika API tidak mengirim id)
+      const selectedOpObj = currentOperators.find(op => (op.id || op.name) == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
+
+      // FIX: Tangkap operator ID saat tombol Beli ditekan, cegah stale-closure dari React
+      const capturedOperatorId = selectedOperatorId || 'any';
 
       showConfirm(
           "Konfirmasi Pembelian",
           `Beli ${country.name} - ${selectedService.service_name}?\nOperator: ${opName}\nServer: ${provider.server_id}\nHarga: Rp ${provider.price}`,
-          () => processBuy(country, provider)
+          () => processBuy(country, provider, capturedOperatorId) // Kirim ID yang ditangkap
       );
   };
 
-  const processBuy = async (country, provider) => {
+  // FIX: Tambahkan parameter opId yang ditangkap dari luar fungsi
+  const processBuy = async (country, provider, opId) => {
       setConfirmModal(prev => ({ ...prev, loading: true }));
-      const opIdToSend = selectedOperatorId || 'any';
+      
+      // Pastikan yang dikirim adalah opId, BUKAN selectedOperatorId yang rawan me-reset
+      const opIdToSend = opId || 'any';
       const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=${opIdToSend}&expected_price=${provider.price}`;
       
       try {
@@ -1213,12 +1221,16 @@ export default function Order() {
                          <button onClick={()=>setSelectedOperatorId('any')} className={`shrink-0 flex flex-col items-center justify-center w-20 h-14 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId==='any'?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
                              <div className="mb-1 text-lg">🎲</div><span>Acak</span>
                          </button>
-                         {currentOperators.filter(op=>op.name!=='any').map(op=>(
-                             <button key={op.id} onClick={()=>setSelectedOperatorId(op.id)} className={`shrink-0 flex flex-col items-center justify-center min-w-[5rem] h-14 px-2 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId===op.id?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
-                                 {op.image ? <img src={getOptimizedImage(op.image)} className="w-5 h-5 rounded-full bg-white object-cover mb-1"/> : <span className="mb-1 text-lg">📡</span>}
-                                 <span className="truncate max-w-full">{op.name}</span>
-                             </button>
-                         ))}
+                         {/* FIX: Gunakan op.id || op.name untuk jaga-jaga kalau backend tidak merespons ID */}
+                         {currentOperators.filter(op=>op.name!=='any').map((op, idx) => {
+                             const opIdentifier = op.id || op.name;
+                             return (
+                                 <button key={op.id || idx} onClick={()=>setSelectedOperatorId(opIdentifier)} className={`shrink-0 flex flex-col items-center justify-center min-w-[5rem] h-14 px-2 rounded-xl border transition-all text-[10px] font-bold ${selectedOperatorId===opIdentifier?'bg-blue-600 text-white border-blue-600':'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-800'}`}>
+                                     {op.image ? <img src={getOptimizedImage(op.image)} className="w-5 h-5 rounded-full bg-white object-cover mb-1"/> : <span className="mb-1 text-lg">📡</span>}
+                                     <span className="truncate max-w-full">{op.name}</span>
+                                 </button>
+                             );
+                         })}
                      </div>
                  )}
              </div>
