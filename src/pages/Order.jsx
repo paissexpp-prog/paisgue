@@ -28,7 +28,7 @@ export default function Order() {
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
-  
+
   const HIDDEN_ORDERS_KEY = 'ruangotp_closed_orders_v1';
   const closedIdsRef = useRef([]);
 
@@ -49,7 +49,7 @@ export default function Order() {
   const [sheetMode, setSheetMode] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
-  
+
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -68,7 +68,8 @@ export default function Order() {
   // ================================================================
   // --- STATE SERVER SWITCHER ---
   // ================================================================
-  const [activeServer, setActiveServer] = useState('utama'); // 'utama', 'alternatif', 'global'
+  const [activeServer, setActiveServer] = useState('utama');
+  // 'utama', 'alternatif', 'global'
 
   // ================================================================
   // --- STATE PROVIDER BARU: ALTERNATIF (JASAOTP) ---
@@ -84,7 +85,7 @@ export default function Order() {
   const [jasaSelectedCountry, setJasaSelectedCountry] = useState(null);
   const [jasaSelectedService, setJasaSelectedService] = useState(null);
   const [jasaModalVisible, setJasaModalVisible] = useState(false);
-  
+
   // Data dinamis di dalam Modal Konfirmasi
   const [jasaModalData, setJasaModalData] = useState({
       countryId: '',
@@ -94,7 +95,6 @@ export default function Order() {
       loading: false,
       processingBeli: false
   });
-
 
   // ================================================================
   // DATA FAQ
@@ -160,6 +160,7 @@ export default function Order() {
             }
         }
     };
+  
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     let userId = null;
@@ -188,7 +189,7 @@ export default function Order() {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         socket.disconnect();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Search Filter Utama
@@ -330,7 +331,7 @@ export default function Order() {
     try {
       const cachedCountries     = localStorage.getItem(cacheKey);
       const cachedCountriesTime = localStorage.getItem(cacheTimeKey);
-
+      
       if (
         cachedCountries &&
         cachedCountriesTime &&
@@ -372,7 +373,7 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
-      
+
       // FIX: Pencarian yang lebih aman (dukung pencarian by name jika API tidak mengirim id)
       const selectedOpObj = currentOperators.find(op => (op.id || op.name) == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
@@ -495,7 +496,7 @@ export default function Order() {
   const handleModalCountryChange = async (e) => {
       const newCountryId = parseInt(e.target.value);
       setJasaModalData(prev => ({ ...prev, loading: true, countryId: newCountryId, operator: 'any' }));
-      
+
       try {
           // Ambil Harga Layanan & Operator secara paralel untuk negara baru
           const [resServ, resOp] = await Promise.all([
@@ -519,7 +520,6 @@ export default function Order() {
               operatorsList: newOperators,
               loading: false
           }));
-
       } catch (err) {
           showToast("Gagal memperbarui data negara", "error");
           setJasaModalData(prev => ({ ...prev, loading: false }));
@@ -532,11 +532,9 @@ export default function Order() {
       if (jasaModalData.price === 0) return showToast("Layanan ini tidak tersedia di negara tersebut", "error");
 
       setJasaModalData(prev => ({ ...prev, processingBeli: true }));
-      
       const selectedCountryName = jasaCountries.find(c => c.id_negara === parseInt(jasaModalData.countryId))?.nama_negara || '';
 
       const buyUrl = `/v2/jasaotp/orders/buy?negara=${jasaModalData.countryId}&layanan=${jasaSelectedService.key}&operator=${jasaModalData.operator}&expected_price=${jasaModalData.price}&service_name=${jasaSelectedService.layanan}&country_name=${selectedCountryName}`;
-      
       try {
           const res = await api.get(buyUrl);
           if (res.data.success) {
@@ -574,6 +572,7 @@ export default function Order() {
           hash = (name || '').charCodeAt(i) + ((hash << 5) - hash);
       }
       const colorClass = gradients[Math.abs(hash) % gradients.length];
+      
       return (
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${colorClass} text-lg font-black text-white shadow-sm border border-white/20 dark:border-white/10`}>
               {letter}
@@ -635,10 +634,12 @@ export default function Order() {
       }
   };
 
+  // ================================================================
+  // ✨ FIX DI SINI: Hapus proxy images.weserv.nl, muat URL langsung
+  // ================================================================
   const getOptimizedImage = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
-    const cleanUrl = url.replace('https://', '').replace('http://', '');
-    return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
+    return url; 
   };
 
   const getCountryFlag = (countryName) => {
@@ -658,7 +659,8 @@ export default function Order() {
       'colombia': '🇨🇴', 'argentina': '🇦🇷', 'peru': '🇵🇪', 'chile': '🇨🇱',
       'venezuela': '🇻🇪', 'nepal': '🇳🇵', 'sri lanka': '🇱🇰', 'laos': '🇱🇦',
       'portugal': '🇵🇹', 'belgium': '🇧🇪', 'switzerland': '🇨🇭', 'austria': '🇦🇹',
-      'saudi arabia': '🇸🇦', 'uae': '🇦🇪', 'united arab emirates': '🇦🇪',
+      'saudi arabia': '🇸🇦', 'uae': '🇦🇪', 
+      'united arab emirates': '🇦🇪',
       'israel': '🇮🇱', 'morocco': '🇲🇦', 'tunisia': '🇹🇳', 'algeria': '🇩🇿',
       'global': '🌐', 'any': '🌐',
     };
@@ -693,7 +695,7 @@ export default function Order() {
                     <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><Wifi size={10} /> Data Center</span>
                     <span className="text-[10px] text-slate-400">{ping}ms latency</span>
                   </div>
-               </div>
+              </div>
               <div className="text-right">
                   <p className="text-[10px] text-slate-400">Saldo Anda</p>
                   <p className="text-lg font-bold text-slate-800 dark:text-white">Rp {balance.toLocaleString('id-ID')}</p>
@@ -837,7 +839,7 @@ export default function Order() {
 
                                 {/* ── ROW 1: Bendera + Nomor + Copy │ Timer 20 menit ── */}
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <span className="text-xl shrink-0 leading-none">
                                             {getCountryFlag(order.country)}
                                         </span>
@@ -885,7 +887,7 @@ export default function Order() {
                                 </div>
 
                                 {/* ── INNER BOX: Info Layanan ── */}
-                                 <div className={`rounded-2xl p-3 border ${
+                                <div className={`rounded-2xl p-3 border ${
                                     isSmsReceived
                                         ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'
                                         : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'
@@ -920,7 +922,7 @@ export default function Order() {
                                                 Menunggu <MessageSquare size={13} />
                                             </div>
                                         )}
-                                     </div>
+                                    </div>
 
                                     {/* Baris bawah: OTP atau countdown batal */}
                                     {isSmsReceived ? (
@@ -963,7 +965,7 @@ export default function Order() {
                                 </div>
 
                                 {/* ── TOMBOL AKSI ── */}
-                                 <div className="flex gap-3">
+                                <div className="flex gap-3">
                                     {/* Tombol Beli Lagi */}
                                     <button
                                         onClick={() => handleReorder(order)}
@@ -980,11 +982,11 @@ export default function Order() {
                                         >
                                             <CheckCircle2 size={15} /> Selesai
                                         </button>
-                                     ) : (
+                                    ) : (
                                         <button
                                             onClick={() => handleCancelClick(order)}
-                                             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
-                                                 remaining > 0
+                                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
+                                                remaining > 0
                                                     ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-600'
                                                     : 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10'
                                             }`}
@@ -992,7 +994,7 @@ export default function Order() {
                                             <X size={15} /> Batal
                                         </button>
                                     )}
-                                 </div>
+                                </div>
 
                             </div>
                         </div>
@@ -1110,7 +1112,7 @@ export default function Order() {
                 className={`mt-4 w-full rounded-xl py-3 text-sm font-bold text-white transition-transform active:scale-95 ${color.btn} flex justify-center items-center gap-2`}
             >
                 <BookOpen size={16} /> Baca Sekarang
-             </button>
+            </button>
         </div>
 
       </div>
