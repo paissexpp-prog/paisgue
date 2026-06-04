@@ -189,7 +189,7 @@ export default function Order() {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         socket.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Search Filter Utama
@@ -256,12 +256,17 @@ export default function Order() {
          });
          setActiveOrders(filtered);
 
-         // --- POLLING FALLBACK JASAOTP (SILENT TRIGGER) ---
-         // Hit endpoint check-status jika ada order RUANGOTP yang masih pending
-         const pendingJasaOrders = filtered.filter(o => (o.order_id || '').startsWith('RUANGOTP') && ['ACTIVE', 'PENDING'].includes((o.status || '').toUpperCase()));
+         // FIX: Identifikasi order Alternatif (JasaOTP) yang lebih presisi
+         // Cek berdasarkan ID yang tidak berawalan RUANGOTP atau ada field penanda di backend
+         const pendingJasaOrders = filtered.filter(o => {
+             const id = o.order_id || o.id || '';
+             const isAlternatif = id.startsWith('JASAOTP') || o.provider === 'jasaotp' || o.is_alternatif === true;
+             return isAlternatif && ['ACTIVE', 'PENDING'].includes((o.status || '').toUpperCase());
+         });
+
          for (const jo of pendingJasaOrders) {
              try {
-                 await api.get(`/v2/jasaotp/orders/check-status?order_id=${jo.order_id}`);
+                 await api.get(`/v2/jasaotp/orders/check-status?order_id=${jo.order_id || jo.id}`);
              } catch(e) {}
          }
       }
@@ -331,7 +336,7 @@ export default function Order() {
     try {
       const cachedCountries     = localStorage.getItem(cacheKey);
       const cachedCountriesTime = localStorage.getItem(cacheTimeKey);
-      
+
       if (
         cachedCountries &&
         cachedCountriesTime &&
@@ -362,6 +367,7 @@ export default function Order() {
       setLoadingOperators(true);
       
       const sampleProviderId = country.pricelist?.[0]?.provider_id;
+
       if (sampleProviderId) {
           try {
               const res = await api.get(`/operators/list?country=${country.name}&provider_id=${sampleProviderId}`);
@@ -373,26 +379,21 @@ export default function Order() {
 
   const handleBuyClick = (country, provider) => {
       if (balance < provider.price) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
-
-      // FIX: Pencarian yang lebih aman (dukung pencarian by name jika API tidak mengirim id)
+      
       const selectedOpObj = currentOperators.find(op => (op.id || op.name) == selectedOperatorId);
       const opName = selectedOpObj ? selectedOpObj.name : 'Acak (Any)';
 
-      // FIX: Tangkap operator ID saat tombol Beli ditekan, cegah stale-closure dari React
       const capturedOperatorId = selectedOperatorId || 'any';
 
       showConfirm(
           "Konfirmasi Pembelian",
           `Beli ${country.name} - ${selectedService.service_name}?\nOperator: ${opName}\nServer: ${provider.server_id}\nHarga: Rp ${provider.price}`,
-          () => processBuy(country, provider, capturedOperatorId) // Kirim ID yang ditangkap
+          () => processBuy(country, provider, capturedOperatorId) 
       );
   };
 
-  // FIX: Tambahkan parameter opId yang ditangkap dari luar fungsi
   const processBuy = async (country, provider, opId) => {
       setConfirmModal(prev => ({ ...prev, loading: true }));
-      
-      // Pastikan yang dikirim adalah opId, BUKAN selectedOperatorId yang rawan me-reset
       const opIdToSend = opId || 'any';
       const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=${opIdToSend}&expected_price=${provider.price}`;
       
@@ -496,9 +497,8 @@ export default function Order() {
   const handleModalCountryChange = async (e) => {
       const newCountryId = parseInt(e.target.value);
       setJasaModalData(prev => ({ ...prev, loading: true, countryId: newCountryId, operator: 'any' }));
-
+      
       try {
-          // Ambil Harga Layanan & Operator secara paralel untuk negara baru
           const [resServ, resOp] = await Promise.all([
               api.get(`/v2/jasaotp/services/list?country_id=${newCountryId}`),
               api.get(`/v2/jasaotp/operators/list?country_id=${newCountryId}`)
@@ -535,6 +535,7 @@ export default function Order() {
       const selectedCountryName = jasaCountries.find(c => c.id_negara === parseInt(jasaModalData.countryId))?.nama_negara || '';
 
       const buyUrl = `/v2/jasaotp/orders/buy?negara=${jasaModalData.countryId}&layanan=${jasaSelectedService.key}&operator=${jasaModalData.operator}&expected_price=${jasaModalData.price}&service_name=${jasaSelectedService.layanan}&country_name=${selectedCountryName}`;
+      
       try {
           const res = await api.get(buyUrl);
           if (res.data.success) {
@@ -555,7 +556,6 @@ export default function Order() {
       }
   };
 
-
   // --- UI Avatar Generator elegan untuk Layanan Provider
   const getServiceAvatar = (name) => {
       const letter = name ? name.charAt(0).toUpperCase() : 'V';
@@ -567,6 +567,7 @@ export default function Order() {
           'from-amber-400 to-amber-600',
           'from-cyan-400 to-cyan-600'
       ];
+      
       let hash = 0;
       for (let i = 0; i < (name || '').length; i++) {
           hash = (name || '').charCodeAt(i) + ((hash << 5) - hash);
@@ -591,8 +592,9 @@ export default function Order() {
      showConfirm("Batalkan Pesanan?", "Yakin batalkan pesanan? Saldo akan dikembalikan otomatis.", async () => {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
-            const targetId = order.order_id || order.id;
-            const isJasaOtp = targetId && targetId.startsWith('RUANGOTP'); 
+            const targetId = order.order_id || order.id || '';
+            // FIX: Identifikasi server alternatif yang presisi 
+            const isJasaOtp = targetId.startsWith('JASAOTP') || order.provider === 'jasaotp' || order.is_alternatif === true; 
             
             const cancelUrl = isJasaOtp ? `/v2/jasaotp/orders/cancel?order_id=${targetId}` : `/orders/cancel?order_id=${targetId}`;
 
@@ -804,7 +806,7 @@ export default function Order() {
                     <button
                         onClick={() => { 
                              if (Date.now() - lastFetchRef.current < 3000) {
-                                showToast("Tunggu sebentar sebelum refresh lagi ⏳", "error");
+                                 showToast("Tunggu sebentar sebelum refresh lagi ⏳", "error");
                                 return;
                              }
                             showToast("Merefresh data...", "success");
@@ -821,10 +823,12 @@ export default function Order() {
                     const isSmsReceived = status === 'COMPLETED' || status === 'RECEIVED';
                     const remaining = getRemainingTime(order.created_at);
                     const lifetimeRemaining = getLifetimeRemaining(order.created_at);
-                    const orderId = order.order_id || order.id;
+                    const orderId = order.order_id || order.id || '';
                     const serviceImg = getServiceImg(order.service);
                     const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
-                    const isAlternatif = orderId && orderId.startsWith('RUANGOTP');
+                    
+                    // FIX: Perbaikan flag UI alternatif
+                    const isAlternatif = orderId && (orderId.startsWith('JASAOTP') || order.provider === 'jasaotp' || order.is_alternatif === true);
 
                     return (
                         <div
@@ -853,7 +857,7 @@ export default function Order() {
                                              <Copy size={13} />
                                         </button>
                                      </div>
-                                    
+                                     
                                     {/* Timer 20 menit */}
                                     <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${
                                         isSmsReceived
@@ -1106,7 +1110,7 @@ export default function Order() {
                 <div className="shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-2">
                      <FileText size={24} className="text-blue-600 dark:text-blue-400"/>
                 </div>
-            </div>
+             </div>
             <button
                 onClick={() => navigate('/ketentuan')}
                 className={`mt-4 w-full rounded-xl py-3 text-sm font-bold text-white transition-transform active:scale-95 ${color.btn} flex justify-center items-center gap-2`}
@@ -1180,7 +1184,7 @@ export default function Order() {
             <div className="flex items-center gap-3">
                 <button onClick={() => setSheetMode('services')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900"><X size={20} className="text-slate-500" /></button>
                 {selectedService && (<><img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" /><h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3></>)}
-            </div>
+             </div>
          </div>
          <div className={`flex-1 overflow-y-auto px-6 py-2 transition-all ${expandedCountry ? 'pb-24' : 'pb-10'}`}>
             {loadingCountries ? <div className="space-y-3 mt-4">{[1,2,3].map(i=><div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div> : countries.length > 0 ? (
