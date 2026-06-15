@@ -32,6 +32,9 @@ export default function Order() {
   const HIDDEN_ORDERS_KEY = 'ruangotp_closed_orders_v1';
   const closedIdsRef = useRef([]);
 
+  // --- STATE CACHE OPERATOR IMAGES ---
+  const [opImagesCache, setOpImagesCache] = useState({});
+
   // --- STATE OPERATOR (UTAMA) ---
   const [currentOperators, setCurrentOperators] = useState([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState('any');
@@ -133,12 +136,18 @@ export default function Order() {
   ];
 
   // ================================================================
-  // LIFECYCLE & SOCKET (TIDAK DISENTUH LOGIKANYA)
+  // LIFECYCLE & SOCKET
   // ================================================================
   useEffect(() => {
     const savedHidden = localStorage.getItem(HIDDEN_ORDERS_KEY);
     if (savedHidden) {
         closedIdsRef.current = JSON.parse(savedHidden);
+    }
+
+    // Load operator images cache dari LocalStorage saat pertama buka
+    const savedOpImages = localStorage.getItem('operator_images_cache');
+    if (savedOpImages) {
+        setOpImagesCache(JSON.parse(savedOpImages));
     }
 
     fetchInitialData();
@@ -256,8 +265,6 @@ export default function Order() {
          });
          setActiveOrders(filtered);
 
-         // FIX: Identifikasi order Alternatif (JasaOTP) yang lebih presisi
-         // Cek berdasarkan ID yang tidak berawalan RUANGOTP atau ada field penanda di backend
          const pendingJasaOrders = filtered.filter(o => {
              const id = o.order_id || o.id || '';
              const isAlternatif = id.startsWith('JASAOTP') || o.provider === 'jasaotp' || o.is_alternatif === true;
@@ -371,7 +378,25 @@ export default function Order() {
       if (sampleProviderId) {
           try {
               const res = await api.get(`/operators/list?country=${country.name}&provider_id=${sampleProviderId}`);
-              if (res.data.success) setCurrentOperators(res.data.data);
+              if (res.data.success) {
+                  setCurrentOperators(res.data.data);
+                  
+                  // 🔥 CACHING GAMBAR OPERATOR KE LOCALSTORAGE
+                  const currentCache = JSON.parse(localStorage.getItem('operator_images_cache') || '{}');
+                  let isUpdated = false;
+                  
+                  res.data.data.forEach(op => {
+                      if (op.name && op.image && !currentCache[op.name.toUpperCase()]) {
+                          currentCache[op.name.toUpperCase()] = op.image;
+                          isUpdated = true;
+                      }
+                  });
+
+                  if (isUpdated) {
+                      localStorage.setItem('operator_images_cache', JSON.stringify(currentCache));
+                      setOpImagesCache(currentCache);
+                  }
+              }
           } catch (err) {}
       }
       setLoadingOperators(false);
@@ -428,7 +453,6 @@ export default function Order() {
   // --- FUNGSI PROVIDER ALTERNATIF (JASAOTP) ---
   // ================================================================
   
-  // 1. Ambil Data Negara Alternatif
   const fetchJasaCountries = async () => {
     setLoadingJasaCountries(true);
     try {
@@ -443,7 +467,6 @@ export default function Order() {
     }
   };
 
-  // 2. Saat Negara Diklik -> Buka Modal Layanan
   const handleJasaCountryClick = async (country) => {
       setJasaSelectedCountry(country);
       setSheetMode('jasa_services');
@@ -464,7 +487,6 @@ export default function Order() {
       }
   };
 
-  // 3. Saat Tombol (+) Layanan Diklik -> Buka Modal Konfirmasi & Ambil Operator
   const openJasaModal = async (serviceCode, serviceData) => {
       setJasaSelectedService({ key: serviceCode, ...serviceData });
       setJasaModalData({
@@ -493,7 +515,6 @@ export default function Order() {
       }
   };
 
-  // 4. Update Dinamis Jika Negara Diganti di Dalam Modal Konfirmasi
   const handleModalCountryChange = async (e) => {
       const newCountryId = parseInt(e.target.value);
       setJasaModalData(prev => ({ ...prev, loading: true, countryId: newCountryId, operator: 'any' }));
@@ -526,7 +547,6 @@ export default function Order() {
       }
   };
 
-  // 5. Proses Beli Alternatif (JasaOTP)
   const processBuyJasa = async () => {
       if (balance < jasaModalData.price) return showToast("Saldo tidak mencukupi!", "error");
       if (jasaModalData.price === 0) return showToast("Layanan ini tidak tersedia di negara tersebut", "error");
@@ -593,7 +613,6 @@ export default function Order() {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
             const targetId = order.order_id || order.id || '';
-            // FIX: Identifikasi server alternatif yang presisi 
             const isJasaOtp = targetId.startsWith('JASAOTP') || order.provider === 'jasaotp' || order.is_alternatif === true; 
             
             const cancelUrl = isJasaOtp ? `/v2/jasaotp/orders/cancel?order_id=${targetId}` : `/orders/cancel?order_id=${targetId}`;
@@ -827,8 +846,12 @@ export default function Order() {
                     const serviceImg = getServiceImg(order.service);
                     const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
                     
-                    // FIX: Perbaikan flag UI alternatif
                     const isAlternatif = orderId && (orderId.startsWith('JASAOTP') || order.provider === 'jasaotp' || order.is_alternatif === true);
+                    
+                    // FIX: Tarik data nama operator dari Backend (default ke 'any')
+                    const operatorName = order.operator || 'any';
+                    const isOpAny = operatorName.toLowerCase() === 'any' || operatorName.toLowerCase() === 'random';
+                    const opImgCached = opImagesCache[operatorName.toUpperCase()];
 
                     return (
                         <div
@@ -874,12 +897,29 @@ export default function Order() {
                                 {/* ── ROW 2: Operator │ Harga ── */}
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm leading-none">
-                                            🎲
-                                        </div>
-                                        <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">any</span>
+                                        {/* FIX: Tampilan Dinamis Berdasarkan Data Operator (Icon / Text / Image) */}
+                                        {isOpAny ? (
+                                            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm leading-none shrink-0">
+                                                🎲
+                                            </div>
+                                        ) : opImgCached ? (
+                                            <img 
+                                                src={getOptimizedImage(opImgCached)} 
+                                                className="w-7 h-7 rounded-full bg-white object-cover border border-slate-200 dark:border-slate-700 shrink-0" 
+                                                alt={operatorName} 
+                                            />
+                                        ) : (
+                                            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 uppercase overflow-hidden shrink-0">
+                                                {operatorName.charAt(0)}
+                                            </div>
+                                        )}
+                                        
+                                        <span className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate max-w-[80px] capitalize">
+                                            {operatorName}
+                                        </span>
+                                        
                                         {isAlternatif && (
-                                            <span className="ml-1 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase">ALTERNATIF</span>
+                                            <span className="ml-1 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase shrink-0">ALTERNATIF</span>
                                         )}
                                     </div>
                                     <div className={`px-3 py-1 rounded-xl text-xs font-bold text-white ${color.btn}`}>
