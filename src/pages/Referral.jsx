@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
+
 import {
   Gift, Copy, CheckCircle2, AlertCircle, Loader2,
   Users, Wallet, TrendingUp, ChevronLeft, Share2,
@@ -241,7 +242,7 @@ export default function Referral() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isOffline, setIsOffline] = useState(false); // State untuk indikator cache/offline
+  const [isOffline, setIsOffline] = useState(false); 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -251,31 +252,26 @@ export default function Referral() {
 
   // --- FETCH DATA DENGAN SISTEM CACHE ---
   const fetchReferral = async () => {
-    // 1. Cek & Muat Data dari Cache (Local Storage) terlebih dahulu
     const cachedData = localStorage.getItem('ruangotp_referral_data');
     
     if (cachedData) {
       setData(JSON.parse(cachedData));
     }
 
-    // Jika tidak ada cache sama sekali, baru tampilkan animasi loading
     if (!cachedData) {
       setLoading(true);
     }
 
-    // 2. Tembak API di background untuk mengambil data terbaru
     try {
       const res = await api.get('/referral/info');
       if (res.data.success) {
         setData(res.data.data);
-        // Simpan ke cache
         localStorage.setItem('ruangotp_referral_data', JSON.stringify(res.data.data));
         setIsOffline(false);
       }
     } catch (err) {
       console.error("Gagal load referral terbaru, menggunakan data cache.");
       setIsOffline(true);
-      // Hanya tampilkan toast error jika benar-benar tidak ada data cache
       if (!cachedData) {
         showToast('Gagal memuat data referral', 'error');
       }
@@ -285,15 +281,12 @@ export default function Referral() {
   };
 
   useEffect(() => {
-    // Jika belum login, tidak perlu fetch
     if (!token) return;
 
-    // Fetch pertama kali saat halaman dibuka
+    // Ambil data pertama kali saat halaman dibuka
     fetchReferral();
 
-    // SENSOR LAYAR: Sama persis seperti Dashboard.jsx
-    // Setiap user balik ke tab / buka lagi dari Chrome,
-    // langsung fetch ulang otomatis tanpa perlu refresh web
+    // SENSOR LAYAR: Otomatis refresh data di latar belakang saat user membuka tab ini kembali
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         fetchReferral();
@@ -301,10 +294,10 @@ export default function Referral() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Cleanup saat komponen dilepas
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCopy = (text, label = 'Berhasil disalin!') => {
@@ -342,16 +335,10 @@ export default function Referral() {
     }).format(number || 0);
   };
 
-  // ================================================================
-  // JIKA BELUM LOGIN: Tampilkan halaman publik
-  // ================================================================
   if (!token) {
     return <ReferralPublicView color={color} />;
   }
 
-  // ================================================================
-  // JIKA SUDAH LOGIN: Tampilkan dashboard referral seperti biasa
-  // ================================================================
   return (
     <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
       <Helmet>
@@ -385,7 +372,7 @@ export default function Referral() {
 
       <div className="px-5 mt-6 space-y-5">
 
-        {/* --- INDIKATOR OFFLINE / CACHE --- */}
+        {/* INDIKATOR OFFLINE */}
         {isOffline && (
             <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2.5 text-xs font-medium text-amber-600 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-400">
                 <WifiOff size={14} className="shrink-0" />
@@ -411,7 +398,6 @@ export default function Referral() {
               dari setiap deposit teman yang mendaftar lewat link kamu.
             </p>
           </div>
-          {/* Dekorasi */}
           <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
             <Gift size={160} />
           </div>
@@ -445,7 +431,7 @@ export default function Referral() {
             </p>
           </div>
 
-          {/* Komisi % — DENGAN INFO SYARAT DEPOSIT */}
+          {/* Komisi % */}
           <div className="rounded-2xl bg-white border border-slate-100 p-4 shadow-sm flex flex-col items-center justify-center text-center dark:bg-slate-950 dark:border-slate-800 relative">
             <div className="mb-2 p-2 rounded-full bg-amber-50 dark:bg-amber-900/20">
               <BadgePercent size={18} className="text-amber-600 dark:text-amber-400" />
@@ -454,7 +440,6 @@ export default function Referral() {
             <p className="text-xl font-black text-slate-800 dark:text-white">
               {loading && !data ? <Loader2 size={16} className="animate-spin mx-auto mt-1" /> : (data?.referral_percent || '2%')}
             </p>
-            {/* Badge syarat min deposit */}
             <div className="mt-1.5 flex items-center justify-center gap-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5">
               <Info size={8} className="text-amber-500 shrink-0" />
               <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 leading-none">min Rp5.000</span>
@@ -463,7 +448,7 @@ export default function Referral() {
 
         </div>
 
-        {/* BANNER SYARAT KOMISI */}
+        {/* BANNER INFO SYARAT */}
         <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/50 dark:bg-amber-900/10">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
             <Info size={14} className="text-amber-600 dark:text-amber-400" />
@@ -479,8 +464,6 @@ export default function Referral() {
 
         {/* KODE & LINK REFERRAL */}
         <div className="rounded-3xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800 overflow-hidden">
-
-          {/* Header Card */}
           <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <Share2 size={16} className={color.text} />
@@ -489,8 +472,7 @@ export default function Referral() {
           </div>
 
           <div className="p-5 space-y-4">
-
-            {/* Kode Referral */}
+            {/* Kode */}
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Kode Referral</p>
               {loading && !data ? (
@@ -510,22 +492,19 @@ export default function Referral() {
               )}
             </div>
 
-            {/* URL Referral — SCROLL HORIZONTAL */}
+            {/* Link */}
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Link Referral</p>
               {loading && !data ? (
                 <div className="h-12 w-full rounded-xl bg-slate-100 dark:bg-slate-900 animate-pulse"></div>
               ) : (
                 <div className="flex items-center gap-0 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 overflow-hidden">
-                  {/* Area teks — bisa di-scroll horizontal, bisa di-select */}
                   <div className="flex-1 overflow-x-auto hide-scrollbar px-4 py-3">
                     <p className="text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap select-all cursor-text">
                       {data?.url_referral || '-'}
                     </p>
                   </div>
-                  {/* Divider tipis */}
                   <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 shrink-0"></div>
-                  {/* Tombol Copy — sticky di kanan, tidak ikut scroll */}
                   <button
                     onClick={() => handleCopy(data?.url_referral || '', 'Link referral disalin!')}
                     className="shrink-0 flex items-center justify-center w-12 h-full py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors"
@@ -536,7 +515,6 @@ export default function Referral() {
               )}
             </div>
 
-            {/* Tombol Bagikan */}
             <button
               onClick={handleShare}
               disabled={(loading && !data) || !data}
@@ -545,7 +523,6 @@ export default function Referral() {
               <Share2 size={18} />
               Bagikan Link Sekarang
             </button>
-
           </div>
         </div>
 
@@ -581,7 +558,6 @@ export default function Referral() {
               <div key={index} className="flex items-start gap-4">
                 <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${item.cls}`}>
                   {item.icon}
-                  {/* Nomor langkah */}
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 dark:bg-slate-600 text-[9px] font-black text-white">
                     {index + 1}
                   </span>
@@ -626,11 +602,8 @@ export default function Referral() {
                 const isDeposit = item.type === 'DEPOSIT';
                 return (
                   <div key={item.id_transaksi || index} className="flex items-center gap-4 px-5 py-4">
-                    {/* Icon */}
                     <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                      isDeposit
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                        : 'bg-blue-50 dark:bg-blue-900/20'
+                      isDeposit ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
                     }`}>
                       {isDeposit
                         ? <ArrowUpRight size={20} className="text-emerald-600 dark:text-emerald-400" />
@@ -638,7 +611,6 @@ export default function Referral() {
                       }
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
                         {item.description || '-'}
@@ -651,7 +623,6 @@ export default function Referral() {
                       </p>
                     </div>
 
-                    {/* Bonus */}
                     <div className="shrink-0 text-right">
                       {item.bonus_earned > 0 ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
