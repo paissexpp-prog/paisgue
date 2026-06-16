@@ -2,8 +2,10 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import NetworkOverlay from './components/NetworkOverlay';
-import OwnerNotification from './components/OwnerNotification';
+import OwnerNotification from './components/OwnerNotification'; // IMPORT KOMPONEN BARU
 
+// Lazy Loading Pages
+const Welcome = lazy(() => import('./pages/Welcome'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -12,10 +14,20 @@ const Deposit = lazy(() => import('./pages/Deposit'));
 const History = lazy(() => import('./pages/History'));
 const Order = lazy(() => import('./pages/Order'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// HALAMAN BARU: Reset Password
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+
+// HALAMAN BARU: Dokumentasi API
 const Dokumentasi = lazy(() => import('./pages/Dokumentasi'));
+
+// HALAMAN BARU: Ketentuan Layanan
 const Ketentuan = lazy(() => import('./pages/Ketentuan'));
+
+// HALAMAN BARU: Maintenance Mode
 const Maintenance = lazy(() => import('./pages/Maintenance'));
+
+// HALAMAN BARU: Referral / Dapatkan Saldo Gratis
 const Referral = lazy(() => import('./pages/Referral'));
 
 const PageLoader = () => (
@@ -37,13 +49,18 @@ const AuthRoute = ({ children }) => {
 function App() {
   return (
     <Router>
+      {/* OVERLAY OFFLINE — Global */}
       <NetworkOverlay />
+
+      {/* NOTIFIKASI OWNER — Global, pojok kiri atas */}
       <OwnerNotification />
-      <Navbar />
+      
+      <Navbar /> 
+      
       <div className="pt-16">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Route "/" dihapus — sudah dihandle oleh public/welcome.html via vercel.json */}
+            <Route path="/" element={<Welcome />} />
 
             <Route path="/login" element={
               <AuthRoute>
@@ -51,24 +68,25 @@ function App() {
               </AuthRoute>
             } />
 
+            {/* RUTEN BARU: FORGOT / RESET PASSWORD */}
             <Route path="/forgot-password" element={
               <AuthRoute>
                 <ForgotPassword />
               </AuthRoute>
             } />
-
+            
             <Route path="/register" element={
               <AuthRoute>
                 <Register />
               </AuthRoute>
             } />
-
+            
             <Route path="/dashboard" element={
               <PrivateRoute>
                 <Dashboard />
               </PrivateRoute>
             } />
-
+            
             <Route path="/profile" element={
               <PrivateRoute>
                 <Profile />
@@ -77,26 +95,34 @@ function App() {
 
             <Route path="/deposit" element={
               <PrivateRoute>
-                <Deposit />
+                 <Deposit />
               </PrivateRoute>
             } />
-
+            
             <Route path="/order" element={
               <PrivateRoute>
-                <Order />
+                 <Order /> 
               </PrivateRoute>
             } />
 
             <Route path="/history" element={
               <PrivateRoute>
-                <History />
+                  <History />
               </PrivateRoute>
             } />
 
+            {/* RUTEN BARU: DOKUMENTASI API (SEKARANG BISA DIAKSES PUBLIK) */}
             <Route path="/api/dev" element={<Dokumentasi />} />
+
+            {/* RUTEN REFERRAL: SEKARANG PUBLIK — login check dilakukan di dalam komponen */}
             <Route path="/referral" element={<Referral />} />
+
+            {/* KETENTUAN LAYANAN: Bisa diakses tanpa login */}
             <Route path="/ketentuan" element={<Ketentuan />} />
+
+            {/* MAINTENANCE MODE: Bisa diakses tanpa login */}
             <Route path="/maintenance" element={<Maintenance />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
