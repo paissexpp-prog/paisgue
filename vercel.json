@@ -1,7 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/",
+      "destination": "/welcome.html"
+    },
+    {
+      "source": "/((?!welcome.html).*)",
       "destination": "/index.html"
     }
   ],
@@ -41,4 +45,3 @@
     }
   ]
 }
-
