@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npx react-snap",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -24,8 +24,16 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
+    "react-snap": "^1.23.0",
     "tailwindcss": "^3.4.1",
-    "vite": "^5.1.4",
-    "vite-plugin-prerender": "^1.0.6"
+    "vite": "^5.1.4"
+  },
+  "reactSnap": {
+    "source": "dist",
+    "minifyHtml": false,
+    "crawl": false,
+    "include": ["/"],
+    "puppeteerArgs": ["--no-sandbox", "--disable-setuid-sandbox"],
+    "waitFor": 3000
   }
 }
