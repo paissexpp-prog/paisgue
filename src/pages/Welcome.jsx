@@ -4,7 +4,7 @@ import {
   ShieldCheck, Zap, Globe, ChevronDown,
   Smartphone, CreditCard, MessageSquare, ArrowRight,
   Clock, Check, Send, Mail, Radio,
-  ExternalLink, Wallet, RefreshCw, PhoneCall, PhoneOff,
+  ExternalLink, Wallet, RefreshCw,
   Code2
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -223,12 +223,6 @@ const VIRTUAL_NUMBERS = [
   { flag: '🇦🇺', country: 'Australia', number: '+61 412-345-678'   },
 ];
 
-const PICKER_NUMBERS = [
-  { flag: '🇫🇷', number: '+33 1 84 80 08 00' },
-  { flag: '🇺🇸', number: '+1 470 634 8800',   active: true },
-  { flag: '🇪🇸', number: '+34 910 38 22 49'   },
-];
-
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
@@ -332,133 +326,86 @@ export default function Welcome() {
             </p>
 
             {/* Container relatif untuk posisikan elemen floating */}
-            <div className="relative mx-auto flex items-center justify-center" style={{ minHeight: 380 }}>
+            <div className="relative mx-auto flex items-center justify-center" style={{ minHeight: 280 }}>
 
-              {/* ── FLOATING CARD KIRI: Pilihan Nomor ── */}
-              <div className="absolute left-0 top-8 z-20 hidden md:block w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 p-3 animate-in fade-in slide-in-from-left-4 duration-500">
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Pilih Negara</p>
-                <div className="space-y-1.5">
-                  {PICKER_NUMBERS.map((item, i) => (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-2 rounded-xl px-2.5 py-2 transition-colors ${
-                        item.active
-                          ? `${color.bg} border ${color.border}`
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      {/* Radio dot */}
-                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                        item.active ? `border-current ${color.text}` : 'border-slate-300 dark:border-slate-600'
-                      }`}>
-                        {item.active && <div className={`w-1.5 h-1.5 rounded-full ${color.btn.split(' ')[0].replace('bg-', 'bg-')}`} />}
-                      </div>
-                      <span className="text-base leading-none">{item.flag}</span>
-                      <span className={`text-[10px] font-mono font-bold truncate ${item.active ? color.text : 'text-slate-600 dark:text-slate-300'}`}>
-                        {item.number}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <button className={`mt-3 w-full rounded-xl py-2 text-[10px] font-black text-white shadow-md transition-all active:scale-95 ${color.btn}`}>
-                  + Tambah Nomor
-                </button>
-              </div>
-
-              {/* ── PHONE MOCKUP UTAMA ── */}
+              {/* ── PHONE MOCKUP UTAMA (dikecilkan di mobile, disesuaikan di desktop) ── */}
               <div className="relative z-10 mx-auto">
                 {/* Frame luar HP */}
-                <div className="relative w-52 bg-slate-900 rounded-[2.8rem] p-[5px] shadow-2xl border-[3px] border-slate-700">
+                <div className="relative w-36 sm:w-44 md:w-52 bg-slate-900 rounded-[2rem] sm:rounded-[2.4rem] md:rounded-[2.8rem] p-1 sm:p-1.5 md:p-[5px] shadow-2xl border-2 md:border-[3px] border-slate-700">
                   {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-slate-900 rounded-b-2xl z-20 flex items-end justify-center pb-1">
-                    <div className="w-8 h-1 bg-slate-700 rounded-full" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-14 sm:w-16 md:w-20 h-4 sm:h-5 md:h-6 bg-slate-900 rounded-b-2xl z-20 flex items-end justify-center pb-1">
+                    <div className="w-5 sm:w-6 md:w-8 h-1 bg-slate-700 rounded-full" />
                   </div>
 
                   {/* Layar */}
-                  <div className="bg-slate-950 rounded-[2.4rem] overflow-hidden">
+                  <div className="bg-slate-950 rounded-[1.7rem] sm:rounded-[2rem] md:rounded-[2.4rem] overflow-hidden">
                     {/* Status bar */}
-                    <div className="flex justify-between items-center px-5 pt-7 pb-1">
-                      <span className="text-[8px] font-bold text-slate-400">9:41</span>
-                      <span className="text-[8px] text-slate-500">▲ ● ■</span>
+                    <div className="flex justify-between items-center px-3 sm:px-4 md:px-5 pt-5 sm:pt-6 md:pt-7 pb-1">
+                      <span className="text-[6px] sm:text-[7px] md:text-[8px] font-bold text-slate-400">9:41</span>
+                      <span className="text-[6px] sm:text-[7px] md:text-[8px] text-slate-500">▲ ● ■</span>
                     </div>
 
                     {/* Header screen */}
-                    <div className="px-4 pt-1 pb-2 border-b border-slate-800">
-                      <p className="text-center text-[11px] font-black text-white tracking-wide">Nomor Virtual</p>
+                    <div className="px-3 md:px-4 pt-1 pb-1.5 md:pb-2 border-b border-slate-800">
+                      <p className="text-center text-[9px] sm:text-[10px] md:text-[11px] font-black text-white tracking-wide">Nomor Virtual</p>
                     </div>
 
                     {/* Daftar nomor */}
-                    <div className="px-3 py-2 space-y-2">
+                    <div className="px-2 md:px-3 py-1.5 md:py-2 space-y-1.5 md:space-y-2">
                       {VIRTUAL_NUMBERS.map((item, i) => (
                         <div
                           key={i}
-                          className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all ${
+                          className={`flex items-center gap-2 md:gap-2.5 rounded-lg md:rounded-xl px-2 md:px-3 py-2 md:py-2.5 transition-all ${
                             i === 0
                               ? `${color.bg} border ${color.border}`
                               : 'bg-slate-800/60'
                           }`}
                         >
-                          <span className="text-base leading-none shrink-0">{item.flag}</span>
+                          <span className="text-sm md:text-base leading-none shrink-0">{item.flag}</span>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-[8px] font-bold leading-none mb-0.5 ${i === 0 ? color.text : 'text-slate-400'}`}>
+                            <p className={`text-[6px] sm:text-[7px] md:text-[8px] font-bold leading-none mb-0.5 ${i === 0 ? color.text : 'text-slate-400'}`}>
                               {item.country}
                             </p>
-                            <p className={`text-[9px] font-mono font-bold truncate ${i === 0 ? 'text-white' : 'text-slate-300'}`}>
+                            <p className={`text-[7px] sm:text-[8px] md:text-[9px] font-mono font-bold truncate ${i === 0 ? 'text-white' : 'text-slate-300'}`}>
                               {item.number}
                             </p>
                           </div>
                           {i === 0 && (
-                            <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${color.btn.split(' ')[0]}`} />
+                            <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full shrink-0 animate-pulse ${color.btn.split(' ')[0]}`} />
                           )}
                         </div>
                       ))}
                     </div>
 
                     {/* Bottom pill */}
-                    <div className="px-4 py-3 flex justify-center">
-                      <div className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[9px] font-black text-white ${color.btn.split(' ')[0]}`}>
+                    <div className="px-4 py-2 md:py-3 flex justify-center">
+                      <div className={`flex items-center gap-1.5 rounded-full px-3 md:px-4 py-1 md:py-1.5 text-[7px] sm:text-[8px] md:text-[9px] font-black text-white ${color.btn.split(' ')[0]}`}>
                         + Tambah Nomor
                       </div>
                     </div>
 
                     {/* Home indicator */}
-                    <div className="flex justify-center pb-3">
-                      <div className="w-16 h-1 bg-slate-700 rounded-full" />
+                    <div className="flex justify-center pb-2 md:pb-3">
+                      <div className="w-12 md:w-16 h-1 bg-slate-700 rounded-full" />
                     </div>
                   </div>
                 </div>
 
                 {/* Glowing shadow bawah */}
-                <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-6 blur-xl opacity-40 rounded-full ${color.btn.split(' ')[0]}`} />
+                <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-24 md:w-32 h-5 md:h-6 blur-xl opacity-40 rounded-full ${color.btn.split(' ')[0]}`} />
               </div>
 
-              {/* ── FLOATING CARD KANAN: Incoming Call ── */}
-              <div className="absolute right-0 top-6 z-20 hidden md:flex items-center gap-3 bg-slate-900 dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 px-4 py-3 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="text-center">
-                  <p className="text-[8px] font-bold text-slate-400 mb-0.5">Panggilan Masuk</p>
-                  <p className="text-[11px] font-black font-mono text-white">+1 234-567-890</p>
-                </div>
-                <div className="flex gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                    <PhoneCall size={14} className="text-white" />
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/30">
-                    <PhoneOff size={14} className="text-white" />
-                  </div>
-                </div>
-              </div>
+            </div>
 
-              {/* ── FLOATING BADGE BAWAH KIRI: Country count ── */}
-              <div className={`absolute bottom-4 left-4 hidden md:flex items-center gap-2 rounded-2xl px-3 py-2 shadow-xl border ${color.bg} ${color.border} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+            {/* ── BADGE INFO: Country count & OTP speed (dipindah ke bawah phone, rapi di semua layar) ── */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 shadow-md border ${color.bg} ${color.border}`}>
                 <Globe size={14} className={color.text} />
                 <span className={`text-[10px] font-black ${color.text}`}>50+ Negara</span>
               </div>
-
-              {/* ── FLOATING BADGE BAWAH KANAN: OTP speed ── */}
-              <div className="absolute bottom-4 right-4 hidden md:flex items-center gap-2 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2 shadow-md">
                 <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">⚡ OTP &lt; 5 detik</span>
               </div>
-
             </div>
           </div>
           {/* ── END VIRTUAL NUMBERS SHOWCASE ── */}
