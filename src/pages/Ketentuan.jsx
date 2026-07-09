@@ -106,11 +106,11 @@ const sections = [
     title: '10. Yurisdiksi, Kepatuhan, dan Penegakan Hukum',
     color: 'slate',
     content: [
-      '10.1. Dasar Hukum: Syarat dan Ketentuan ini tunduk pada hukum yang berlaku di wilayah Republik Indonesia, termasuk namun tidak terbatas pada Undang-Undang Informasi dan Transaksi Elektronik (UU ITE).',
-      '10.2. Sikap Kooperatif dengan Penegak Hukum: Pihak Pengelola berkomitmen penuh untuk mendukung, membantu, dan bersikap kooperatif terhadap kepolisian, penyelidik, atau otoritas penegak hukum (Cybercrime) dalam mengusut tuntas tindak kejahatan yang menyalahgunakan infrastruktur sistem kami.',
-      '10.3. Prosedur Penyerahan Data Log (Subpoena): Pihak Pengelola akan membuka dan menyerahkan data log operasional Pengguna (meliputi IP Address, timestamp aktivitas, riwayat deposit, dan metadata terkait) kepada pihak berwajib HANYA JIKA otoritas terkait melampirkan dokumen resmi, seperti Surat Perintah Penyelidikan, Surat Perintah Penyitaan, atau surat permohonan informasi resmi dari instansi penegak hukum.',
-      '10.4. Pelaporan Mandiri (Proaktif): Apabila sistem internal Pengelola mendeteksi indikasi kuat adanya aktivitas kriminal tingkat tinggi (seperti pendanaan terorisme, peretasan massal, atau pencucian uang), Pengelola berhak secara proaktif melaporkan data akun tersebut kepada pihak berwajib tanpa memberikan pemberitahuan (notifikasi) terlebih dahulu kepada Pengguna yang bersangkutan.',
-      '10.5. Penyelesaian Sengketa Umum: Di luar urusan pidana, apabila terjadi perselisihan atau keluhan operasional antar Pengguna, penyelesaian secara kekeluargaan dan musyawarah akan tetap menjadi jalan utama yang ditempuh.'
+      '10.1. Dasar Hukum: Syarat dan Ketentuan ini tunduk pada peraturan perundang-undangan Republik Indonesia yang berlaku, termasuk namun tidak terbatas pada Undang-Undang Informasi dan Transaksi Elektronik (UU ITE) dan Undang-Undang Pelindungan Data Pribadi (UU PDP) beserta perubahannya, serta peraturan perundang-undangan lain yang relevan.',
+      '10.2. Sikap Kooperatif dengan Penegak Hukum: Pihak Pengelola berkomitmen untuk bersikap kooperatif terhadap kepolisian, penyidik, atau otoritas penegak hukum dalam mengusut tindak pidana yang menyalahgunakan infrastruktur sistem kami.',
+      '10.3. Prosedur Penyerahan Data Log: Pihak Pengelola akan membuka dan menyerahkan data log operasional Pengguna (meliputi IP Address, timestamp aktivitas, riwayat deposit, dan metadata terkait) kepada pihak berwajib sesuai dengan ketentuan hukum yang berlaku dan berdasarkan permintaan resmi tertulis dari instansi penegak hukum yang berwenang.',
+      '10.4. Tindakan Pencegahan Internal: Apabila terdapat dugaan yang beralasan mengenai adanya penyalahgunaan layanan RuangOTP untuk tindak pidana serius, Pengelola berhak mengambil tindakan tegas secara internal berupa penangguhan atau pemutusan akses layanan secara sepihak. Pengelola dapat mencadangkan data terkait untuk diserahkan kepada pihak berwajib apabila terdapat proses hukum lebih lanjut sesuai dengan prosedur pada poin 10.3.',
+      '10.5. Penyelesaian Sengketa Umum: Di luar urusan pidana, apabila terjadi perselisihan atau keluhan operasional antara Pengguna dan Pihak Pengelola, penyelesaian secara kekeluargaan dan musyawarah mufakat akan menjadi langkah pertama yang ditempuh sebelum menempuh jalur hukum.'
     ],
   },
   {
@@ -334,3 +334,4 @@ export default function Ketentuan() {
     </div>
   );
 }
+
