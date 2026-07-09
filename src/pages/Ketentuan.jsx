@@ -70,7 +70,7 @@ const sections = [
       '6.1. Pengumpulan Informasi: RuangOTP hanya mencatat data operasional esensial seperti alamat email, kata sandi (disimpan dalam format acak/terenkripsi), riwayat deposit saldo, dan log akses teknis (seperti IP address) untuk menjaga kelancaran server.',
       '6.2. Penanganan SMS: Isi pesan teks (SMS) yang masuk ke sistem kami hanya ditampung sementara agar dapat dibaca di layar Anda. Pesan tersebut akan dihapus secara otomatis dan berkala oleh sistem demi menjaga privasi.',
       '6.3. Perlindungan Privasi: Pengelola menjamin bahwa informasi data diri Anda tidak akan diperjualbelikan, disewakan, atau dibagikan kepada pihak pengiklan luar.',
-      '6.4. Akses Pihak Luar: Berbagi data hanya dilakukan sebatas keperluan teknis dengan mitra operasional (seperti penyedia gerbang pembayaran atau operator telekomunikasi global), serta otoritas penegak hukum yang sah di Indonesia apabila terdapat surat perintah resmi.'
+      '6.4. Akses Pihak Luar: Berbagi data hanya dilakukan sebatas keperluan teknis dengan mitra operasional (seperti penyedia gerbang pembayaran atau operator telekomunikasi global), serta otoritas penegak hukum yang diatur secara spesifik pada Pasal 10.'
     ],
   },
   {
@@ -103,11 +103,14 @@ const sections = [
   },
   {
     icon: <Scale size={20} />,
-    title: '10. Yurisdiksi dan Kepatuhan',
+    title: '10. Yurisdiksi, Kepatuhan, dan Penegakan Hukum',
     color: 'slate',
     content: [
-      'Aturan ini merujuk pada ketentuan hukum yang berlaku di wilayah Republik Indonesia.',
-      'Jika terjadi perselisihan atau keluhan operasional, penyelesaian secara kekeluargaan dan musyawarah akan menjadi jalan utama yang ditempuh.'
+      '10.1. Dasar Hukum: Syarat dan Ketentuan ini tunduk pada hukum yang berlaku di wilayah Republik Indonesia, termasuk namun tidak terbatas pada Undang-Undang Informasi dan Transaksi Elektronik (UU ITE).',
+      '10.2. Sikap Kooperatif dengan Penegak Hukum: Pihak Pengelola berkomitmen penuh untuk mendukung, membantu, dan bersikap kooperatif terhadap kepolisian, penyelidik, atau otoritas penegak hukum (Cybercrime) dalam mengusut tuntas tindak kejahatan yang menyalahgunakan infrastruktur sistem kami.',
+      '10.3. Prosedur Penyerahan Data Log (Subpoena): Pihak Pengelola akan membuka dan menyerahkan data log operasional Pengguna (meliputi IP Address, timestamp aktivitas, riwayat deposit, dan metadata terkait) kepada pihak berwajib HANYA JIKA otoritas terkait melampirkan dokumen resmi, seperti Surat Perintah Penyelidikan, Surat Perintah Penyitaan, atau surat permohonan informasi resmi dari instansi penegak hukum.',
+      '10.4. Pelaporan Mandiri (Proaktif): Apabila sistem internal Pengelola mendeteksi indikasi kuat adanya aktivitas kriminal tingkat tinggi (seperti pendanaan terorisme, peretasan massal, atau pencucian uang), Pengelola berhak secara proaktif melaporkan data akun tersebut kepada pihak berwajib tanpa memberikan pemberitahuan (notifikasi) terlebih dahulu kepada Pengguna yang bersangkutan.',
+      '10.5. Penyelesaian Sengketa Umum: Di luar urusan pidana, apabila terjadi perselisihan atau keluhan operasional antar Pengguna, penyelesaian secara kekeluargaan dan musyawarah akan tetap menjadi jalan utama yang ditempuh.'
     ],
   },
   {
@@ -290,7 +293,7 @@ export default function Ketentuan() {
                 </button>
 
                 {/* Accordion Body */}
-                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-0 border-t border-slate-100 dark:border-slate-800">
                     {section.content.map((paragraph, i) => (
                       <div
