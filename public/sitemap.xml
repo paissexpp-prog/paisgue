@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+  xsi:schemaLocation="
+    http://www.sitemaps.org/schemas/sitemap/0.9
+    http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd
+    http://www.google.com/schemas/sitemap-image/1.1
+    http://www.google.com/schemas/sitemap-image/1.1/sitemap-image.xsd
+  ">
+
+  <url>
+    <loc>https://ruangotp.net/</loc>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://cdn.nekohime.site/file/HsGrgzQf.jpeg</image:loc>
+      <image:title>RuangOTP - Layanan OTP Tercepat &amp; Termurah di Indonesia</image:title>
+      <image:caption>RuangOTP adalah platform penyedia nomor virtual OTP nomor 1 di Indonesia. Verifikasi WhatsApp, Telegram, Google dan 1000+ layanan lainnya.</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://ruangotp.net/login</loc>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://cdn.nekohime.site/file/HsGrgzQf.jpeg</image:loc>
+      <image:title>Login Member RuangOTP</image:title>
+      <image:caption>Masuk ke akun RuangOTP untuk membeli nomor virtual dan menerima SMS OTP.</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://ruangotp.net/register</loc>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://cdn.nekohime.site/file/HsGrgzQf.jpeg</image:loc>
+      <image:title>Daftar Akun RuangOTP Gratis</image:title>
+      <image:caption>Buat akun RuangOTP gratis dan mulai beli nomor virtual OTP untuk semua kebutuhan verifikasi kamu.</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://ruangotp.net/forgot-password</loc>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://ruangotp.net/ketentuan</loc>
+    <lastmod>2026-04-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+    <image:image>
+      <image:loc>https://cdn.nekohime.site/file/HsGrgzQf.jpeg</image:loc>
+      <image:title>Ketentuan Layanan - RuangOTP</image:title>
+      <image:caption>Syarat dan ketentuan penggunaan layanan RuangOTP. Harap baca dan pahami kebijakan layanan Virtual Number &amp; OTP kami sebelum mendaftar.</image:caption>
+    </image:image>
+  </url>
+
+  <url>
+    <loc>https://ruangotp.net/api/dev</loc>
+    <lastmod>2026-04-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://cdn.nekohime.site/file/HsGrgzQf.jpeg</image:loc>
+      <image:title>Dokumentasi API - RuangOTP</image:title>
+      <image:caption>Integrasi mudah layanan OTP RuangOTP ke sistem Anda dengan Dokumentasi API yang lengkap dan interaktif.</image:caption>
+    </image:image>
+  </url>
+
+</urlset>

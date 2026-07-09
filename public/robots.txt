@@ -1,0 +1,18 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /deposit
+Disallow: /order
+Disallow: /history
+Disallow: /referral
+Disallow: /maintenance
+
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /ketentuan
+Allow: /api/dev
+
+Sitemap: https://ruangotp.net/sitemap.xml
+
