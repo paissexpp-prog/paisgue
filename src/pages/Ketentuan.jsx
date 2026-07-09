@@ -6,92 +6,190 @@ import { useTheme } from '../context/ThemeContext';
 import {
   ChevronLeft, FileText, ChevronDown, ChevronUp,
   ShieldCheck, Wallet, AlertTriangle, Ban,
-  Scale, Clock, Phone, Info
+  Scale, Clock, Phone, Info, UserCheck, 
+  CheckCircle, Database, User, XOctagon, FileBadge
 } from 'lucide-react';
 
 const sections = [
   {
-    icon: <Info size={20} />,
-    title: '1. Deskripsi Layanan',
+    icon: <ShieldCheck size={20} />,
+    title: '1. Penerimaan Ketentuan',
     color: 'blue',
     content: [
-      'RuangOTP adalah platform penyedia nomor virtual (Virtual Number) yang digunakan untuk menerima kode OTP (One-Time Password) dari berbagai layanan digital seperti WhatsApp, Telegram, Google, dan 1.000+ aplikasi lainnya.',
-      'Layanan ini beroperasi secara otomatis selama 24 jam penuh, 7 hari seminggu, tanpa perlu kartu SIM fisik. Setiap nomor bersifat sementara dan digunakan sekali untuk keperluan verifikasi.',
-      'RuangOTP tidak berafiliasi dengan platform atau aplikasi mana pun yang tercantum sebagai layanan tersedia. Nama-nama tersebut hanya berfungsi sebagai kategori tujuan penggunaan OTP.',
+      'Dengan mengakses, mendaftar, atau menggunakan layanan RuangOTP ("Platform", "Kami", "Layanan"), Anda ("Pengguna", "Anda") menyetujui untuk terikat dengan Syarat dan Ketentuan ("S&K") ini, Kebijakan Privasi, dan semua peraturan yang berlaku.',
+      'Jika Anda bertindak atas nama suatu entitas, Anda menjamin memiliki kewenangan untuk mengikat entitas tersebut.'
     ],
   },
   {
-    icon: <Scale size={20} />,
-    title: '2. Ketentuan Penggunaan',
+    icon: <Info size={20} />,
+    title: '2. Definisi Layanan',
     color: 'violet',
     content: [
-      'Dengan menggunakan layanan RuangOTP, Anda menyatakan telah berusia minimal 17 tahun dan memiliki kapasitas hukum untuk menyetujui ketentuan ini.',
-      'Nomor virtual yang Anda dapatkan hanya boleh digunakan untuk keperluan verifikasi yang sah dan pribadi. Penggunaan untuk aktivitas ilegal, penipuan, spam, atau tindakan yang merugikan pihak lain sangat dilarang.',
-      'Setiap akun RuangOTP bersifat personal dan tidak boleh dipindahtangankan, dijual, atau digunakan bersama dengan pihak lain tanpa izin tertulis dari tim RuangOTP.',
+      'RuangOTP adalah platform penyedia layanan digital Jasa OTP dan Nomor Virtual.',
+      'Layanan mencakup dashboard pengelolaan, API, dan fitur pendukung lainnya untuk kebutuhan penerimaan SMS verifikasi.'
     ],
   },
   {
-    icon: <Wallet size={20} />,
-    title: '3. Kebijakan Saldo & Refund',
+    icon: <UserCheck size={20} />,
+    title: '3. Kelayakan Pengguna',
     color: 'emerald',
     content: [
-      'Saldo yang telah diisi (top up) ke akun RuangOTP bersifat non-tunai dan tidak dapat ditarik kembali dalam bentuk uang tunai ke rekening bank atau dompet digital.',
-      'Biaya pembelian nomor virtual akan dipotong secara otomatis dari saldo Anda saat order berhasil dibuat. Jika OTP tidak diterima dalam waktu yang ditentukan, order dapat dibatalkan dan saldo akan dikembalikan sepenuhnya.',
-      'Pembatalan order hanya dapat dilakukan setelah 4 menit sejak order dibuat. Pastikan Anda telah memulai proses verifikasi sebelum waktu tersebut berakhir.',
-      'Dalam kondisi gangguan teknis dari pihak penyedia nomor, RuangOTP berhak untuk memberikan kompensasi saldo sesuai kebijakan internal yang berlaku.',
+      '3.1. Anda berusia minimal 18 tahun atau telah mencapai usia dewasa menurut yurisdiksi Anda.',
+      '3.2. Anda memiliki kapasitas hukum untuk membuat perjanjian yang mengikat.',
+      '3.3. Anda bukan orang atau entitas yang dilarang menerima layanan sesuai hukum yang berlaku.'
     ],
   },
   {
-    icon: <ShieldCheck size={20} />,
-    title: '4. Privasi & Keamanan Data',
-    color: 'blue',
+    icon: <CheckCircle size={20} />,
+    title: '4. Penggunaan yang Diperbolehkan',
+    color: 'emerald',
     content: [
-      'RuangOTP berkomitmen menjaga kerahasiaan data pribadi pengguna. Data yang Anda berikan saat registrasi (nama, email) hanya digunakan untuk keperluan autentikasi dan komunikasi layanan.',
-      'RuangOTP tidak menjual, menyewakan, atau membagikan data pengguna kepada pihak ketiga untuk keperluan komersial tanpa persetujuan pengguna.',
-      'Anda bertanggung jawab atas keamanan kredensial akun Anda. Jangan bagikan token API atau User ID kepada siapa pun. RuangOTP tidak akan pernah meminta password Anda melalui media apa pun.',
+      'Nomor Virtual dari RuangOTP HANYA diperbolehkan untuk:',
+      '4.1. Registrasi akun media sosial, platform komunikasi, dan forum online.',
+      '4.2. Pendaftaran layanan streaming, hiburan, dan game online.',
+      '4.3. Verifikasi akun e-commerce, marketplace, dan platform review.',
+      '4.4. Pengujian aplikasi, pengembangan perangkat lunak, dan QA.',
+      '4.5. Aktivitas pemasaran, promosi, dan penelitian pasar yang sah.',
+      '4.6. Pendaftaran ke layanan "non-sensitif" yang tidak mengancam keamanan jika diretas.'
     ],
   },
   {
     icon: <Ban size={20} />,
-    title: '5. Larangan Penggunaan',
+    title: '5. Penggunaan yang DILARANG KERAS',
     color: 'red',
     content: [
-      'Dilarang keras menggunakan layanan RuangOTP untuk melakukan tindakan penipuan (fraud), phishing, penyebaran konten berbahaya, atau aktivitas yang bertentangan dengan hukum yang berlaku di Indonesia.',
-      'Dilarang menggunakan layanan ini untuk mendaftarkan nomor pada platform yang secara eksplisit melarang penggunaan nomor virtual atau nomor sementara dalam Syarat & Ketentuan mereka.',
-      'Dilarang melakukan penyalahgunaan API seperti flood request, scraping berlebihan, atau upaya untuk memanipulasi sistem harga dan stok nomor.',
-      'Pelanggaran terhadap larangan di atas akan mengakibatkan pemblokiran akun permanen tanpa pengembalian saldo.',
+      'Nomor Virtual dari RuangOTP TIDAK BOLEH digunakan untuk:',
+      '5.1. Layanan Keuangan: Perbankan (mobile/internet banking), fintech, e-wallet, pembayaran digital, transfer uang.',
+      '5.2. Layanan Peminjaman: Fintech lending, pinjaman online, peer-to-peer lending, kartu kredit.',
+      '5.3. Layanan Pemerintah: Administrasi kependudukan, pajak, kepabeanan, layanan kesehatan negara, SIM, paspor.',
+      '5.4. Platform Investasi: Trading saham, forex, cryptocurrency, aset digital, crowdfunding.',
+      '5.5. Layanan Sensitif: Kesehatan (rekam medis), asuransi, notaris, pengacara, layanan kurir dokumen resmi.',
+      '5.6. Aktivitas Ilegal: Penipuan, pencucian uang, terorisme, perjudian ilegal, pornografi anak, perdagangan narkotika.',
+      '5.7. Pelanggaran Hak: Phishing, spamming, hacking, penyebaran malware, pelanggaran hak kekayaan intelektual.',
+      '5.8. Pelanggaran Kebijakan Pihak Ketiga: Aktivitas yang melanggar ToS platform lain (Google, Facebook, WhatsApp, dll.).'
+    ],
+  },
+  {
+    icon: <Database size={20} />,
+    title: '6. Pengumpulan dan Pengolahan Data',
+    color: 'blue',
+    content: [
+      '6.1. Data yang Dikumpulkan: Data Registrasi (Email, nama, kata sandi terenkripsi), Data Transaksi (Riwayat pembelian, saldo, metode pembayaran), Data Teknis (Alamat IP, jenis browser, perangkat, log akses), Data Penggunaan (Nomor Virtual yang disewa, negara tujuan, timestamp), dan Data SMS (hanya disimpan sementara untuk tujuan penampilan kepada pengguna).',
+      '6.2. Tujuan Pengolahan Data: Menyediakan dan mengoperasikan Layanan, memproses transaksi, mencegah penipuan/penyalahgunaan, meningkatkan kualitas layanan, dan mematuhi kewajiban hukum.',
+      '6.3. Penyimpanan dan Keamanan Data: Data disimpan di server dengan enkripsi dan proteksi keamanan. Konten SMS dihapus secara berkala. Data pribadi tidak dijual ke pihak ketiga untuk pemasaran.',
+      '6.4. Berbagi Data dengan Pihak Ketiga: Hanya dengan penyedia nomor (operator global), penyedia pembayaran, otoritas hukum (jika diwajibkan), dan mitra teknis yang terikat NDA.'
+    ],
+  },
+  {
+    icon: <User size={20} />,
+    title: '7. Tanggung Jawab Pengguna',
+    color: 'amber',
+    content: [
+      '7.1. Tanggung Jawab Penuh: Pengguna bertanggung jawab penuh atas segala aktivitas yang dilakukan menggunakan Nomor Virtual yang disewa.',
+      '7.2. Kepatuhan Hukum: Pengguna wajib mematuhi semua hukum dan regulasi di yurisdiksi Pengguna dan yurisdiksi dimana Nomor Virtual digunakan.',
+      '7.3. Kerahasiaan: Pengguna bertanggung jawab menjaga kerahasiaan kode OTP, akses akun, dan informasi sensitif yang diterima.',
+      '7.4. Akurasi Informasi: Pengguna menjamin keakuratan informasi yang diberikan saat registrasi.',
+      '7.5. Pelaporan Penyalahgunaan: Pengguna wajib melaporkan dugaan penyalahgunaan atau kerentanan keamanan kepada Kami.'
     ],
   },
   {
     icon: <AlertTriangle size={20} />,
-    title: '6. Batasan Tanggung Jawab',
+    title: '8. Pembatasan Tanggung Jawab Perusahaan',
     color: 'amber',
     content: [
-      'RuangOTP tidak bertanggung jawab atas kegagalan verifikasi yang disebabkan oleh kebijakan platform tujuan, perubahan sistem pihak ketiga, atau gangguan jaringan di luar kendali kami.',
-      'Layanan disediakan "sebagaimana adanya" (as-is). RuangOTP tidak menjamin keberhasilan 100% setiap order karena ketersediaan nomor dipengaruhi oleh kondisi pasar dan penyedia.',
-      'Dalam hal apapun, total tanggung jawab RuangOTP kepada pengguna tidak akan melebihi jumlah saldo yang tersisa di akun pengguna pada saat terjadinya sengketa.',
+      '8.1. Layanan "SEBAGAIMANA ADANYA": Layanan disediakan "sebagaimana adanya" dan "sebagaimana tersedia" tanpa jaminan apa pun, baik tersurat maupun tersirat.',
+      '8.2. Tidak Ada Jaminan: Kami tidak menjamin ketersediaan, keakuratan, ketepatan waktu, atau keandalan Layanan.',
+      '8.3. Penyangkalan Tanggung Jawab: RuangOTP TIDAK BERTANGGUNG JAWAB ATAS kerugian ekonomi, kehilangan data/keuntungan, aktivitas ilegal pengguna, kebocoran data akibat kelalaian pengguna, kehilangan akses akun pihak ketiga, keterlambatan pengiriman SMS, atau keakuratan informasi via SMS.',
+      '8.4. Batasan Tanggung Jawab: Tanggung jawab kumulatif Kami tidak akan melebihi jumlah yang telah dibayarkan Pengguna kepada Kami dalam 6 (enam) bulan terakhir.'
+    ],
+  },
+  {
+    icon: <Wallet size={20} />,
+    title: '9. Model Layanan dan Pembayaran',
+    color: 'emerald',
+    content: [
+      '9.1. Jenis Layanan: One-Time Use (Nomor sekali pakai untuk penerimaan satu SMS OTP/Verifikasi).',
+      '9.2. Pembayaran: Menggunakan sistem prabayar. Pembayaran hanya dikenakan setelah SMS berhasil diterima. Tidak ada biaya tersembunyi, semua biaya ditampilkan sebelum transaksi.',
+      '9.3. Mekanisme Verifikasi: Mendukung penerimaan kode verifikasi melalui SMS teks.',
+      '9.4. Pengembalian Dana (Refund): Dana yang telah didepositkan tidak dapat ditarik kembali (non-withdrawable). Refund saldo akun hanya dipertimbangkan untuk kegagalan layanan dari sisi sistem Kami. Tidak ada refund untuk pemblokiran oleh pihak ketiga atau kesalahan pengguna.'
+    ],
+  },
+  {
+    icon: <Scale size={20} />,
+    title: '10. Otoritas Hukum dan Kepatuhan',
+    color: 'slate',
+    content: [
+      '10.1. Hukum yang Berlaku: Syarat dan Ketentuan ini diatur oleh dan ditafsirkan sesuai dengan hukum Republik Indonesia.',
+      '10.2. Forum Penyelesaian Sengketa: Setiap sengketa akan diselesaikan secara musyawarah.',
+      '10.3. Kepatuhan Hukum Setempat: Pengguna dari luar Indonesia bertanggung jawab untuk memastikan penggunaan Layanan sesuai dengan hukum negara mereka.',
+      '10.4. Permintaan Penegak Hukum: Permintaan resmi dari penegak hukum atau otoritas pemerintah yang sah akan ditanggapi sesuai dengan kebijakan dan hukum yang berlaku. Kami akan berusaha memberi pemberitahuan kepada Pengguna yang terdampak, kecuali dilarang oleh hukum.',
+      '10.5. Pelaporan Aktivitas Ilegal: Kami akan bekerja sama dengan otoritas dalam investigasi aktivitas ilegal dan berhak melaporkan dugaan pelanggaran hukum.'
+    ],
+  },
+  {
+    icon: <XOctagon size={20} />,
+    title: '11. Pelanggaran dan Pemutusan Layanan',
+    color: 'red',
+    content: [
+      '11.1. Hak Pemantauan: Kami berhak memantau penggunaan untuk mendeteksi pelanggaran, penipuan, atau penyalahgunaan.',
+      '11.2. Sanksi atas Pelanggaran: Jika terjadi pelanggaran, Kami dapat memberikan peringatan, membekukan sementara akun, melakukan pemotongan saldo sebagai denda, atau memutuskan akun secara permanen.',
+      '11.3. Pemutusan Sepihak oleh Kami: Kami dapat menghentikan Layanan kepada Pengguna tanpa pemberitahuan jika terdeteksi pelanggaran berat (khususnya penyalahgunaan nomor untuk layanan keuangan/ilegal), terdapat aktivitas penipuan, diperintahkan otoritas, atau pengguna berusaha merusak sistem.',
+      '11.4. Akibat Pemutusan: Pemutusan tidak membebaskan Pengguna dari kewajiban pembayaran. Saldo yang tersisa pada akun yang diputus karena pelanggaran TIDAK dapat dikembalikan.'
+    ],
+  },
+  {
+    icon: <FileBadge size={20} />,
+    title: '12. Kekayaan Intelektual',
+    color: 'violet',
+    content: [
+      '12.1. Seluruh hak atas Platform, logo, konten, dan teknologi RuangOTP adalah milik Kami atau pemberi lisensi Kami.',
+      '12.2. Pengguna diberikan lisensi terbatas, non-eksklusif, dan tidak dapat dialihkan untuk menggunakan Layanan sesuai Syarat dan Ketentuan ini.'
     ],
   },
   {
     icon: <Clock size={20} />,
-    title: '7. Perubahan Ketentuan',
+    title: '13. Perubahan Syarat dan Ketentuan',
     color: 'slate',
     content: [
-      'RuangOTP berhak mengubah, memperbarui, atau merevisi ketentuan layanan ini kapan saja tanpa pemberitahuan terlebih dahulu.',
-      'Perubahan akan mulai berlaku segera setelah dipublikasikan. Dengan terus menggunakan layanan setelah perubahan diterapkan, Anda dianggap telah menyetujui ketentuan yang baru.',
-      'Disarankan untuk memeriksa halaman ini secara berkala untuk mengetahui pembaruan terbaru.',
+      '13.1. Kami berhak mengubah, memperbarui, atau memodifikasi Syarat dan Ketentuan ini kapan saja.',
+      '13.2. Perubahan akan diberitahukan melalui email terdaftar atau pemberitahuan di dalam Platform (Dashboard/Notifikasi).',
+      '13.3. Perubahan akan efektif 7 (tujuh) hari setelah pemberitahuan, kecuali dinyatakan lain.',
+      '13.4. Penggunaan Layanan yang berlanjut setelah perubahan efektif berarti Anda menerima perubahan tersebut.'
+    ],
+  },
+  {
+    icon: <FileText size={20} />,
+    title: '14. Ketentuan Umum',
+    color: 'blue',
+    content: [
+      '14.1. Pemisahan Klausul: Jika suatu ketentuan dinyatakan tidak sah, ketentuan lain tetap berlaku.',
+      '14.2. Force Majeure: Kami tidak bertanggung jawab atas kegagalan yang disebabkan oleh keadaan di luar kendali wajar (perang, bencana alam, embargo, gangguan jaringan besar).',
+      '14.3. Hubungan Para Pihak: Hubungan ini adalah sebagai penyedia layanan dan pengguna, bukan kemitraan, joint venture, atau agensi.',
+      '14.4. Keutuhan Perjanjian: Syarat dan Ketentuan ini beserta Kebijakan Privasi merupakan perjanjian lengkap antara Anda dan RuangOTP.'
     ],
   },
   {
     icon: <Phone size={20} />,
-    title: '8. Kontak & Penyelesaian Sengketa',
+    title: '15. Kontak dan Pengaduan',
     color: 'blue',
     content: [
-      'Jika Anda memiliki pertanyaan, keluhan, atau ingin melaporkan pelanggaran terkait layanan RuangOTP, silakan hubungi tim kami melalui CS Telegram di @cs_ruangotp atau email di support@ruangotp.net.',
-      'Segala sengketa yang timbul dari penggunaan layanan akan diselesaikan secara musyawarah terlebih dahulu. Jika tidak tercapai kesepakatan, sengketa akan diselesaikan berdasarkan hukum yang berlaku di Republik Indonesia.',
-      'Ketentuan ini berlaku sejak tanggal pengguna pertama kali menggunakan layanan RuangOTP dan terus berlaku selama akun aktif.',
+      'Untuk pertanyaan, klarifikasi, atau pengaduan terkait Layanan maupun Syarat dan Ketentuan ini, Anda dapat menghubungi kami melalui:',
+      'Email Bantuan: support@ruangotp.net',
+      'Telegram Support: @cs_ruangotp',
+      'Dengan mendaftar, masuk, atau menggunakan Layanan RuangOTP dalam cara apa pun, Anda menyatakan telah membaca, memahami, dan menyetujui tanpa syarat seluruh Syarat dan Ketentuan yang terkait.'
     ],
   },
+  {
+    icon: <AlertTriangle size={20} />,
+    title: '16. Peringatan Penting',
+    color: 'red',
+    content: [
+      '1. Layanan ini BUKAN untuk verifikasi akun sensitif yang melibatkan uang, identitas resmi, atau data kritis.',
+      '2. Penggunaan untuk keperluan terlarang dapat mengakibatkan pemutusan akun TANPA refund dan berpotensi dilaporkan ke otoritas yang berwajib.',
+      '3. Anda sepenuhnya bertanggung jawab atas cara Anda menggunakan Nomor Virtual yang disewa.',
+      '4. Gunakan dengan bijak dan selalu patuhi hukum serta kebijakan platform pihak ketiga tujuan Anda.'
+    ],
+  }
 ];
 
 const colorMap = {
@@ -159,7 +257,7 @@ export default function Ketentuan() {
             </p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
-              Berlaku sejak 1 Januari 2026
+              Terakhir diperbarui pada 18 Februari 2026
             </div>
           </div>
           {/* Dekorasi */}
@@ -215,7 +313,7 @@ export default function Ketentuan() {
                 </button>
 
                 {/* Accordion Body */}
-                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="space-y-0 border-t border-slate-100 dark:border-slate-800">
                     {section.content.map((paragraph, i) => (
                       <div
