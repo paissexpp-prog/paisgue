@@ -69,8 +69,7 @@ const sections = [
     content: [
       '6.1. Pengumpulan Informasi: RuangOTP hanya mencatat data operasional esensial seperti alamat email, kata sandi (disimpan dalam format acak/terenkripsi), riwayat deposit saldo, dan log akses teknis (seperti IP address) untuk menjaga kelancaran server.',
       '6.2. Penanganan SMS: Isi pesan teks (SMS) yang masuk ke sistem kami hanya ditampung sementara agar dapat dibaca di layar Anda. Pesan tersebut akan dihapus secara otomatis dan berkala oleh sistem demi menjaga privasi.',
-      '6.3. Perlindungan Privasi: Pengelola menjamin bahwa informasi data diri Anda tidak akan diperjualbelikan, disewakan, atau dibagikan kepada pihak pengiklan luar.',
-      '6.4. Akses Pihak Luar: Berbagi data hanya dilakukan sebatas keperluan teknis dengan mitra operasional (seperti penyedia gerbang pembayaran atau operator telekomunikasi global), serta otoritas penegak hukum yang diatur secara spesifik pada Pasal 10.'
+      '6.3. Perlindungan Privasi: Pengelola menjamin bahwa informasi data diri Anda tidak akan diperjualbelikan, disewakan, atau dibagikan kepada pihak pengiklan luar.'
     ],
   },
   {
@@ -155,7 +154,7 @@ const sections = [
     color: 'blue',
     content: [
       'Jika Anda menemui kendala teknis, pertanyaan seputar aturan ini, atau indikasi error pada saldo, tim pengelola siap membantu Anda melalui:',
-      '• Email Resmi: support@ruangotp.net',
+      '• Email Resmi: paismd07@gmail.com',
       '• Telegram Admin: @cs_ruangotp'
     ],
   },

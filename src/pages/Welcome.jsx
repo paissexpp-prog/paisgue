@@ -605,7 +605,7 @@ export default function Welcome() {
           <div className="mx-auto max-w-xl grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[
               { href: 'https://t.me/cs_ruangotp', icon: <Send size={20}/>, label: 'CS Telegram', sub: '@cs_ruangotp', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-              { href: 'mailto:support@ruangotp.net', icon: <Mail size={20}/>, label: 'Email Support', sub: 'support@ruangotp.net', color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+              { href: 'mailto:paismd07@gmail.com', icon: <Mail size={20}/>, label: 'Email Support', sub: 'paismd07@gmail.com', color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
               { href: 'https://t.me/ruangotp', icon: <Radio size={20}/>, label: 'Channel Telegram', sub: '@ruangotp', color: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400' },
               { href: 'https://whatsapp.com/channel/0029VbCNWVk84OmIdF16fK2z', icon: <MessageSquare size={20}/>, label: 'Saluran WhatsApp', sub: 'Berita Resmi', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
             ].map((c) => (
@@ -664,7 +664,7 @@ export default function Welcome() {
               <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-400">Contacts Us</h4>
               <ul className="space-y-3">
                 <li><a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Telegram CS</a></li>
-                <li><a href="mailto:support@ruangotp.net" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Email</a></li>
+                <li><a href="mailto:paismd07@gmail.com" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Email</a></li>
               </ul>
               <h4 className="mt-6 mb-4 text-xs font-black uppercase tracking-widest text-slate-400">Channel</h4>
               <ul className="space-y-3">
