@@ -297,7 +297,8 @@ export default function Welcome() {
             </p>
 
             {/* CTA */}
-            <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4">
+            {/* Class sm:flex-row dan flex-wrap dihapus agar tombol murni menurun dari atas ke bawah */}
+            <div className="mt-10 flex flex-col items-center justify-center gap-4">
               <Link to="/register" className={`inline-flex items-center gap-2 rounded-xl px-8 py-4 text-base font-bold shadow-lg transition-all hover:scale-105 active:scale-95 ${color.btn}`}>
                 Mulai Sekarang — Gratis <ArrowRight size={18} />
               </Link>
@@ -307,7 +308,7 @@ export default function Welcome() {
                 <Send size={18} /> Akses Cepat? Order Via Telegram
               </a>
 
-              {/* ── DIUBAH: Masuk Member → API DOCS → /api/dev ── */}
+              {/* ── API DOCS ── */}
               <Link to="/api/dev" className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-8 py-4 text-base font-semibold text-white shadow-sm transition-all hover:scale-105 active:scale-95">
                 <Code2 size={18} /> API DOCS
               </Link>
