@@ -297,10 +297,16 @@ export default function Welcome() {
             </p>
 
             {/* CTA */}
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4">
               <Link to="/register" className={`inline-flex items-center gap-2 rounded-xl px-8 py-4 text-base font-bold shadow-lg transition-all hover:scale-105 active:scale-95 ${color.btn}`}>
                 Mulai Sekarang — Gratis <ArrowRight size={18} />
               </Link>
+              
+              {/* ── TOMBOL BARU: ORDER VIA TELEGRAM ── */}
+              <a href="https://t.me/ruangotp_bot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-600 px-8 py-4 text-base font-semibold text-white shadow-sm transition-all hover:scale-105 active:scale-95">
+                <Send size={18} /> Akses Cepat? Order Via Telegram
+              </a>
+
               {/* ── DIUBAH: Masuk Member → API DOCS → /api/dev ── */}
               <Link to="/api/dev" className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-8 py-4 text-base font-semibold text-white shadow-sm transition-all hover:scale-105 active:scale-95">
                 <Code2 size={18} /> API DOCS
