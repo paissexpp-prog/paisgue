@@ -29,9 +29,6 @@ export default function Order() {
   const [filteredServices, setFilteredServices] = useState([]);
   const [countries, setCountries] = useState([]);
 
-  const HIDDEN_ORDERS_KEY = 'ruangotp_closed_orders_v1';
-  const closedIdsRef = useRef([]);
-
   // --- STATE CACHE OPERATOR IMAGES ---
   const [opImagesCache, setOpImagesCache] = useState({});
 
@@ -139,11 +136,6 @@ export default function Order() {
   // LIFECYCLE & SOCKET
   // ================================================================
   useEffect(() => {
-    const savedHidden = localStorage.getItem(HIDDEN_ORDERS_KEY);
-    if (savedHidden) {
-        closedIdsRef.current = JSON.parse(savedHidden);
-    }
-
     // Load operator images cache dari LocalStorage saat pertama buka
     const savedOpImages = localStorage.getItem('operator_images_cache');
     if (savedOpImages) {
@@ -188,7 +180,25 @@ export default function Order() {
         reconnectionDelay: 3000,
     });
 
-    socket.on('otp_received', () => {
+    socket.on('otp_received', (data) => {
+        // [MODIFIED]: Gunakan payload socket secara langsung untuk mencegah data SMS hilang
+        if (data && data.order_id) {
+            setActiveOrders(prevOrders => {
+                return prevOrders.map(order => {
+                    const orderId = order.order_id || order.id;
+                    if (orderId === data.order_id) {
+                        return {
+                            ...order,
+                            status: data.status || 'COMPLETED',
+                            otp_code: data.otp_code || order.otp_code,
+                            sms_content: data.sms_content || order.sms_content
+                        };
+                    }
+                    return order;
+                });
+            });
+        }
+        
         fetchInitialData(true);
     });
 
@@ -245,27 +255,29 @@ export default function Order() {
       
       if(!silent) setPing(Date.now() - start);
 
-      let closedBackendIds = [];
-      try {
-          const resSelesai = await api.get('/cekselesai/list');
-          if (resSelesai.data.success && Array.isArray(resSelesai.data.data)) {
-              closedBackendIds = resSelesai.data.data.map(o => o.order_id);
-          }
-      } catch (err) {}
-
-      const resHistory = await api.get('/history/list');
+      // ✅ [REFACTORING]: Endpoint diganti ke jalur baru (Server-Side Filtering)
+      const resHistory = await api.get('/history/list/order');
       if (resHistory.data.success) {
-         const allOrders = resHistory.data.data;
-         const filtered = allOrders.filter(order => {
-             const id = order.order_id || order.id;
-             const isHiddenLocal = closedIdsRef.current.includes(id);
-             const isHiddenBackend = closedBackendIds.includes(id);
-             const status = (order.status || '').toUpperCase();
-             return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(status) && !isHiddenLocal && !isHiddenBackend;
+         // Data sudah bersih 100% dari Backend. Tidak perlu filter client-side yang membebani HP!
+         const filteredOrders = resHistory.data.data;
+         
+         // [MODIFIED]: Menggabungkan data dari API dengan state lokal untuk mempertahankan sms_content
+         setActiveOrders(prevOrders => {
+             return filteredOrders.map(fetchedOrder => {
+                 const fetchedId = fetchedOrder.order_id || fetchedOrder.id;
+                 const existingOrder = prevOrders.find(o => (o.order_id || o.id) === fetchedId);
+                 
+                 if (existingOrder) {
+                     return {
+                         ...fetchedOrder,
+                         sms_content: fetchedOrder.sms_content || fetchedOrder.sms || existingOrder.sms_content
+                     };
+                 }
+                 return fetchedOrder;
+             });
          });
-         setActiveOrders(filtered);
 
-         const pendingJasaOrders = filtered.filter(o => {
+         const pendingJasaOrders = filteredOrders.filter(o => {
              const id = o.order_id || o.id || '';
              const isAlternatif = id.startsWith('JASAOTP') || o.provider === 'jasaotp' || o.is_alternatif === true;
              return isAlternatif && ['ACTIVE', 'PENDING'].includes((o.status || '').toUpperCase());
@@ -633,9 +645,7 @@ export default function Order() {
   };
 
   const handleCloseOrder = async (orderId) => {
-      const newHidden = [...closedIdsRef.current, orderId];
-      closedIdsRef.current = newHidden;
-      localStorage.setItem(HIDDEN_ORDERS_KEY, JSON.stringify(newHidden));
+      // ✅ [REFACTORING]: Hapus logika penumpukan localStorage. Cukup hilangkan dari State instan!
       setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
 
       let attempt = 0;
@@ -655,9 +665,6 @@ export default function Order() {
       }
   };
 
-  // ================================================================
-  // ✨ FIX DI SINI: Hapus proxy images.weserv.nl, muat URL langsung
-  // ================================================================
   const getOptimizedImage = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/1176/1176425.png";
     return url; 
@@ -844,11 +851,13 @@ export default function Order() {
                     const lifetimeRemaining = getLifetimeRemaining(order.created_at);
                     const orderId = order.order_id || order.id || '';
                     const serviceImg = getServiceImg(order.service);
-                    const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
                     
+                    const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
+                    const smsText = order.sms_content || order.sms || order.message || 
+                        (otpDisplay ? `Kode OTP ${order.service || ''} Anda adalah: ${otpDisplay}` : 'Pesan kosong diterima dari server.');
+
                     const isAlternatif = orderId && (orderId.startsWith('JASAOTP') || order.provider === 'jasaotp' || order.is_alternatif === true);
                     
-                    // FIX: Tarik data nama operator dari Backend (default ke 'any')
                     const operatorName = order.operator || 'any';
                     const isOpAny = operatorName.toLowerCase() === 'any' || operatorName.toLowerCase() === 'random';
                     const opImgCached = opImagesCache[operatorName.toUpperCase()];
@@ -856,111 +865,115 @@ export default function Order() {
                     return (
                         <div
                             key={orderId}
-                            className={`overflow-hidden rounded-3xl shadow-lg border animate-in slide-in-from-bottom duration-500 bg-white dark:bg-slate-950 ${
+                            className={`overflow-hidden rounded-[1.5rem] shadow-lg border animate-in slide-in-from-bottom duration-500 bg-white dark:bg-[#111827] ${
                                 isSmsReceived
-                                    ? 'border-emerald-400 ring-1 ring-emerald-400 dark:border-emerald-600 dark:ring-emerald-600'
-                                    : 'border-slate-200 dark:border-slate-800'
+                                    ? 'border-emerald-400/50 ring-1 ring-emerald-400/30 dark:border-emerald-600/50 dark:ring-emerald-900/30'
+                                    : 'border-slate-200 dark:border-[#1f2937]'
                             }`}
                         >
                             <div className="p-4 space-y-3">
 
-                                {/* ── ROW 1: Bendera + Nomor + Copy │ Timer 20 menit ── */}
+                                {/* ── ROW 1: Bendera + Nomor + Copy │ Tag Selesai/Timer ── */}
                                 <div className="flex items-center justify-between gap-2">
                                      <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <span className="text-xl shrink-0 leading-none">
                                             {getCountryFlag(order.country)}
                                         </span>
-                                        <span className="font-mono font-bold text-slate-800 dark:text-white text-sm truncate">
+                                        <span className="font-bold text-slate-800 dark:text-white text-base truncate tracking-wide">
                                             {order.phone_number}
                                         </span>
                                         <button
                                             onClick={() => handleCopy(order.phone_number)}
-                                            className="shrink-0 p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700"
+                                            className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors dark:text-slate-500 dark:hover:text-slate-300 ml-1"
                                         >
-                                             <Copy size={13} />
+                                             <Copy size={16} />
                                         </button>
                                      </div>
                                      
-                                    {/* Timer 20 menit */}
-                                    <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${
+                                    <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
                                         isSmsReceived
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                            ? 'bg-emerald-100/50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30'
                                             : lifetimeRemaining <= 120
-                                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                ? 'bg-red-100/50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200/50 dark:border-red-800/30'
+                                                : 'bg-amber-100/50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/30'
                                     }`}>
-                                        <Clock size={12} />
-                                        {isSmsReceived ? 'Selesai' : formatTime(lifetimeRemaining)}
+                                        {isSmsReceived ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                                        {isSmsReceived ? 'Diterima' : formatTime(lifetimeRemaining)}
                                     </div>
                                 </div>
 
                                 {/* ── ROW 2: Operator │ Harga ── */}
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        {/* FIX: Tampilan Dinamis Berdasarkan Data Operator (Icon / Text / Image) */}
                                         {isOpAny ? (
-                                            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm leading-none shrink-0">
+                                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm leading-none shrink-0 border border-slate-200 dark:border-slate-700">
                                                 🎲
                                             </div>
                                         ) : opImgCached ? (
                                             <img 
                                                 src={getOptimizedImage(opImgCached)} 
-                                                className="w-7 h-7 rounded-full bg-white object-cover border border-slate-200 dark:border-slate-700 shrink-0" 
+                                                className="w-6 h-6 rounded-full bg-white object-cover border border-slate-200 dark:border-slate-700 shrink-0" 
                                                 alt={operatorName} 
                                             />
                                         ) : (
-                                            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 uppercase overflow-hidden shrink-0">
+                                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 uppercase overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
                                                 {operatorName.charAt(0)}
                                             </div>
                                         )}
                                         
-                                        <span className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate max-w-[80px] capitalize">
+                                        <span className="text-sm text-slate-600 dark:text-slate-300 font-medium truncate max-w-[100px] capitalize">
                                             {operatorName}
                                         </span>
                                         
                                         {isAlternatif && (
-                                            <span className="ml-1 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase shrink-0">ALTERNATIF</span>
+                                            <span className="ml-1 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase shrink-0">ALT</span>
                                         )}
                                     </div>
-                                    <div className={`px-3 py-1 rounded-xl text-xs font-bold text-white ${color.btn}`}>
+                                    <div className={`px-3 py-1 rounded-full text-xs font-bold text-blue-700 bg-blue-100/50 dark:text-blue-400 dark:bg-blue-900/30 border border-blue-200/50 dark:border-blue-800/30`}>
                                         {order.total_price
-                                            ? `Rp${order.total_price.toLocaleString('id-ID')}`
+                                            ? `Rp ${order.total_price.toLocaleString('id-ID')}`
                                             : '—'
                                         }
                                     </div>
                                 </div>
 
-                                {/* ── INNER BOX: Info Layanan ── */}
-                                <div className={`rounded-2xl p-3 border ${
+                                {/* ── INNER BOX: Info Layanan & Full Text SMS (UI BARU Sesuai Screenshot) ── */}
+                                <div className={`rounded-2xl p-4 border mt-2 relative overflow-hidden ${
                                     isSmsReceived
-                                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'
+                                        ? 'bg-slate-100 border-slate-200/80 dark:bg-[#1f2937] dark:border-slate-700/50'
                                         : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'
                                 }`}>
-                                    {/* Baris atas: Gambar + Nama Layanan │ Status */}
-                                    <div className="flex items-center justify-between mb-2">
+                                    
+                                    {/* Baris Atas: Icon Layanan, Nama, dan Aksi Copy / Status */}
+                                    <div className="flex items-center justify-between mb-3 relative z-10">
                                         <div className="flex items-center gap-2 min-w-0">
                                             {isAlternatif ? (
-                                                <div className="scale-90 origin-left">{getServiceAvatar(order.service)}</div>
+                                                <div className="scale-75 origin-left">{getServiceAvatar(order.service)}</div>
                                             ) : serviceImg ? (
                                                 <img
                                                     src={getOptimizedImage(serviceImg)}
-                                                    className="w-8 h-8 rounded-xl object-contain bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 shrink-0"
+                                                    className="w-6 h-6 rounded-full object-contain bg-white dark:bg-slate-800 shrink-0"
                                                     alt={order.service}
                                                 />
                                             ) : (
-                                                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
-                                                    <Smartphone size={16} className="text-blue-600 dark:text-blue-400" />
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                                                    <Smartphone size={14} className="text-blue-600 dark:text-blue-400" />
                                                 </div>
                                             )}
-                                            <span className="font-bold text-slate-800 dark:text-white text-sm truncate">
+                                            <span className="font-bold text-slate-800 dark:text-white text-sm truncate tracking-wide">
                                                 {order.service || 'Layanan'}
                                             </span>
                                         </div>
-                                        {/* Label status */}
+                                        
+                                        {/* Status / Aksi Kanan */}
                                         {isSmsReceived ? (
-                                            <div className="shrink-0 flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                                                SMS Diterima <CheckCircle2 size={13} />
-                                            </div>
+                                            <button
+                                                onClick={() => handleCopy(order.sms_content || otpDisplay)}
+                                                className="shrink-0 flex items-center gap-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors text-sm font-mono active:scale-95"
+                                            >
+                                                <Copy size={14} />
+                                                <span>{otpDisplay || 'Copy'}</span>
+                                            </button>
                                         ) : (
                                             <div className="shrink-0 flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-bold">
                                                 Menunggu <MessageSquare size={13} />
@@ -968,75 +981,73 @@ export default function Order() {
                                         )}
                                     </div>
 
-                                    {/* Baris bawah: OTP atau countdown batal */}
-                                    {isSmsReceived ? (
-                                        // ── TAMPILAN OTP (digit per kotak) ──
-                                        <div
-                                            onClick={() => handleCopy(otpDisplay || order.sms_content)}
-                                            className="flex items-center justify-center gap-1.5 py-1.5 cursor-pointer active:scale-95 transition-transform"
-                                        >
-                                            {otpDisplay ? (
-                                                otpDisplay.toString().split('').map((digit, i) => (
-                                                    <div
-                                                        key={i}
-                                                        className="w-9 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center text-lg font-black text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shadow-sm"
-                                                    >
-                                                        {digit}
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono py-1">
-                                                    {order.sms_content || 'SMS diterima ✓'}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        // ── COUNTDOWN SEBELUM BATAL ──
-                                        <p className="text-xs text-slate-400 dark:text-slate-500">
-                                            {remaining > 0 ? (
-                                                <>
-                                                    Tunggu{' '}
-                                                    <span className="font-bold text-red-500">{formatTime(remaining)}</span>
-                                                    {' '}sebelum klik batal.
-                                                </>
-                                            ) : (
-                                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                                    ✓ Siap dibatalkan jika diperlukan.
-                                                </span>
-                                            )}
-                                        </p>
-                                    )}
+                                    {/* Baris Bawah: Full Text SMS atau Countdown Batal */}
+                                    <div className="relative z-10">
+                                        {isSmsReceived ? (
+                                            // ── TAMPILAN FULL SMS ──
+                                            <div
+                                                onClick={() => handleCopy(order.sms_content || otpDisplay)}
+                                                className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-mono whitespace-pre-wrap break-words cursor-pointer hover:opacity-80 transition-opacity"
+                                            >
+                                                {smsText}
+                                            </div>
+                                        ) : (
+                                            // ── COUNTDOWN SEBELUM BATAL ──
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                                                {remaining > 0 ? (
+                                                    <>
+                                                        Tunggu{' '}
+                                                        <span className="font-bold text-red-500">{formatTime(remaining)}</span>
+                                                        {' '}sebelum klik batal.
+                                                    </>
+                                                ) : (
+                                                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                                        ✓ Siap dibatalkan jika diperlukan.
+                                                    </span>
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
-                                {/* ── TOMBOL AKSI ── */}
-                                <div className="flex gap-3">
-                                    {/* Tombol Beli Lagi */}
-                                    <button
-                                        onClick={() => handleReorder(order)}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors ${color.border} ${color.text} hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-95`}
-                                    >
-                                        <ShoppingBag size={15} /> Beli lagi
-                                    </button>
-
-                                    {/* Tombol Selesai (SMS diterima) atau Batal (masih pending) */}
+                                {/* ── TOMBOL AKSI BAWAH ── */}
+                                <div className="flex gap-3 mt-3">
                                     {isSmsReceived ? (
-                                        <button
-                                            onClick={() => handleCloseOrder(orderId)}
-                                            className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black dark:bg-white dark:text-slate-900 transition-colors flex items-center justify-center gap-2 active:scale-95"
-                                        >
-                                            <CheckCircle2 size={15} /> Selesai
-                                        </button>
+                                        // ── Tombol saat SMS Masuk ──
+                                        <>
+                                            <button
+                                                onClick={() => showToast("Fitur Kirim Ulang segera hadir ⏳", "success")}
+                                                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                                            >
+                                                <RefreshCw size={15} /> Kirim Ulang
+                                            </button>
+                                            <button
+                                                onClick={() => handleCloseOrder(orderId)}
+                                                className="flex-1 py-3 rounded-xl border border-emerald-600/50 bg-emerald-50 text-emerald-600 font-bold text-sm hover:bg-emerald-100 dark:bg-emerald-900/10 dark:text-emerald-500 dark:hover:bg-emerald-900/30 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                                            >
+                                                <CheckCircle2 size={15} /> Selesai
+                                            </button>
+                                        </>
                                     ) : (
-                                        <button
-                                            onClick={() => handleCancelClick(order)}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
-                                                remaining > 0
-                                                    ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-600'
-                                                    : 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10'
-                                            }`}
-                                        >
-                                            <X size={15} /> Batal
-                                        </button>
+                                        // ── Tombol saat Menunggu (Beli Lagi & Batal) ──
+                                        <>
+                                            <button
+                                                onClick={() => handleReorder(order)}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors ${color.border} ${color.text} hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-95`}
+                                            >
+                                                <ShoppingBag size={15} /> Beli lagi
+                                            </button>
+                                            <button
+                                                onClick={() => handleCancelClick(order)}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
+                                                    remaining > 0
+                                                        ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-600'
+                                                        : 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10'
+                                                }`}
+                                            >
+                                                <X size={15} /> Batal
+                                            </button>
+                                        </>
                                     )}
                                 </div>
 
