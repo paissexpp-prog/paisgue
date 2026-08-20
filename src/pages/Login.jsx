@@ -32,7 +32,7 @@ export default function Login() {
       const res = await api.post('/auth/login', form);
       if (res.data.success) {
         localStorage.setItem('token', res.data.data.token);
-        showToast('✅ Login Berhasil! Masuk ke dashboard...', 'success');
+        showToast('Login Berhasil!', 'success');
         setTimeout(() => {
             navigate("/dashboard"); 
         }, 1000);

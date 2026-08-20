@@ -67,7 +67,7 @@ export default function Register() {
       const res = await api.post('/auth/register', payload);
       
       if (res.data.success) {
-        showToast('✅ Registrasi Berhasil! Mengalihkan...', 'success');
+        showToast('Registrasi Berhasil! Mengalihkan...', 'success');
         // Reset form agar bersih
         setForm({ username: '', email: '', password: '' });
         setIsAgreed(false);
