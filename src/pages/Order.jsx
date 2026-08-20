@@ -75,7 +75,7 @@ const ActiveOrderCard = memo(({
                 {/* ── ROW 1: Bendera + Nomor + Copy │ Tag Selesai/Timer ── */}
                 <div className="flex items-center justify-between gap-2">
                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-xl shrink-0 leading-none">{countryFlag}</span>
+                        <span className="text-xl shrink-0 leading-none flex items-center justify-center">{countryFlag}</span>
                         <span className="font-bold text-slate-800 dark:text-white text-base truncate tracking-wide">
                             {order.phone_number}
                         </span>
@@ -195,7 +195,7 @@ const ActiveOrderCard = memo(({
                     {isSmsReceived ? (
                         <>
                             <button
-                                onClick={() => onShowToast("Fitur Kirim Ulang segera hadir ⏳", "success")}
+                                onClick={() => onShowToast("Fitur Kirim Ulang segera hadir", "success")}
                                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors active:scale-95"
                             >
                                 <RefreshCw size={15} /> Kirim Ulang
@@ -234,20 +234,18 @@ const ActiveOrderCard = memo(({
 });
 
 // ================================================================
-// --- KOMPONEN ISOLASI DRAWER UNTUK MENCEGAH LAG ---
+// --- DRAWER SERVER UTAMA (V1) ---
 // ================================================================
 
-// 1. DRAWER LAYANAN SERVER UTAMA (OPTIMIZED DENGAN CHUNKING & ANIMASI GELOMBANG)
 const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectService, getOptimizedImage }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const deferredSearchTerm = useDeferredValue(searchTerm);
-    // State untuk membatasi jumlah render awal (Infinite Scroll logic)
     const [displayLimit, setDisplayLimit] = useState(20);
 
     useEffect(() => {
         if (!isOpen) {
             setSearchTerm('');
-            setDisplayLimit(20); // Reset limit saat drawer ditutup
+            setDisplayLimit(20); 
         }
     }, [isOpen]);
 
@@ -259,15 +257,12 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
 
     const isSearching = deferredSearchTerm.trim() !== '';
 
-    // Mengambil 6 data teratas (sebagai aplikasi populer sesuai instruksi backend array)
     const popularServices = useMemo(() => {
          return services.slice(0, 6);
     }, [services]);
 
-    // Fungsi deteksi scroll mentok bawah untuk menambah display limit
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
-        // Jika user scroll sampai jarak 50px dari bawah, load 20 item lagi
         if (scrollTop + clientHeight >= scrollHeight - 50) {
             if (displayLimit < filteredServices.length) {
                 setDisplayLimit(prev => prev + 20);
@@ -280,13 +275,12 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
             <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}></div>
             <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-[#f8fafc] shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
                 
-                {/* Header & Search */}
                 <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
                     <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">Beli Nomor Virtual</h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pilih sebuah aplikasi dan negaranya</p>
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">Server Utama</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pilih aplikasi (Get Virtual Number)</p>
                         </div>
                         <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><X size={22} className="text-slate-500" /></button>
                     </div>
@@ -302,18 +296,14 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                     </div>
                 </div>
 
-                {/* Content (Infinite Scroll Area) */}
                 <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
                     {loading ? (
                         <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
                     ) : (
                         <div className="space-y-8">
-                            
-                            {/* === APLIKASI POPULER (Sembunyi jika sedang mencari) === */}
                             {!isSearching && popularServices.length > 0 && (
                                 <div>
                                     <h3 className="text-[13px] font-black tracking-wide uppercase text-slate-800 dark:text-white mb-4">Aplikasi Populer</h3>
-                                    {/* Grid 2 Column meniru referensi gambar */}
                                     <div className="grid grid-cols-2 gap-3">
                                         {popularServices.map((item, index) => (
                                             <button 
@@ -332,7 +322,6 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                 </div>
                             )}
 
-                            {/* === SEMUA APLIKASI (List View Horizontal) === */}
                             <div>
                                 <h3 className="text-[13px] font-black tracking-wide uppercase text-slate-800 dark:text-white mb-4">
                                     {isSearching ? 'Hasil Pencarian' : 'Semua Aplikasi'}
@@ -363,13 +352,11 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                     </div>
                                 )}
                             </div>
-
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* CSS INJEKSI UNTUK ANIMASI GELOMBANG */}
             <style>{`
                 @keyframes waveFadeIn {
                     0% { opacity: 0; transform: translateY(15px) scale(0.98); }
@@ -380,7 +367,6 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
     );
 });
 
-// 2. DRAWER NEGARA SERVER UTAMA
 const CountriesDrawer = memo(({ isOpen, onBack, selectedService, countries, loading, expandedCountry, onToggleCountry, getOptimizedImage, onBuyClick }) => {
     return (
         <>
@@ -392,7 +378,6 @@ const CountriesDrawer = memo(({ isOpen, onBack, selectedService, countries, load
                         {selectedService && (<><img src={getOptimizedImage(selectedService.service_img)} className="w-8 h-8 object-contain" alt="" /><h3 className="font-bold text-slate-800 dark:text-white">{selectedService.service_name}</h3></>)}
                     </div>
                 </div>
-                {/* Padding dirubah menjadi pb-10 karena bottom bar operator dihilangkan */}
                 <div className={`flex-1 overflow-y-auto px-6 py-2 transition-all pb-10`}>
                     {loading ? (
                         <div className="space-y-3 mt-4">{[1,2,3].map(i=><div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div>
@@ -433,40 +418,239 @@ const CountriesDrawer = memo(({ isOpen, onBack, selectedService, countries, load
 });
 
 // ================================================================
+// --- DRAWER SERVER TERMURAH (V2) ---
+// ================================================================
+
+const V2CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectCountry, getCountryFlag }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+    const [displayLimit, setDisplayLimit] = useState(20);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            setDisplayLimit(20); 
+        }
+    }, [isOpen]);
+
+    const filteredCountries = useMemo(() => {
+        return countries.filter(c =>
+          c.name.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+        );
+    }, [countries, deferredSearchTerm]);
+
+    const handleScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {
+            if (displayLimit < filteredCountries.length) {
+                setDisplayLimit(prev => prev + 20);
+            }
+        }
+    };
+
+    return (
+        <>
+            <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}></div>
+            <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-[#f8fafc] shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                
+                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
+                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 leading-tight">Server Termurah</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 1: Pilih Negara</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><X size={22} className="text-slate-500" /></button>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-emerald-400 dark:focus-within:border-emerald-500">
+                        <Search size={18} className="text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Cari negara..." 
+                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
+                            value={searchTerm} 
+                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
+                    {loading ? (
+                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredCountries.length > 0 ? (
+                                <div className="flex flex-col gap-2.5">
+                                    {filteredCountries.slice(0, displayLimit).map((item, index) => (
+                                        <button 
+                                            key={item.id} 
+                                            onClick={() => onSelectCountry(item)} 
+                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-emerald-400 dark:hover:border-emerald-500 transition-all active:scale-[0.98]" 
+                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                <div className="text-2xl w-10 text-center flex justify-center">{getCountryFlag(item.name)}</div>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name}</span>
+                                            </div>
+                                            <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                                    <Globe size={32} className="mx-auto mb-3 opacity-50" />
+                                    Negara tidak ditemukan
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+});
+
+const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, loading, onSelectService, getOptimizedImage, getCountryFlag }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+    const [displayLimit, setDisplayLimit] = useState(20);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            setDisplayLimit(20); 
+        }
+    }, [isOpen]);
+
+    const filteredServices = useMemo(() => {
+        return services.filter(service =>
+          service.name.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+        );
+    }, [services, deferredSearchTerm]);
+
+    const handleScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {
+            if (displayLimit < filteredServices.length) {
+                setDisplayLimit(prev => prev + 20);
+            }
+        }
+    };
+
+    return (
+        <>
+            <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onBack}></div>
+            <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                
+                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
+                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><ChevronRight size={22} className="text-slate-500 rotate-180" /></button>
+                            <div>
+                                <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 leading-tight flex items-center gap-2">
+                                    {selectedCountry ? <>{getCountryFlag(selectedCountry.name)} {selectedCountry.name}</> : 'Server Termurah'}
+                                </h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 2: Pilih Layanan</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-emerald-400 dark:focus-within:border-emerald-500">
+                        <Search size={18} className="text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Cari aplikasi..." 
+                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
+                            value={searchTerm} 
+                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
+                    {loading ? (
+                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredServices.length > 0 ? (
+                                <div className="flex flex-col gap-2.5">
+                                    {filteredServices.slice(0, displayLimit).map((item, index) => (
+                                        <button 
+                                            key={item.code} 
+                                            onClick={() => onSelectService(item)} 
+                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-emerald-400 dark:hover:border-emerald-500 transition-all active:scale-[0.98]" 
+                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                <div className="bg-slate-50 w-10 h-10 p-1.5 flex items-center justify-center rounded-xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+                                                   {item.service_img ? 
+                                                       <img src={getOptimizedImage(item.service_img)} className="w-full h-full object-contain" loading="lazy" alt="" />
+                                                       : <Smartphone size={18} className="text-slate-400" />
+                                                   }
+                                                </div>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name}</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-3 py-1.5 rounded-lg">
+                                                Cek Harga
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                                    <Smartphone size={32} className="mx-auto mb-3 opacity-50" />
+                                    Layanan tidak ditemukan
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+});
+
+
+// ================================================================
 // --- MAIN COMPONENT ORDER ---
 // ================================================================
 export default function Order() {
   const { color } = useTheme();
   const navigate = useNavigate();
 
-  // --- STATE DATA UTAMA ---
+  // --- STATE DATA UTAMA (V1) ---
   const [balance, setBalance] = useState(0);
   const [ping, setPing] = useState(0);
   const [activeOrders, setActiveOrders] = useState([]);
 
   const [services, setServices] = useState([]);
   const [countries, setCountries] = useState([]);
-
-  // --- STATE CACHE OPERATOR IMAGES ---
   const [opImagesCache, setOpImagesCache] = useState({});
 
-  // --- STATE UI UTAMA ---
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadingCountries, setLoadingCountries] = useState(false);
 
-  // UI Controls UTAMA
-  const [sheetMode, setSheetMode] = useState(null);
+  // --- STATE DATA TERMURAH (V2) ---
+  const [v2Countries, setV2Countries] = useState([]);
+  const [v2Services, setV2Services] = useState([]);
+  const [loadingV2Countries, setLoadingV2Countries] = useState(false);
+  const [loadingV2Services, setLoadingV2Services] = useState(false);
+  
+  const [selectedV2Country, setSelectedV2Country] = useState(null);
+  const [selectedV2Service, setSelectedV2Service] = useState(null);
+
+  // UI Controls
+  const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
 
-  // --- STATE UNTUK OPERATOR MODAL (Baru) ---
+  // Modals
   const [operatorModal, setOperatorModal] = useState({
-      show: false,
-      country: null,
-      provider: null,
-      operators: [],
-      loading: false,
-      processingOpId: null
+      show: false, country: null, provider: null, operators: [], loading: false, processingOpId: null
+  });
+
+  const [v2PriceModal, setV2PriceModal] = useState({
+      show: false, data: null, loading: false, ordering: false
   });
 
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
@@ -475,7 +659,7 @@ export default function Order() {
 
   const lastFetchRef = useRef(0);
 
-  // Cache UTAMA
+  // Constants Cache
   const CACHE_KEY = 'otp_services_v12';
   const CACHE_TIME = 'otp_services_time_v12';
   const CACHE_DURATION = 60 * 60 * 1000;
@@ -483,6 +667,17 @@ export default function Order() {
   const COUNTRIES_CACHE_PREFIX      = 'otp_countries_v2_';
   const COUNTRIES_CACHE_TIME_PREFIX = 'otp_countries_time_v2_';
   const COUNTRIES_CACHE_DURATION    = 5 * 60 * 1000;
+
+  // Constants Cache V2
+  const V2_COUNTRIES_CACHE_KEY  = 'otp_v2_countries';
+  const V2_COUNTRIES_CACHE_TIME = 'otp_v2_countries_time';
+  const V2_SERVICES_PREFIX      = 'otp_v2_srv_';
+  const V2_SERVICES_TIME_PREFIX = 'otp_v2_srv_time_';
+  const V2_CACHE_DURATION       = 60 * 60 * 1000; // 1 Jam
+  
+  const V2_PRICE_PREFIX      = 'otp_v2_price_';
+  const V2_PRICE_TIME_PREFIX = 'otp_v2_price_time_';
+  const V2_PRICE_DURATION    = 2 * 60 * 1000; // 2 Menit Cache Harga
 
   const faqData = [
     {
@@ -519,23 +714,17 @@ export default function Order() {
 
   useEffect(() => {
     const savedOpImages = localStorage.getItem('operator_images_cache');
-    if (savedOpImages) {
-        setOpImagesCache(JSON.parse(savedOpImages));
-    }
+    if (savedOpImages) setOpImagesCache(JSON.parse(savedOpImages));
 
     fetchInitialData();
     
     const interval = setInterval(() => {
-        if (!document.hidden) {
-            fetchInitialData(true); 
-        }
+        if (!document.hidden) fetchInitialData(true); 
     }, 180000);
 
     const handleVisibilityChange = () => {
-        if (!document.hidden) {
-            if (Date.now() - lastFetchRef.current > 15000) {
-                fetchInitialData(true);
-            }
+        if (!document.hidden && Date.now() - lastFetchRef.current > 15000) {
+            fetchInitialData(true);
         }
     };
   
@@ -544,10 +733,7 @@ export default function Order() {
     let userId = null;
     try {
         const token = localStorage.getItem('token');
-        if (token) {
-            const decoded = jwtDecode(token);
-            userId = decoded?.userId || null;
-        }
+        if (token) userId = jwtDecode(token)?.userId || null;
     } catch (e) {}
 
     const socket = io('https://api.ruangotp.net', {
@@ -591,34 +777,25 @@ export default function Order() {
 
     try {
       const resUser = await api.get('/auth/me');
-      if (resUser.data.success) {
-          setBalance(resUser.data.data.balance);
-      }
+      if (resUser.data.success) setBalance(resUser.data.data.balance);
       
       if(!silent) setPing(Date.now() - start);
 
       const resHistory = await api.get('/history/list/order');
       if (resHistory.data.success) {
          const filteredOrders = resHistory.data.data;
-         
          setActiveOrders(prevOrders => {
              return filteredOrders.map(fetchedOrder => {
                  const fetchedId = fetchedOrder.order_id || fetchedOrder.id;
                  const existingOrder = prevOrders.find(o => (o.order_id || o.id) === fetchedId);
-                 
                  if (existingOrder) {
-                     return {
-                         ...fetchedOrder,
-                         sms_content: fetchedOrder.sms_content || fetchedOrder.sms || existingOrder.sms_content
-                     };
+                     return { ...fetchedOrder, sms_content: fetchedOrder.sms_content || fetchedOrder.sms || existingOrder.sms_content };
                  }
                  return fetchedOrder;
              });
          });
       }
-    } catch (e) { 
-        console.error("Fetch Error:", e);
-    }
+    } catch (e) {}
 
     if(!silent) loadServicesFromCache();
   };
@@ -629,8 +806,7 @@ export default function Order() {
     const now = Date.now();
 
     if (cachedData && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
-      const parsedData = JSON.parse(cachedData);
-      setServices(parsedData);
+      setServices(JSON.parse(cachedData));
       setLoadingServices(false);
     } else {
       try {
@@ -644,6 +820,131 @@ export default function Order() {
       setLoadingServices(false);
     }
   };
+
+  // ================================================================
+  // --- FLOW SERVER TERMURAH (V2) LOGIC ---
+  // ================================================================
+  
+  const handleOpenV2 = async () => {
+      setSheetMode('v2_countries');
+      setLoadingV2Countries(true);
+      
+      const cached = localStorage.getItem(V2_COUNTRIES_CACHE_KEY);
+      const cachedTime = localStorage.getItem(V2_COUNTRIES_CACHE_TIME);
+      const now = Date.now();
+
+      if (cached && cachedTime && (now - parseInt(cachedTime, 10) < V2_CACHE_DURATION)) {
+          setV2Countries(JSON.parse(cached));
+          setLoadingV2Countries(false);
+      } else {
+          try {
+              const res = await api.get('/country-v2/list');
+              if (res.data.success) {
+                  setV2Countries(res.data.data);
+                  localStorage.setItem(V2_COUNTRIES_CACHE_KEY, JSON.stringify(res.data.data));
+                  localStorage.setItem(V2_COUNTRIES_CACHE_TIME, now.toString());
+              }
+          } catch (err) {
+              showToast("Gagal memuat negara server termurah", "error");
+          } finally {
+              setLoadingV2Countries(false);
+          }
+      }
+  };
+
+  const handleV2CountryClick = async (country) => {
+      setSelectedV2Country(country);
+      setSheetMode('v2_services');
+      setV2Services([]);
+      setLoadingV2Services(true);
+
+      const cacheKey = V2_SERVICES_PREFIX + country.id;
+      const cacheTime = V2_SERVICES_TIME_PREFIX + country.id;
+      const now = Date.now();
+
+      setTimeout(async () => {
+          try {
+              const cached = localStorage.getItem(cacheKey);
+              const cachedTimeVal = localStorage.getItem(cacheTime);
+              
+              if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V2_CACHE_DURATION)) {
+                  setV2Services(JSON.parse(cached));
+              } else {
+                  const res = await api.get(`/services-v2/list?country=${country.id}`);
+                  if (res.data.success) {
+                      setV2Services(res.data.data);
+                      localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                      localStorage.setItem(cacheTime, now.toString());
+                  }
+              }
+          } catch (err) {
+              showToast("Gagal memuat layanan server termurah", "error");
+          } finally {
+              setLoadingV2Services(false);
+          }
+      }, 300);
+  };
+
+  const handleV2ServiceClick = async (service) => {
+      setSelectedV2Service(service);
+      setV2PriceModal({ show: true, data: null, loading: true, ordering: false });
+
+      const cacheKey = V2_PRICE_PREFIX + service.code + '_' + selectedV2Country.id;
+      const cacheTime = V2_PRICE_TIME_PREFIX + service.code + '_' + selectedV2Country.id;
+      const now = Date.now();
+
+      try {
+          const cached = localStorage.getItem(cacheKey);
+          const cachedTimeVal = localStorage.getItem(cacheTime);
+
+          if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V2_PRICE_DURATION)) {
+              setV2PriceModal({ show: true, data: JSON.parse(cached), loading: false, ordering: false });
+          } else {
+              const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}`);
+              if (res.data.success) {
+                  setV2PriceModal({ show: true, data: res.data.data, loading: false, ordering: false });
+                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                  localStorage.setItem(cacheTime, now.toString());
+              } else {
+                  setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+                  showToast(res.data.message || "Gagal cek harga", "error");
+              }
+          }
+      } catch (err) {
+          setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+          showToast("Gagal cek harga layanan", "error");
+      }
+  };
+
+  const processV2Buy = async (priceData) => {
+      if (balance < priceData.price.sell) {
+          return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
+      }
+
+      setV2PriceModal(prev => ({ ...prev, ordering: true }));
+
+      try {
+          const res = await api.get(`/order-v2/buy?service=${priceData.service}&country=${priceData.country}&expected_price=${priceData.price.sell}`);
+          if (res.data.success) {
+              setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+              setSheetMode(null); 
+              showToast("Order Server Termurah Berhasil!", "success");
+              fetchInitialData();
+          } else {
+              setV2PriceModal(prev => ({ ...prev, ordering: false }));
+              showToast(res.data.message || "Order Gagal", "error");
+          }
+      } catch (err) {
+          setV2PriceModal(prev => ({ ...prev, ordering: false }));
+          const errorMsg = err.response?.data?.message || err.response?.data?.error?.message || "Gagal memproses order, coba lagi.";
+          showToast(errorMsg, "error");
+          fetchInitialData(true);
+      }
+  };
+
+  // ================================================================
+  // --- GENERAL HANDLERS ---
+  // ================================================================
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -661,7 +962,7 @@ export default function Order() {
   const handleCopy = (text) => {
       if (!text) return;
       navigator.clipboard.writeText(text);
-      showToast("Berhasil disalin! 📋", "success");
+      showToast("Berhasil disalin!", "success");
   };
 
   const handleServiceClick = (service) => {
@@ -675,17 +976,12 @@ export default function Order() {
     const cacheTimeKey = COUNTRIES_CACHE_TIME_PREFIX + service.service_code;
     const now          = Date.now();
 
-    // ⏱️ DELAY 300ms: Membiarkan animasi laci selesai dengan mulus sebelum mem-parsing data berat JSON
     setTimeout(async () => {
         try {
           const cachedCountries     = localStorage.getItem(cacheKey);
           const cachedCountriesTime = localStorage.getItem(cacheTimeKey);
 
-          if (
-            cachedCountries &&
-            cachedCountriesTime &&
-            (now - parseInt(cachedCountriesTime, 10) < COUNTRIES_CACHE_DURATION)
-          ) {
+          if (cachedCountries && cachedCountriesTime && (now - parseInt(cachedCountriesTime, 10) < COUNTRIES_CACHE_DURATION)) {
             setCountries(JSON.parse(cachedCountries));
           } else {
             const res = await api.get(`/countries/list?service_id=${service.service_code}`);
@@ -697,43 +993,28 @@ export default function Order() {
           }
         } catch (err) { 
           showToast("Gagal memuat negara", "error");
-        } 
-        finally { 
+        } finally { 
           setLoadingCountries(false); 
         }
     }, 300);
   };
 
   const toggleCountry = (country) => {
-      // HANYA toggle state akordeon, TIDAK memanggil API Operator di sini lagi (No Lag!)
-      if (expandedCountry === country.number_id) { 
-          setExpandedCountry(null); 
-      } else {
-          setExpandedCountry(country.number_id);
-      }
+      if (expandedCountry === country.number_id) setExpandedCountry(null); 
+      else setExpandedCountry(country.number_id);
   };
 
   const handleBuyClick = async (country, provider) => {
-      if (balance < provider.price) return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
+      if (balance < provider.price) return showToast("Saldo tidak mencukupi!", "error");
       
-      // Buka Modal Operator dengan status loading
-      setOperatorModal({
-          show: true,
-          country: country,
-          provider: provider,
-          operators: [],
-          loading: true,
-          processingOpId: null
-      });
+      setOperatorModal({ show: true, country: country, provider: provider, operators: [], loading: true, processingOpId: null });
 
-      // Lakukan fetch operator di background
       try {
           const res = await api.get(`/operators/list?country=${country.name}&provider_id=${provider.provider_id}`);
           if (res.data.success) {
               const ops = res.data.data;
               setOperatorModal(prev => ({ ...prev, operators: ops, loading: false }));
               
-              // Caching logic
               const currentCache = JSON.parse(localStorage.getItem('operator_images_cache') || '{}');
               let isUpdated = false;
               ops.forEach(op => {
@@ -755,33 +1036,30 @@ export default function Order() {
   };
 
   const processBuy = async (country, provider, opId) => {
-      // Set loading state pada card operator yang sedang diklik
       setOperatorModal(prev => ({ ...prev, processingOpId: opId }));
-
       const opIdToSend = opId || 'any';
       const buyUrl = `/orders/buy?number_id=${country.number_id}&provider_id=${provider.provider_id}&operator_id=${opIdToSend}&expected_price=${provider.price}`;
       
       try {
           const res = await api.get(buyUrl);
           if (res.data.success) {
-              // Sukses: Tutup modal operator saja, jangan ubah sheetMode
               setOperatorModal(prev => ({ ...prev, show: false, processingOpId: null }));
-              showToast("✅ Order Berhasil! Menunggu SMS...", "success");
+              showToast("Order Berhasil! Menunggu SMS...", "success");
               fetchInitialData();
           } else {
               setOperatorModal(prev => ({ ...prev, processingOpId: null }));
               let errorMsg = res.data.error?.message || res.data.message || "Order Gagal";
               if (errorMsg.toLowerCase().includes("rate limit") || errorMsg.toLowerCase().includes("please wait")) {
-                  errorMsg = "Sistem pusat sedang sibuk. Silakan coba klik order lagi dalam 1-2 detik ya! ⏳";
+                  errorMsg = "Sistem pusat sedang sibuk. Silakan coba klik order lagi dalam 1-2 detik ya!";
               }
               showToast(errorMsg, "error");
           }
       } catch (err) {
           setOperatorModal(prev => ({ ...prev, processingOpId: null }));
-          const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || "Gagal memproses order coba lagi .";
+          const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || "Gagal memproses order coba lagi.";
           let finalMsg = errorMsg;
           if (finalMsg.toLowerCase().includes("rate limit") || finalMsg.toLowerCase().includes("please wait")) {
-              finalMsg = "Sistem pusat sedang sibuk. Silakan coba klik order lagi dalam 1-2 detik ya! ⏳";
+              finalMsg = "Sistem pusat sedang sibuk. Silakan coba klik order lagi";
           }
           showToast(finalMsg, "error");
           fetchInitialData(true);
@@ -791,7 +1069,7 @@ export default function Order() {
   const handleCancelClick = (order) => {
      const remaining = calculateRemainingTime(order.created_at, Date.now());
      if (remaining > 0) {
-         showConfirm("⏳ Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(remaining)} lagi.`, closeConfirm, "Saya Mengerti");
+         showConfirm("Belum Bisa Batal", `Pembatalan baru bisa dilakukan setelah 4 menit.\nMohon tunggu ${formatTime(remaining)} lagi.`, closeConfirm, "Saya Mengerti");
          return;
      }
 
@@ -799,7 +1077,11 @@ export default function Order() {
          setConfirmModal(prev => ({ ...prev, loading: true }));
          try {
             const targetId = order.order_id || order.id || '';
-            const cancelUrl = `/orders/cancel?order_id=${targetId}`;
+            
+            // LOGIKA PEMISAHAN CANCEL V1 & V2
+            const cancelUrl = order.version === 'v2' 
+                ? `/order-v2/cancel?order_id=${targetId}` 
+                : `/orders/cancel?order_id=${targetId}`;
 
             await api.get(cancelUrl);
             setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
@@ -819,18 +1101,13 @@ export default function Order() {
   const handleCloseOrder = async (orderId) => {
       setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
       let attempt = 0;
-      const maxRetry = 3;
-      while (attempt < maxRetry) {
+      while (attempt < 3) {
           try {
               await api.post('/cekselesai/tutup', { order_id: orderId });
               break;
           } catch (err) {
               attempt++;
-              if (attempt < maxRetry) {
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-              } else {
-                  console.error("Gagal sinkronisasi tutup order ke backend:", err);
-              }
+              if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
           }
       }
   };
@@ -840,8 +1117,20 @@ export default function Order() {
     return url; 
   };
 
+  // ================================================================
+  // PERUBAHAN UTAMA: getCountryFlag
+  // Sekarang mengembalikan komponen badge yang sangat rapi jika
+  // bendera negara tidak ditemukan di dalam dictionary.
+  // ================================================================
   const getCountryFlag = (countryName) => {
-    if (!countryName) return '🌐';
+    if (!countryName) {
+        return (
+            <div className="inline-flex items-center justify-center w-[1.3em] h-[1.3em] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[0.65em] font-bold border border-slate-200 dark:border-slate-700 align-middle shrink-0 shadow-sm">
+                ?
+            </div>
+        );
+    }
+
     const flags = {
       'indonesia': '🇮🇩', 'russia': '🇷🇺', 'united states': '🇺🇸', 'usa': '🇺🇸',
       'united kingdom': '🇬🇧', 'uk': '🇬🇧', 'england': '🇬🇧', 'philippines': '🇵🇭',
@@ -857,12 +1146,25 @@ export default function Order() {
       'colombia': '🇨🇴', 'argentina': '🇦🇷', 'peru': '🇵🇪', 'chile': '🇨🇱',
       'venezuela': '🇻🇪', 'nepal': '🇳🇵', 'sri lanka': '🇱🇰', 'laos': '🇱🇦',
       'portugal': '🇵🇹', 'belgium': '🇧🇪', 'switzerland': '🇨🇭', 'austria': '🇦🇹',
-      'saudi arabia': '🇸🇦', 'uae': '🇦🇪', 
-      'united arab emirates': '🇦🇪',
+      'saudi arabia': '🇸🇦', 'uae': '🇦🇪', 'united arab emirates': '🇦🇪',
       'israel': '🇮🇱', 'morocco': '🇲🇦', 'tunisia': '🇹🇳', 'algeria': '🇩🇿',
       'global': '🌐', 'any': '🌐',
     };
-    return flags[countryName.toLowerCase()] || '🌐';
+
+    const nameLower = countryName.toLowerCase();
+    
+    // Jika ada di mapping, gunakan emoji bendera aslinya
+    if (flags[nameLower]) {
+      return flags[nameLower];
+    }
+
+    // Jika TIDAK ADA, buat Avatar Bulat (Badge) yang modern & profesional
+    const initial = countryName.charAt(0).toUpperCase();
+    return (
+      <div className="inline-flex items-center justify-center w-[1.3em] h-[1.3em] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[0.65em] font-bold border border-slate-200 dark:border-slate-700 align-middle shrink-0 shadow-sm">
+        {initial}
+      </div>
+    );
   };
 
   const getServiceImg = (serviceName) => {
@@ -872,11 +1174,26 @@ export default function Order() {
   };
 
   const handleReorder = (order) => {
-    const found = services.find(s => s.service_name?.toLowerCase() === order.service?.toLowerCase());
-    if (found) {
-        handleServiceClick(found);
+    if (order.version === 'v2') {
+        // Reorder Server Termurah V2
+        if (v2Countries.length > 0) {
+            const countryV2 = v2Countries.find(c => String(c.id) === String(order.country) || c.name.toLowerCase() === order.countryName?.toLowerCase());
+            if (countryV2) {
+                handleV2CountryClick(countryV2);
+            } else {
+                handleOpenV2();
+            }
+        } else {
+            handleOpenV2();
+        }
     } else {
-        setSheetMode('services');
+        // Reorder Server Utama V1
+        const found = services.find(s => s.service_name?.toLowerCase() === order.service?.toLowerCase());
+        if (found) {
+            handleServiceClick(found);
+        } else {
+            setSheetMode('services');
+        }
     }
   };
 
@@ -903,21 +1220,50 @@ export default function Order() {
       {/* KONTEN */}
       <div className="px-5 mt-6 space-y-6">
         
-        {/* BUTTON GET NUMBER */}
-        <button onClick={() => setSheetMode('services')} className={`w-full group relative overflow-hidden rounded-3xl p-6 text-left shadow-xl transition-transform active:scale-95 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-blue-900 dark:to-slate-900`}>
-            <div className="relative z-10 flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-white mb-1">Get Virtual Number</h2>
-                    <p className="text-slate-300 text-sm opacity-90">Pilih layanan dari 190+ negara</p>
+        {/* =========================================
+            TOMBOL PILIHAN ORDER (UTAMA & TERMURAH)
+            ========================================= */}
+        <div className="grid grid-cols-1 gap-4">
+            
+            {/* Tombol Server Utama */}
+            <button 
+                onClick={() => setSheetMode('services')} 
+                className="w-full group relative overflow-hidden rounded-3xl p-6 text-left shadow-xl transition-transform active:scale-95 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-blue-900 dark:to-slate-900"
+            >
+                <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white mb-1">Server Utama</h2>
+                        <p className="text-slate-300 text-sm opacity-90">(Get Virtual Number)</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                        <Plus size={24} className="text-white" />
+                    </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
-                    <Plus size={24} className="text-white" />
+                <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
+                    <Smartphone size={100} className="text-white" />
                 </div>
-            </div>
-            <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
-                <Smartphone size={120} className="text-white" />
-            </div>
-        </button>
+            </button>
+
+            {/* Tombol Server Termurah (V2) */}
+            <button 
+                onClick={handleOpenV2} 
+                className="w-full group relative overflow-hidden rounded-3xl p-5 text-left shadow-lg transition-transform active:scale-95 bg-gradient-to-r from-emerald-600 to-teal-700 dark:from-emerald-800 dark:to-teal-900"
+            >
+                <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-white mb-0.5">Server Termurah</h2>
+                        <p className="text-emerald-100 text-xs opacity-90">Harga ekonomis, proses instan</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                        <Plus size={20} className="text-white" />
+                    </div>
+                </div>
+                <div className="absolute -right-2 -bottom-4 opacity-10 rotate-12">
+                    <Globe size={80} className="text-white" />
+                </div>
+            </button>
+            
+        </div>
 
         {/* INFO CARDS */}
         <div className="grid grid-cols-2 gap-4">
@@ -932,7 +1278,7 @@ export default function Order() {
                 <div className="p-2 w-fit rounded-lg bg-blue-50 text-blue-600 mb-2 dark:bg-blue-900/20"><Globe size={18} /></div>
                 <p className="text-xs text-slate-400">Total Negara</p>
                 <p className="font-bold text-slate-700 dark:text-slate-200">
-                    193 Negara
+                    193+ Negara
                 </p>
             </div>
         </div>
@@ -950,7 +1296,7 @@ export default function Order() {
                     <button
                         onClick={() => { 
                              if (Date.now() - lastFetchRef.current < 3000) {
-                                 showToast("Tunggu sebentar sebelum refresh lagi ⏳", "error");
+                                 showToast("Tunggu sebentar sebelum refresh lagi", "error");
                                 return;
                              }
                             showToast("Merefresh data...", "success");
@@ -964,15 +1310,26 @@ export default function Order() {
 
                 {activeOrders.map((order) => {
                     const orderId = order.order_id || order.id || '';
-                    const serviceImg = getServiceImg(order.service);
+                    
+                    // Fallback image handling
+                    let serviceImg = null;
+                    if (order.version === 'v2') {
+                        // Jika V2 dan tidak ada logic fetch img history, bisa fallback ke icon smartphone
+                        serviceImg = null; 
+                    } else {
+                        serviceImg = getServiceImg(order.service);
+                    }
                     
                     const otpDisplay = order.otp_code || (order.sms_content?.match(/\d+/)?.[0]) || '';
                     const smsText = order.sms_content || order.sms || order.message || 
                         (otpDisplay ? `Kode OTP ${order.service || ''} Anda adalah: ${otpDisplay}` : 'Pesan kosong diterima dari server.');
 
-                    const operatorName = order.operator || 'any';
+                    // V2 tidak pakai operator, fallback ke 'any'
+                    const operatorName = order.version === 'v2' ? 'any' : (order.operator || 'any');
                     const isOpAny = operatorName.toLowerCase() === 'any' || operatorName.toLowerCase() === 'random';
                     const opImgCached = opImagesCache[operatorName.toUpperCase()];
+
+                    const finalCountryName = order.countryName || order.country;
 
                     return (
                         <ActiveOrderCard
@@ -986,7 +1343,7 @@ export default function Order() {
                             onShowToast={showToast}
                             getOptimizedImage={getOptimizedImage}
                             serviceImg={serviceImg}
-                            countryFlag={getCountryFlag(order.country)}
+                            countryFlag={getCountryFlag(finalCountryName)}
                             opImgCached={opImgCached}
                             otpDisplay={otpDisplay}
                             smsText={smsText}
@@ -1007,13 +1364,7 @@ export default function Order() {
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-[250px]">
                     Anda belum memiliki pesanan virtual number yang aktif saat ini.
                 </p>
-                <button 
-                    onClick={() => setSheetMode('services')}
-                    className={`flex items-center gap-2 px-6 py-3 mb-6 rounded-xl text-white font-bold text-sm shadow-lg transition-transform active:scale-95 ${color.btn}`}
-                >
-                    <Plus size={16} /> Beli Nomor Sekarang
-                </button>
-
+                
                 <div className="flex gap-3 w-full max-w-[250px]">
                     <button 
                         onClick={() => navigate('/history')}
@@ -1099,7 +1450,84 @@ export default function Order() {
 
       </div>
 
-      {/* MODAL OPERATOR SELULER (SATU KALI KLIK LANGSUNG ORDER) */}
+      {/* =========================================================
+          MODAL UNTUK KONFIRMASI HARGA & ORDER (SERVER TERMURAH V2)
+          ========================================================= */}
+      {v2PriceModal.show && (
+          <div 
+              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-5 animate-in fade-in duration-200" 
+              onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false })}
+          >
+              <div 
+                  className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 border border-slate-100 dark:border-slate-800" 
+                  onClick={e => e.stopPropagation()}
+              >
+                  {v2PriceModal.loading ? (
+                      <div className="flex flex-col items-center justify-center py-8">
+                          <Loader2 size={36} className="text-emerald-500 animate-spin mb-4" />
+                          <p className="text-slate-500 font-medium">Mengecek harga realtime...</p>
+                      </div>
+                  ) : v2PriceModal.data ? (
+                      <div>
+                          <div className="flex items-center justify-between mb-5 border-b border-slate-100 dark:border-slate-800 pb-4">
+                              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Detail Pesanan</h3>
+                              <button 
+                                  onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false })} 
+                                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                              >
+                                  <X size={20} />
+                              </button>
+                          </div>
+
+                          <div className="space-y-4 mb-6">
+                              <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-500">Layanan</span>
+                                  <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                      {v2PriceModal.data.name}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-500">Negara</span>
+                                  <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                      {getCountryFlag(v2PriceModal.data.countryName)} {v2PriceModal.data.countryName}
+                                  </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                  <span className="text-sm text-slate-500">Sisa Stok</span>
+                                  <span className={`font-bold text-sm px-2 py-0.5 rounded ${v2PriceModal.data.stock > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700'}`}>
+                                      {v2PriceModal.data.stock} Tersedia
+                                  </span>
+                              </div>
+                              <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Total Harga</span>
+                                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                      Rp {v2PriceModal.data.price?.sell?.toLocaleString('id-ID') || 0}
+                                  </span>
+                              </div>
+                          </div>
+
+                          <button 
+                              onClick={() => processV2Buy(v2PriceModal.data)}
+                              disabled={v2PriceModal.ordering || v2PriceModal.data.stock <= 0}
+                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v2PriceModal.ordering || v2PriceModal.data.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'}`}
+                          >
+                              {v2PriceModal.ordering ? (
+                                  <><Loader2 size={18} className="animate-spin" /> Memproses...</>
+                              ) : v2PriceModal.data.stock <= 0 ? (
+                                  'Stok Habis'
+                              ) : (
+                                  <><ShoppingBag size={18} /> Beli Sekarang</>
+                              )}
+                          </button>
+                      </div>
+                  ) : (
+                      <div className="text-center py-6 text-slate-500">Gagal memuat detail harga.</div>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* MODAL OPERATOR SELULER (SERVER UTAMA V1) */}
       {operatorModal.show && (
           <div 
               className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-5 animate-in fade-in duration-200" 
@@ -1146,7 +1574,7 @@ export default function Order() {
                               )}
                           </button>
 
-                          {/* List Operator dari API */}
+                          {/* List Operator */}
                           {operatorModal.operators.filter(op => op.name !== 'any').map((op) => {
                               const opIdentifier = op.id || op.name;
                               const isProcessing = operatorModal.processingOpId === opIdentifier;
@@ -1192,7 +1620,7 @@ export default function Order() {
           </div>
       )}
 
-      {/* CONFIRM MODAL UTAMA & TOAST */}
+      {/* CONFIRM MODAL UTAMA */}
       {confirmModal.show && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
               <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
@@ -1216,7 +1644,7 @@ export default function Order() {
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span className="text-sm font-bold">{toast.message}</span>
       </div>
 
-      {/* IMPLEMENTASI DRAWERS YANG SUDAH DIOPTIMASI */}
+      {/* IMPLEMENTASI DRAWERS V1 */}
       <ServicesDrawer
           isOpen={sheetMode === 'services'}
           onClose={() => setSheetMode(null)}
@@ -1236,6 +1664,27 @@ export default function Order() {
           onToggleCountry={toggleCountry}
           getOptimizedImage={getOptimizedImage}
           onBuyClick={handleBuyClick}
+      />
+
+      {/* IMPLEMENTASI DRAWERS V2 (TERMURAH) */}
+      <V2CountriesDrawer
+          isOpen={sheetMode === 'v2_countries'}
+          onClose={() => setSheetMode(null)}
+          countries={v2Countries}
+          loading={loadingV2Countries}
+          onSelectCountry={handleV2CountryClick}
+          getCountryFlag={getCountryFlag}
+      />
+
+      <V2ServicesDrawer
+          isOpen={sheetMode === 'v2_services'}
+          onBack={() => setSheetMode('v2_countries')}
+          selectedCountry={selectedV2Country}
+          services={v2Services}
+          loading={loadingV2Services}
+          onSelectService={handleV2ServiceClick}
+          getOptimizedImage={getOptimizedImage}
+          getCountryFlag={getCountryFlag}
       />
 
       <BottomNav />
