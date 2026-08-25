@@ -11,7 +11,7 @@
   ">
 
   <url>
-    <loc>https://ruangotp.net/</loc>
+    <loc>https://ruangotp.io/</loc>
     <lastmod>2026-04-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -23,7 +23,7 @@
   </url>
 
   <url>
-    <loc>https://ruangotp.net/login</loc>
+    <loc>https://ruangotp.io/login</loc>
     <lastmod>2026-04-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -35,7 +35,7 @@
   </url>
 
   <url>
-    <loc>https://ruangotp.net/register</loc>
+    <loc>https://ruangotp.io/register</loc>
     <lastmod>2026-04-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -47,14 +47,14 @@
   </url>
 
   <url>
-    <loc>https://ruangotp.net/forgot-password</loc>
+    <loc>https://ruangotp.io/forgot-password</loc>
     <lastmod>2026-04-10</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://ruangotp.net/ketentuan</loc>
+    <loc>https://ruangotp.io/ketentuan</loc>
     <lastmod>2026-04-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -66,7 +66,7 @@
   </url>
 
   <url>
-    <loc>https://ruangotp.net/api/dev</loc>
+    <loc>https://ruangotp.io/api/dev</loc>
     <lastmod>2026-04-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

@@ -35,7 +35,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.nekohime.site https://images.weserv.nl https://cdn-icons-png.flaticon.com https://mustikapayment.com https://cdn.ruangotp.net https://www.rumahotp.io https://assets.cindigital.id; connect-src 'self' https://api.ruangotp.net https://virtusim.com wss://api.ruangotp.net wss://api.ruangotp.id; frame-ancestors 'none';"
+          "value": "default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://cdn.nekohime.site https://images.weserv.nl https://cdn-icons-png.flaticon.com https://mustikapayment.com https://cdn.ruangotp.io https://www.rumahotp.io https://assets.cindigital.id; connect-src 'self' https://api.ruangotp.io https://virtusim.com wss://api.ruangotp.io wss://api.ruangotp.id; frame-ancestors 'none';"
         }
       ]
     }

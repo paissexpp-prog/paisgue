@@ -2,7 +2,7 @@ import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
 
 const api = axios.create({
-  baseURL: 'https://api.ruangotp.net/api', 
+  baseURL: 'https://api.ruangotp.io/api', 
   headers: {
     'Content-Type': 'application/json',
   },

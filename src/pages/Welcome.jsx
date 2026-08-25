@@ -236,9 +236,9 @@ export default function Welcome() {
         <title>RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia</title>
         <meta name="description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah. Daftar gratis sekarang!" />
         <meta name="keywords" content="RuangOTP, ruangotp, ruang otp, ruang-otp, jasa otp, beli otp, otp murah, layanan otp indonesia, verifikasi otp, nomor virtual indonesia, beli nomor otp, otp whatsapp murah, verifikasi telegram, otp google, nomor virtual sekali pakai, sms verification indonesia, otp bypass, sms otp service, virtual number indonesia" />
-        <link rel="canonical" href="https://ruangotp.net/" />
+        <link rel="canonical" href="https://ruangotp.io/" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://ruangotp.net/" />
+        <meta property="og:url" content="https://ruangotp.io/" />
         <meta property="og:site_name" content="RuangOTP" />
         <meta property="og:title" content="RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia" />
         <meta property="og:description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah." />
@@ -258,9 +258,9 @@ export default function Welcome() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@graph": [
-              { "@type": "WebSite", "@id": "https://ruangotp.net/#website", "url": "https://ruangotp.net/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.net/?s={search_term_string}", "query-input": "required name=search_term_string" } },
-              { "@type": "Organization", "@id": "https://ruangotp.net/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.net/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_ruangotp", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_ruangotp"] },
-              { "@type": "WebPage", "@id": "https://ruangotp.net/#webpage", "url": "https://ruangotp.net/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.net/#website" }, "about": { "@id": "https://ruangotp.net/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
+              { "@type": "WebSite", "@id": "https://ruangotp.io/#website", "url": "https://ruangotp.io/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.io/?s={search_term_string}", "query-input": "required name=search_term_string" } },
+              { "@type": "Organization", "@id": "https://ruangotp.io/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.io/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_ruangotp", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_ruangotp"] },
+              { "@type": "WebPage", "@id": "https://ruangotp.io/#webpage", "url": "https://ruangotp.io/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.io/#website" }, "about": { "@id": "https://ruangotp.io/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
             ]
           })}
         </script>

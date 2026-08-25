@@ -200,12 +200,12 @@ export default function Ketentuan() {
         <meta name="description" content="Syarat dan ketentuan penggunaan layanan RuangOTP. Harap baca dan pahami kebijakan layanan Virtual Number & OTP kami sebelum mendaftar." />
         <meta name="keywords" content="ketentuan layanan ruangotp, syarat ruangotp, kebijakan privasi ruangotp, aturan otp" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://ruangotp.net/ketentuan" />
+        <link rel="canonical" href="https://ruangotp.io/ketentuan" />
         
         {/* Open Graph / Media Sosial */}
         <meta property="og:title" content="Ketentuan Layanan - RuangOTP" />
         <meta property="og:description" content="Syarat dan ketentuan penggunaan layanan RuangOTP. Harap baca dan pahami kebijakan layanan Virtual Number & OTP kami sebelum mendaftar." />
-        <meta property="og:url" content="https://ruangotp.net/ketentuan" />
+        <meta property="og:url" content="https://ruangotp.io/ketentuan" />
         <meta property="og:type" content="website" />
       </Helmet>
 

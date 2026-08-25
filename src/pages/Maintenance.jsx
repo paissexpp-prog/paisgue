@@ -18,7 +18,7 @@ const Maintenance = () => {
     setIsChecking(true);
     try {
       // Gunakan raw fetch agar tidak kena interceptor axios yang akan loop ke /maintenance
-      const res = await fetch('https://api.ruangotp.net/api/auth/me', {
+      const res = await fetch('https://api.ruangotp.io/api/auth/me', {
         method: 'GET',
         signal: AbortSignal.timeout(4000), // timeout 4 detik
       });

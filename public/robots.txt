@@ -14,5 +14,5 @@ Allow: /forgot-password
 Allow: /ketentuan
 Allow: /api/dev
 
-Sitemap: https://ruangotp.net/sitemap.xml
+Sitemap: https://ruangotp.io/sitemap.xml
 

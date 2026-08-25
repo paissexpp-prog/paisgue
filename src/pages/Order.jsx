@@ -736,7 +736,7 @@ export default function Order() {
         if (token) userId = jwtDecode(token)?.userId || null;
     } catch (e) {}
 
-    const socket = io('https://api.ruangotp.net', {
+    const socket = io('https://api.ruangotp.io', {
         auth: { userId },
         transports: ['websocket'],
         reconnectionAttempts: 5,

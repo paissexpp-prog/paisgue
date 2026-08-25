@@ -291,7 +291,7 @@ export default function Dokumentasi() {
       parameters: [
         { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    { "service_code": 13, "service_name": "WhatsApp", "category": "Social", "status": true },\n    { "service_code": 59, "service_name": "DANA", "category": "E-wallet", "status": true }\n  ]\n}`
     },
     {
@@ -303,7 +303,7 @@ export default function Dokumentasi() {
         { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
         { name: "service_id", type: "query", required: true, desc: "Kode layanan (cth: 13 untuk WA)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/countries/list?service_id=13', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/countries/list?service_id=13', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    {\n      "number_id": 837,\n      "name": "Indonesia",\n      "prefix": "+62",\n      "stock_total": 3306,\n      "pricelist": [\n        { "provider_id": 3237, "server_id": 2, "stock": 7, "price": 750, "price_format": "Rp750" }\n      ]\n    }\n  ]\n}`
     },
     {
@@ -316,7 +316,7 @@ export default function Dokumentasi() {
         { name: "country", type: "query", required: true, desc: "Nama negara (cth: Indonesia)" },
         { name: "provider_id", type: "query", required: true, desc: "ID Provider dari endpoint countries" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/operators/list?country=Indonesia&provider_id=3237', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/operators/list?country=Indonesia&provider_id=3237', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    { "id": 1, "name": "any", "image": "..." },\n    { "id": 3, "name": "telkomsel", "image": "..." }\n  ]\n}`
     },
     {
@@ -337,7 +337,7 @@ export default function Dokumentasi() {
             { name: "operator_id", type: "query", required: true, desc: "ID Operator (dari endpoint Operators, atau 'any')" },
             { name: "expected_price", type: "query", required: true, desc: "Harga sesuai pricelist" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/buy', {\n  params: { number_id: 837, provider_id: 3237, operator_id: 'any', expected_price: 750 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/orders/buy', {\n  params: { number_id: 837, provider_id: 3237, operator_id: 'any', expected_price: 750 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Pembelian berhasil",\n  "data": {\n    "order_id": "RUANGOTP405817",\n    "phone_number": "+62 857 2105 2792",\n    "price": 750,\n    "remaining_balance": 6500\n  }\n}`
         },
         {
@@ -350,7 +350,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "order_id", type: "query", required: true, desc: "ID Order (RUANGOTP...)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/check-status', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/orders/check-status', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `// ACTIVE — Menunggu SMS\n{ "success": true, "data": { "order_id": "RUANGOTP405817", "status": "ACTIVE" } }\n\n// COMPLETED — Ada OTP\n{ "success": true, "data": { "order_id": "RUANGOTP405817", "status": "COMPLETED", "otp_code": "4585" } }`
         },
         {
@@ -363,7 +363,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "order_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/cancel', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/orders/cancel', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Pesanan berhasil dibatalkan. Saldo telah dikembalikan.",\n  "data": { "order_id": "RUANGOTP405817", "refund_amount": 750, "current_balance": 7250 }\n}`
         }
       ]
@@ -383,7 +383,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "amount", type: "query", required: true, desc: "Nominal deposit (Min. Rp500)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "QRIS Berhasil dibuat",\n  "data": {\n    "deposit_id": "DEP-816176",\n    "amount_received": 10000,\n    "total_pay": 10569,\n    "qr_image": "data:image/png;base64,....",\n    "expired_at": 1773668680946\n  }\n}`
         },
         {
@@ -396,7 +396,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "deposit_id", type: "query", required: true, desc: "ID Deposit (DEP-...)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/cekstatus', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/deposit/cekstatus', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{ "success": true, "data": { "deposit_id": "DEP-816176", "status": "pending" } }\n{ "success": true, "data": { "deposit_id": "DEP-816176", "status": "success" } }`
         },
         {
@@ -409,7 +409,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "deposit_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/cancel', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v1/deposit/cancel', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Deposit berhasil dibatalkan",\n  "data": { "deposit_id": "DEP-816176", "status": "canceled" }\n}`
         }
       ]
@@ -428,7 +428,7 @@ export default function Dokumentasi() {
       parameters: [
         { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    { "service_code": "whatsapp", "service_name": "WhatsApp" },\n    { "service_code": "telegram", "service_name": "Telegram" }\n  ]\n}`
     },
     {
@@ -440,7 +440,7 @@ export default function Dokumentasi() {
         { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
         { name: "service_id", type: "query", required: true, desc: "Kode layanan (cth: whatsapp, telegram)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/countries/list', {\n  params: { service_id: 'whatsapp' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/countries/list', {\n  params: { service_id: 'whatsapp' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    {\n      "country_id": 6,\n      "country_name": "INDONESIA",\n      "pricelist": [\n        { "server_name": "Server 1", "product_code": "RUANGOTP_6_whatsapp", "price": 1150, "stock": 312 }\n      ]\n    }\n  ]\n}`
     },
     {
@@ -452,7 +452,7 @@ export default function Dokumentasi() {
         { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
         { name: "country_id", type: "query", required: true, desc: "ID Negara (cth: 6 untuk Indonesia)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/operators/list', {\n  params: { country_id: 6 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/operators/list', {\n  params: { country_id: 6 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
       response: `{\n  "success": true,\n  "data": [\n    { "operator_code": "any",       "operator_name": "AUTOMATIC" },\n    { "operator_code": "telkomsel", "operator_name": "TELKOMSEL" }\n  ]\n}`
     },
     {
@@ -472,7 +472,7 @@ export default function Dokumentasi() {
             { name: "operator_id", type: "query", required: true, desc: "Kode operator (cth: any, telkomsel)" },
             { name: "expected_price", type: "query", required: true, desc: "Harga sesuai pricelist" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/buy', {\n  params: { product_code: 'RUANGOTP_6_whatsapp', operator_id: 'any', expected_price: 1150 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/orders/buy', {\n  params: { product_code: 'RUANGOTP_6_whatsapp', operator_id: 'any', expected_price: 1150 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Order success",\n  "data": { "invoice_id": "RUANGOTP512834", "number": "+62 895 3421 8821", "price": 1150, "balance": 8850 }\n}`
         },
         {
@@ -485,7 +485,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "invoice_id", type: "query", required: true, desc: "ID Order dari endpoint buy (RUANGOTP...)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/check-status', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/orders/check-status', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `// ACTIVE\n{ "success": true, "data": { "invoice_id": "RUANGOTP512834", "status": "ACTIVE", "otp": "WAITING" } }\n\n// COMPLETED\n{ "success": true, "data": { "invoice_id": "RUANGOTP512834", "status": "COMPLETED", "otp": "847291" } }`
         },
         {
@@ -498,7 +498,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "invoice_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/cancel', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/orders/cancel', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Cancelled & Refunded",\n  "data": { "invoice_id": "RUANGOTP512834", "refund": 1150, "balance": 10000 }\n}`
         }
       ]
@@ -518,7 +518,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "amount", type: "query", required: true, desc: "Nominal deposit (Min. Rp500)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Deposit Berhasil dibuat",\n  "data": {\n    "invoice_id": "DEP-523901",\n    "status": "pending",\n    "payment_method": "qris",\n    "balance_received": 10000,\n    "payment_amount": 10569,\n    "qr_image": "https://...",\n    "qr_string": "00020101...",\n    "valid_until": "2026-03-16T12:15:00.000Z"\n  }\n}`
         },
         {
@@ -531,7 +531,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "invoice_id", type: "query", required: true, desc: "ID Deposit (DEP-...)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/cekstatus', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/deposit/cekstatus', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{ "success": true, "data": { "invoice_id": "DEP-523901", "status": "pending" } }\n{ "success": true, "data": { "invoice_id": "DEP-523901", "status": "success" } }`
         },
         {
@@ -544,7 +544,7 @@ export default function Dokumentasi() {
             { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
             { name: "invoice_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/cancel', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          codeSnippet: `axios.get('https://api.ruangotp.io/api/v2/deposit/cancel', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{\n  "success": true,\n  "message": "Deposit berhasil dibatalkan",\n  "data": { "invoice_id": "DEP-523901", "status": "canceled" }\n}`
         }
       ]
@@ -560,8 +560,8 @@ export default function Dokumentasi() {
 
   const currentDocs = activeVersion === 'v1' ? API_DOCS_V1 : API_DOCS_V2;
   const baseUrl = activeVersion === 'v1'
-    ? 'https://api.ruangotp.net/api/v1'
-    : 'https://api.ruangotp.net/api/v2';
+    ? 'https://api.ruangotp.io/api/v1'
+    : 'https://api.ruangotp.io/api/v2';
 
   const v1Features = ["Server: RuangOTP S1", "190+ Negara", "Parameter: order_id", "Deposit via QRIS (S1)"];
   const v2Features = ["Server: RuangOTP S2", "190+ Negara", "Parameter: invoice_id", "Deposit via QRIS (S2)"];
