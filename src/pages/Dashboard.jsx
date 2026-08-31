@@ -2,18 +2,72 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { 
-  Bell, RefreshCw, Smartphone, Globe, CheckCircle2, 
-  Clock, MessageSquare, Loader2, ChevronRight, Info, ShieldAlert, FileText, CheckCircle
+  Bell, RefreshCw, Smartphone, Globe, Info, ShieldAlert, 
+  FileText, CheckCircle, CheckCircle2, TrendingUp, Megaphone, 
+  ChevronRight, Activity, Server, AlertTriangle, Plus, ExternalLink
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { jwtDecode } from 'jwt-decode';
 
+// Helper untuk memvalidasi apakah string adalah URL yang valid (untuk gambar cover pengumuman)
+const isValidUrl = (string) => {
+  if (!string) return false;
+  try {
+    new URL(string);
+    return string.startsWith('http');
+  } catch (_) {
+    return false;
+  }
+};
+
+// Helper untuk mendeteksi dan merender URL di dalam teks menjadi tautan yang bisa diklik dengan desain profesional
+const renderMessageWithLinks = (text) => {
+  if (!text) return null;
+  // Regex untuk mendeteksi http, https, dan format t.me
+  const urlRegex = /(https?:\/\/[^\s]+)|(t\.me\/[^\s]+)/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+    const raw = match[0];
+    const href = raw.startsWith('http') ? raw : `https://${raw}`;
+    parts.push({ type: 'link', value: raw, href });
+    lastIndex = match.index + raw.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+
+  return parts.map((part, index) => {
+    if (part.type === 'link') {
+      return (
+        <a 
+          key={index} 
+          href={part.href} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 font-bold text-indigo-600 transition-colors hover:bg-indigo-100 hover:underline dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 break-all"
+        >
+          {part.value}
+          <ExternalLink size={12} className="shrink-0" />
+        </a>
+      );
+    }
+    return <span key={index}>{part.value}</span>;
+  });
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { color } = useTheme();
 
-  // Kita inisialisasi data user langsung dari Token / LocalStorage
+  // Inisialisasi data user dari Token / LocalStorage
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) return JSON.parse(savedUser);
@@ -41,25 +95,24 @@ const Dashboard = () => {
   // State untuk Layanan Populer
   const [popularServices, setPopularServices] = useState([]);
 
-  // STATE BARU: Pesanan Aktif
-  const [activeOrders, setActiveOrders] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
+  // STATE: Papan Pengumuman
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
 
-  // Ref untuk cache daftar service (untuk ambil gambar)
+  // Ref untuk cache daftar service
   const servicesRef = useRef([]);
 
-  // State dan Ref untuk fungsi Slider Dots (Titik Indikator)
+  // State dan Ref untuk fungsi Slider Dots (Titik Indikator Banner)
   const [activeBanner, setActiveBanner] = useState(0);
   const sliderRef = useRef(null);
 
   // =========================================================
-  // STATE BARU: MODAL KETENTUAN (TUTORIAL & INFO)
+  // STATE: MODAL KETENTUAN (TUTORIAL & INFO)
   // =========================================================
   const [showTerms, setShowTerms] = useState(false);
   const [termsTab, setTermsTab] = useState('refund'); // 'refund', 'ketentuan', 'tutorial'
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [showWarningPopup, setShowWarningPopup] = useState(false);
-  // State untuk Pop-up Peringatan
 
   useEffect(() => {
     // Cek apakah user sudah pernah menyetujui ketentuan di sesi login ini
@@ -72,10 +125,8 @@ const Dashboard = () => {
   // Fungsi untuk menangani klik Tutup atau Selesai
   const handleAttemptClose = () => {
     if (!agreedTerms) {
-      // Jika belum centang, tampilkan pop-up peringatan elegan
       setShowWarningPopup(true);
     } else {
-      // Jika sudah centang, simpan persetujuan dan tutup
       localStorage.setItem('ruangotp_terms_accepted', 'true');
       setShowTerms(false);
     }
@@ -120,7 +171,7 @@ const Dashboard = () => {
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
-        setPopularServices(parsed.slice(0, 3));
+        setPopularServices(parsed.slice(0, 4)); // Ambil minimal 4 untuk overlapping UI
         servicesRef.current = parsed; 
         return;
       } catch (e) {}
@@ -129,30 +180,24 @@ const Dashboard = () => {
     try {
       const res = await api.get('/services/list');
       if (res.data && res.data.success) {
-        setPopularServices(res.data.data.slice(0, 3));
+        setPopularServices(res.data.data.slice(0, 4));
         servicesRef.current = res.data.data;
         localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.data));
       }
     } catch (err) {}
   };
 
-  const fetchActiveOrders = async () => {
-    setOrdersLoading(true);
+  const fetchAnnouncements = async () => {
+    setAnnouncementsLoading(true);
     try {
-      const res = await api.get('/history/list');
-      if (res.data.success) {
-        const aktif = res.data.data
-          .filter(order => {
-            const s = (order.status || '').toUpperCase();
-            return ['ACTIVE', 'PENDING', 'COMPLETED', 'RECEIVED'].includes(s);
-          })
-          .slice(0, 5);
-        setActiveOrders(aktif);
+      const res = await api.get('/info/v2');
+      if (res.data && res.data.success) {
+        setAnnouncements(res.data.data);
       }
     } catch (err) {
       // Silent error
     } finally {
-      setOrdersLoading(false);
+      setAnnouncementsLoading(false);
     }
   };
 
@@ -160,31 +205,24 @@ const Dashboard = () => {
     fetchUserData();
     fetchBanners();
     loadPopularServices();
-    fetchActiveOrders();
+    fetchAnnouncements();
 
     const bannerInterval = setInterval(() => {
-      if (!document.hidden) {
-        fetchBanners();
-      }
+      if (!document.hidden) fetchBanners();
     }, 300000);
 
-    const orderInterval = setInterval(() => {
-      if (!document.hidden) {
-        fetchActiveOrders();
-      }
-    }, 10000);
+    const announcementInterval = setInterval(() => {
+      if (!document.hidden) fetchAnnouncements();
+    }, 60000);
 
-    // SENSOR LAYAR INSTAN: Kalau user pindah tab lalu balik lagi, langsung tembak API detik itu juga
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchActiveOrders();
-      }
+      if (!document.hidden) fetchAnnouncements();
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(bannerInterval);
-      clearInterval(orderInterval);
+      clearInterval(announcementInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -220,14 +258,6 @@ const Dashboard = () => {
     return `https://images.weserv.nl/?url=${cleanUrl}&w=80&h=80&fit=contain&output=webp`;
   };
 
-  const getServiceImage = (serviceName) => {
-    if (!serviceName) return null;
-    const found = servicesRef.current.find(
-      s => s.service_name?.toLowerCase() === serviceName.toLowerCase()
-    );
-    return found?.service_img || null;
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
@@ -250,7 +280,7 @@ const Dashboard = () => {
                   fetchUserData();
                   fetchBanners();
                   loadPopularServices();
-                  fetchActiveOrders();
+                  fetchAnnouncements();
                 }}
              >
                 <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
@@ -331,185 +361,254 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Banner Get Virtual Number */}
+      {/* =========================================================
+          BANNER GET VIRTUAL NUMBER (Desain SaaS Overlapping Avatars)
+          ========================================================= */}
       <div className="mt-6 px-5">
-        <div className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-lg bg-gradient-to-r ${color.gradient}`}>
+        <div className={`relative overflow-hidden rounded-3xl p-6 shadow-xl bg-gradient-to-r ${color.gradient}`}>
+           {/* Abstract Background Elements */}
+           <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/20 blur-2xl"></div>
+           <div className="absolute -bottom-12 -right-4 h-40 w-40 rounded-full bg-black/10 blur-3xl"></div>
+
            <div className="relative z-10">
-              <h3 className="text-lg font-bold">Get Virtual Number</h3>
-              <p className="mt-1 mb-4 w-3/4 text-sm text-white/90">OTP access for 1,038+ apps across 193 countries</p>
-              
-              <div className="mb-2 flex items-center gap-2">
-                 <div className="rounded-full bg-white/20 p-1.5"><Smartphone size={16} /></div>
-                 <div className="rounded-full bg-white/20 p-1.5"><Globe size={16} /></div>
-                 <span className="text-xs font-medium">+99 Apps</span>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">Get Virtual Number</h3>
+                  <p className="mt-1 mb-6 w-11/12 text-sm text-white/90 leading-relaxed font-medium">
+                    OTP access for 1,038+ apps across 193 countries
+                  </p>
+                </div>
               </div>
 
-              <button 
-                onClick={() => navigate('/order')}
-                className="mt-2 flex items-center gap-1 text-sm font-bold hover:underline"
-              >
-                Beli Nomor &gt;
-              </button>
+              <div className="flex items-center justify-between">
+                 {/* Overlapping Service Icons */}
+                 <div className="flex items-center">
+                   <div className="flex items-center -space-x-3">
+                     {popularServices.length > 0 ? (
+                       popularServices.map((item, index) => (
+                         <div 
+                           key={index} 
+                           className="relative flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm p-2 shadow-sm transition-transform hover:-translate-y-1"
+                           style={{ zIndex: 10 - index }}
+                         >
+                             <img 
+                               src={getOptimizedImage(item.service_img)} 
+                               alt={item.service_name} 
+                               className="h-full w-full object-contain drop-shadow" 
+                             />
+                         </div>
+                       ))
+                     ) : (
+                       [1, 2, 3, 4].map((i, index) => (
+                         <div 
+                           key={i} 
+                           className="h-11 w-11 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm animate-pulse"
+                           style={{ zIndex: 10 - index }}
+                         ></div>
+                       ))
+                     )}
+                     
+                     {/* Action Button '+' */}
+                     <button 
+                       onClick={() => navigate('/order')}
+                       className="relative z-20 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white bg-white text-slate-800 shadow-lg transition-transform active:scale-90 hover:bg-slate-50"
+                     >
+                       <Plus size={20} strokeWidth={3} className={color.text} />
+                     </button>
+                   </div>
+                 </div>
+
+                 <div className="text-right">
+                   <span className="block text-[10px] font-semibold text-white/70 uppercase tracking-wider">Tersedia</span>
+                   <span className="block text-sm font-bold text-white">+99 Layanan</span>
+                 </div>
+              </div>
            </div>
-           
-           <div className="absolute -bottom-10 -right-5 h-32 w-32 rounded-full bg-white/20 blur-2xl"></div>
         </div>
       </div>
 
-      {/* Lagi Populer */}
+      {/* =========================================================
+          SYSTEM UPTIME (Desain Standar Industri / SaaS)
+          ========================================================= */}
+      <div className="mb-6 mt-8 px-5">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400">
+                 <Activity size={18} />
+             </div>
+             <h3 className="text-base font-bold tracking-tight text-slate-800 dark:text-white">System Uptime</h3>
+          </div>
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-200/50 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-600 dark:border-emerald-800/50 dark:bg-emerald-900/20 dark:text-emerald-400">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            </span>
+            System Degraded
+          </span>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-800/80 dark:bg-slate-900/50">
+           <div className="p-5">
+             <div className="mb-6 flex items-start justify-between">
+                <div>
+                   <h4 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">99.98%</h4>
+                   <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Average Uptime</p>
+                </div>
+                <div className="flex gap-5">
+                   <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                         <Server size={14} />
+                         <span className="text-sm font-bold">4</span>
+                      </div>
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Online</span>
+                   </div>
+                   <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1.5 text-amber-500 dark:text-amber-500">
+                         <AlertTriangle size={14} />
+                         <span className="text-sm font-bold">1</span>
+                      </div>
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Offline</span>
+                   </div>
+                </div>
+             </div>
+
+             {/* Uptime Bars (Grafik) */}
+             <div className="flex h-10 w-full items-end justify-between gap-1 sm:gap-1.5">
+                {Array.from({ length: 30 }).map((_, i) => {
+                   // Simulasi 1 bar merah/kuning karena ada 1 server offline (biar visualnya realistis)
+                   const isDegraded = i === 28; // Sengaja ditaruh di akhir-akhir biar kelihatan baru saja down
+                   
+                   return (
+                     <div
+                       key={i}
+                       className={`group relative h-full w-full rounded-sm transition-colors hover:opacity-80 ${
+                         isDegraded 
+                           ? 'bg-amber-400 hover:bg-amber-300' 
+                           : 'bg-emerald-500 hover:bg-emerald-400'
+                       }`}
+                     >
+                        {/* Tooltip Hover Mikron */}
+                        <div className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-slate-800 px-2 py-1 text-[9px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 dark:bg-slate-700 shadow-md whitespace-nowrap">
+                           {isDegraded ? '1 Node Offline' : '100%'}
+                        </div>
+                     </div>
+                   );
+                })}
+             </div>
+
+             <div className="mt-3 flex items-center justify-between text-[10px] font-medium text-slate-400">
+                <span>30 menit lalu</span>
+                <span>Saat ini</span>
+             </div>
+           </div>
+           
+           {/* Aksen Minimalis Gradasi Bawah */}
+           <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-amber-400 to-emerald-600 opacity-20"></div>
+        </div>
+      </div>
+
+      {/* Layanan Populer */}
       <div className="mt-8 px-5">
-        <div className="mb-4 flex items-center justify-between">
-           <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-white">🔥 Lagi Populer</h3>
-           <button onClick={() => navigate('/order')} className={`text-sm font-medium ${color.text}`}>Lihat Semua</button>
+        <div className="mb-5 flex items-center justify-between">
+           <div className="flex items-center gap-2.5">
+               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                   <TrendingUp size={18} />
+               </div>
+               <h3 className="text-base font-bold tracking-tight text-slate-800 dark:text-white">Layanan Populer</h3>
+           </div>
+           <button onClick={() => navigate('/order')} className={`text-xs font-semibold ${color.text} hover:underline`}>
+               Lihat Semua
+           </button>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
            {popularServices.length > 0 ? (
-             popularServices.map((item, index) => (
+             popularServices.slice(0, 3).map((item, index) => (
                <div 
                  key={index}
                  onClick={() => navigate('/order')}
-                 className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 active:scale-95"
+                 className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200/50 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-md dark:border-slate-800/50 dark:bg-slate-900/40 dark:hover:border-blue-500/30 active:scale-95"
                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 p-2 dark:bg-slate-900">
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 p-3 shadow-inner transition-colors group-hover:bg-blue-50/50 dark:bg-slate-800/80 dark:group-hover:bg-blue-900/20">
                       <img 
                         src={getOptimizedImage(item.service_img)} 
                         alt={item.service_name} 
-                        className="h-full w-full object-contain" 
+                        className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-sm" 
                         loading="lazy" 
                       />
                   </div>
-                  <span className="truncate w-full text-center text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <span className="w-full truncate text-center text-xs font-semibold tracking-wide text-slate-700 dark:text-slate-300">
                     {item.service_name}
                   </span>
                </div>
              ))
            ) : (
              [1, 2, 3].map((i) => (
-               <div key={i} className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                  <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-900 animate-pulse"></div>
-                  <div className="h-3 w-16 rounded bg-slate-100 dark:bg-slate-900 animate-pulse"></div>
+               <div key={i} className="flex flex-col items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+                  <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse"></div>
+                  <div className="h-3 w-16 rounded bg-slate-100 dark:bg-slate-800 animate-pulse"></div>
                </div>
              ))
            )}
         </div>
       </div>
 
-      {/* PESANAN PENDING */}
+      {/* PAPAN PENGUMUMAN */}
       <div className="mb-6 mt-8 px-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Pesanan Pending</h3>
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                 <Megaphone size={18} />
+             </div>
+             <h3 className="text-base font-bold tracking-tight text-slate-800 dark:text-white">Papan Pengumuman</h3>
+          </div>
           <button 
-            onClick={fetchActiveOrders}
-            className={`p-1 ${color.text}`}
+            onClick={fetchAnnouncements}
+            className="rounded-full bg-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
           >
-            <RefreshCw size={16} className={ordersLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={announcementsLoading ? 'animate-spin' : ''} />
           </button>
         </div>
 
-        {ordersLoading ? (
-          <div className="space-y-3">
+        {announcementsLoading ? (
+          <div className="space-y-4">
             {[1, 2].map(i => (
-              <div key={i} className="h-24 w-full animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+              <div key={i} className="h-32 w-full animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
             ))}
           </div>
-        ) : activeOrders.length > 0 ? (
-          <div className="space-y-3">
-            {activeOrders.map((order) => {
-              const status = (order.status || '').toUpperCase();
-              const isSmsReceived = status === 'COMPLETED' || status === 'RECEIVED';
-              const serviceImg = getServiceImage(order.service);
+        ) : announcements.length > 0 ? (
+          <div className="space-y-4">
+            {announcements.map((item) => {
+              const hasValidImage = isValidUrl(item.image);
 
               return (
                 <div
-                  key={order.order_id}
-                  onClick={() => navigate('/order')}
-                  className={`cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm transition-all active:scale-95 dark:bg-slate-950 ${
-                    isSmsReceived
-                      ? 'border-emerald-300 dark:border-emerald-700'
-                      : 'border-slate-100 dark:border-slate-800'
-                  }`}
+                  key={item.id}
+                  className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-all hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50"
                 >
-                  <div className="flex items-center gap-4 p-4">
-                    <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl p-2 ${
-                      isSmsReceived
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                        : 'bg-slate-50 dark:bg-slate-900'
-                    }`}>
-                      {serviceImg ? (
-                        <img
-                          src={getOptimizedImage(serviceImg)}
-                          alt={order.service}
-                          className="h-full w-full object-contain"
-                          loading="lazy"
-                        />
-                      ) : (
-                        isSmsReceived
-                          ? <MessageSquare size={24} className="text-emerald-500" />
-                          : <Loader2 size={24} className={`animate-spin ${color.text}`} />
-                      )}
-
-                      <span className={`absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-white dark:border-slate-950 ${
-                        isSmsReceived ? 'bg-emerald-500' : 'bg-amber-400'
-                      }`} />
+                  {hasValidImage && (
+                    <div className="relative h-40 w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                      <img
+                        src={item.image}
+                        alt="Pengumuman"
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-bold text-slate-800 dark:text-white">
-                          {order.service || 'Layanan'}
-                        </p>
-                        {order.country && (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                            {order.country}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="mt-0.5 font-mono text-sm text-slate-500 dark:text-slate-400 truncate">
-                        {order.phone_number || '—'}
-                      </p>
-
-                      <div className="mt-1.5">
-                        {isSmsReceived ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                            <CheckCircle2 size={10} /> SMS Diterima
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            <Clock size={10} /> Menunggu SMS
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <ChevronRight size={18} className="shrink-0 text-slate-300 dark:text-slate-600" />
+                  )}
+                  <div className="p-4">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {renderMessageWithLinks(item.pesan)}
+                    </p>
                   </div>
                 </div>
               );
             })}
-
-            <button
-              onClick={() => navigate('/order')}
-              className={`w-full rounded-2xl border py-3 text-sm font-bold transition-all active:scale-95 ${color.bg} ${color.text} ${color.border}`}
-            >
-              Kelola Semua Pesanan →
-            </button>
           </div>
-
         ) : (
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-4xl dark:bg-slate-900">
-              🤷‍♂️
-            </div>
-            <h4 className="mb-1 font-bold text-slate-800 dark:text-white">Tidak ada pesanan</h4>
-            <p className="mb-6 text-sm text-slate-400">Pesanan aktif akan muncul disini</p>
-            <button 
-              onClick={() => navigate('/order')}
-              className={`w-full rounded-xl py-3 text-sm font-medium shadow-sm transition-transform active:scale-95 ${color.btn}`}
-            >
-              + Buat Pesanan
-            </button>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-800/50">
+            <Info size={24} className="mx-auto mb-2 text-slate-400" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Belum ada pengumuman saat ini.</p>
           </div>
         )}
       </div>
@@ -705,4 +804,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

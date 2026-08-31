@@ -38,7 +38,7 @@ export default function Deposit() {
         }
     } catch (e) {}
 
-    const socket = io('https://api.ruangotp.io', {
+    const socket = io('https://api.ruangotp.net', {
         auth: { userId },
         transports: ['websocket'], // FIX: paksa WebSocket agar tidak memakan slot koneksi HTTP
         reconnectionAttempts: 5,
