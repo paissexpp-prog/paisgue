@@ -13,14 +13,17 @@ import {
   ChevronDown, ChevronUp, ChevronRight, Server, Globe, 
   Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, 
   Clock, Copy, MessageSquare, RefreshCw,
-  Wallet, History, Headphones, Brain, Info, Bug, Eye, BookOpen, FileText
+  Wallet, History, Headphones, Brain, Info, Bug, Eye, BookOpen, FileText,
+  Zap
 } from 'lucide-react';
 
 // ================================================================
 // --- HELPER FUNCTIONS UNTUK TIMER ---
 // ================================================================
 const calculateRemainingTime = (createdAt, currentTime) => {
+    if (!createdAt) return 0;
     const createdTime = new Date(createdAt).getTime();
+    if (isNaN(createdTime)) return 0;
     const diffSeconds = Math.floor((currentTime - createdTime) / 1000);
     const lockDuration = 4 * 60; // 4 Menit
     const remaining = lockDuration - diffSeconds;
@@ -28,7 +31,9 @@ const calculateRemainingTime = (createdAt, currentTime) => {
 };
 
 const calculateLifetimeRemaining = (createdAt, currentTime) => {
+    if (!createdAt) return 0;
     const createdTime = new Date(createdAt).getTime();
+    if (isNaN(createdTime)) return 0;
     const diffSeconds = Math.floor((currentTime - createdTime) / 1000);
     const lifetimeDuration = 20 * 60; // 20 Menit
     const remaining = lifetimeDuration - diffSeconds;
@@ -36,6 +41,7 @@ const calculateLifetimeRemaining = (createdAt, currentTime) => {
 };
 
 const formatTime = (seconds) => {
+    if (isNaN(seconds) || seconds < 0) return '0:00';
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
@@ -236,7 +242,6 @@ const ActiveOrderCard = memo(({
 // ================================================================
 // --- DRAWER SERVER UTAMA (V1) ---
 // ================================================================
-
 const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectService, getOptimizedImage }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -250,14 +255,16 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
     }, [isOpen]);
 
     const filteredServices = useMemo(() => {
+        if (!Array.isArray(services)) return [];
         return services.filter(service =>
-          service.service_name.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+          (service.service_name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
         );
     }, [services, deferredSearchTerm]);
 
     const isSearching = deferredSearchTerm.trim() !== '';
 
     const popularServices = useMemo(() => {
+         if (!Array.isArray(services)) return [];
          return services.slice(0, 6);
     }, [services]);
 
@@ -307,7 +314,7 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                     <div className="grid grid-cols-2 gap-3">
                                         {popularServices.map((item, index) => (
                                             <button 
-                                                key={`pop-${item.service_code}`} 
+                                                key={item.service_code || `pop-${index}`} 
                                                 onClick={() => onSelectService(item)} 
                                                 className="flex flex-col items-center justify-center gap-3 p-5 rounded-3xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-blue-400 dark:hover:border-blue-500 transition-all active:scale-[0.97]" 
                                                 style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${index * 0.05}s`, opacity: 0 }}
@@ -315,7 +322,7 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                                 <div className="w-14 h-14 rounded-[1.2rem] bg-slate-50 dark:bg-slate-800 p-2 flex items-center justify-center border border-slate-100 dark:border-slate-700">
                                                     <img src={getOptimizedImage(item.service_img)} className="w-full h-full object-contain" loading="lazy" alt="" />
                                                 </div>
-                                                <span className="font-bold text-slate-800 dark:text-white text-[13px] truncate w-full text-center">{item.service_name}</span>
+                                                <span className="font-bold text-slate-800 dark:text-white text-[13px] truncate w-full text-center">{item.service_name || 'Layanan'}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -330,7 +337,7 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                     <div className="flex flex-col gap-2.5">
                                         {filteredServices.slice(0, displayLimit).map((item, index) => (
                                             <button 
-                                                key={item.service_code} 
+                                                key={item.service_code || index} 
                                                 onClick={() => onSelectService(item)} 
                                                 className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-blue-400 dark:hover:border-blue-500 transition-all active:scale-[0.98]" 
                                                 style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
@@ -339,7 +346,7 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                                                     <div className="bg-slate-50 w-10 h-10 p-1.5 flex items-center justify-center rounded-xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
                                                        <img src={getOptimizedImage(item.service_img)} className="w-full h-full object-contain" loading="lazy" alt="" />
                                                     </div>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.service_name}</span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.service_name || 'Layanan'}</span>
                                                 </div>
                                                 <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 shrink-0" />
                                             </button>
@@ -356,7 +363,6 @@ const ServicesDrawer = memo(({ isOpen, onClose, services, loading, onSelectServi
                     )}
                 </div>
             </div>
-
             <style>{`
                 @keyframes waveFadeIn {
                     0% { opacity: 0; transform: translateY(15px) scale(0.98); }
@@ -381,24 +387,24 @@ const CountriesDrawer = memo(({ isOpen, onBack, selectedService, countries, load
                 <div className={`flex-1 overflow-y-auto px-6 py-2 transition-all pb-10`}>
                     {loading ? (
                         <div className="space-y-3 mt-4">{[1,2,3].map(i=><div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse dark:bg-slate-900"></div>)}</div>
-                    ) : countries.length > 0 ? (
+                    ) : (Array.isArray(countries) && countries.length > 0) ? (
                         <div className="space-y-3 mt-4">
-                            {countries.map((country) => {
+                            {countries.map((country, idxMain) => {
                                 const startPrice = country.pricelist?.[0]?.price || 0;
                                 const isExpanded = expandedCountry === country.number_id;
 
                                 return (
-                                    <div key={country.number_id} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
+                                    <div key={country.number_id || idxMain} className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
                                         <button onClick={() => onToggleCountry(country)} className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-900">
                                             <div className="flex items-center gap-4">
                                                 <img src={getOptimizedImage(country.img)} className="w-8 h-6 object-cover rounded shadow-sm" alt="" />
-                                                <div className="text-left"><p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name}</p><p className="text-xs text-blue-600 font-medium">Mulai Rp {startPrice}</p></div>
+                                                <div className="text-left"><p className="font-bold text-slate-700 text-sm dark:text-slate-200">{country.name || 'Negara'}</p><p className="text-xs text-blue-600 font-medium">Mulai Rp {startPrice}</p></div>
                                             </div>
-                                            <div className="flex items-center gap-2"><span className="text-xs text-slate-400">Stok: {country.stock_total}</span>{isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}</div>
+                                            <div className="flex items-center gap-2"><span className="text-xs text-slate-400">Stok: {country.stock_total || 0}</span>{isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}</div>
                                         </button>
                                         {isExpanded && (
                                             <div className="bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 p-4 space-y-2">
-                                                {country.pricelist?.filter(p=>p.stock>0).map((srv,idx)=>(
+                                                {Array.isArray(country.pricelist) && country.pricelist.filter(p=>p.stock>0).map((srv,idx)=>(
                                                     <div key={idx} className="flex justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-blue-200 transition-colors">
                                                         <div><span className="text-xs font-bold text-slate-700 dark:text-slate-300">Server {srv.server_id}</span><p className="text-[10px] text-slate-400">Stok {srv.stock}</p></div>
                                                         <div className="flex items-center gap-3"><span className="font-bold text-emerald-600 text-sm">Rp {srv.price}</span><button onClick={()=>onBuyClick(country,srv)} className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg dark:bg-white dark:text-slate-900 active:scale-95 transition-transform">Beli</button></div>
@@ -420,7 +426,6 @@ const CountriesDrawer = memo(({ isOpen, onBack, selectedService, countries, load
 // ================================================================
 // --- DRAWER SERVER TERMURAH (V2) ---
 // ================================================================
-
 const V2CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectCountry, getCountryFlag }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -434,8 +439,9 @@ const V2CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectC
     }, [isOpen]);
 
     const filteredCountries = useMemo(() => {
+        if (!Array.isArray(countries)) return [];
         return countries.filter(c =>
-          c.name.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+          (c.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
         );
     }, [countries, deferredSearchTerm]);
 
@@ -483,14 +489,14 @@ const V2CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectC
                                 <div className="flex flex-col gap-2.5">
                                     {filteredCountries.slice(0, displayLimit).map((item, index) => (
                                         <button 
-                                            key={item.id} 
+                                            key={item.id || index} 
                                             onClick={() => onSelectCountry(item)} 
                                             className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-emerald-400 dark:hover:border-emerald-500 transition-all active:scale-[0.98]" 
                                             style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
                                         >
                                             <div className="flex items-center gap-4 min-w-0 flex-1">
                                                 <div className="text-2xl w-10 text-center flex justify-center">{getCountryFlag(item.name)}</div>
-                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name}</span>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Negara'}</span>
                                             </div>
                                             <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 shrink-0" />
                                         </button>
@@ -523,8 +529,9 @@ const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
     }, [isOpen]);
 
     const filteredServices = useMemo(() => {
+        if (!Array.isArray(services)) return [];
         return services.filter(service =>
-          service.name.toLowerCase().includes(deferredSearchTerm.toLowerCase())
+          (service.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
         );
     }, [services, deferredSearchTerm]);
 
@@ -549,7 +556,7 @@ const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
                             <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><ChevronRight size={22} className="text-slate-500 rotate-180" /></button>
                             <div>
                                 <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 leading-tight flex items-center gap-2">
-                                    {selectedCountry ? <>{getCountryFlag(selectedCountry.name)} {selectedCountry.name}</> : 'Server Termurah'}
+                                    {selectedCountry ? <>{getCountryFlag(selectedCountry.name)} {selectedCountry.name || 'Negara'}</> : 'Server Termurah'}
                                 </h2>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 2: Pilih Layanan</p>
                             </div>
@@ -576,7 +583,7 @@ const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
                                 <div className="flex flex-col gap-2.5">
                                     {filteredServices.slice(0, displayLimit).map((item, index) => (
                                         <button 
-                                            key={item.code} 
+                                            key={item.code || index} 
                                             onClick={() => onSelectService(item)} 
                                             className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-emerald-400 dark:hover:border-emerald-500 transition-all active:scale-[0.98]" 
                                             style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
@@ -588,9 +595,203 @@ const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
                                                        : <Smartphone size={18} className="text-slate-400" />
                                                    }
                                                 </div>
-                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name}</span>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Layanan'}</span>
                                             </div>
                                             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-3 py-1.5 rounded-lg">
+                                                Cek Harga
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                                    <Smartphone size={32} className="mx-auto mb-3 opacity-50" />
+                                    Layanan tidak ditemukan
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+});
+
+// ================================================================
+// --- DRAWER SERVER PLUS (V3) ---
+// ================================================================
+const V3CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectCountry, getCountryFlag }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+    const [displayLimit, setDisplayLimit] = useState(20);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            setDisplayLimit(20); 
+        }
+    }, [isOpen]);
+
+    const filteredCountries = useMemo(() => {
+        if (!Array.isArray(countries)) return [];
+        return countries.filter(c =>
+          (c.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
+        );
+    }, [countries, deferredSearchTerm]);
+
+    const handleScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {
+            if (displayLimit < filteredCountries.length) {
+                setDisplayLimit(prev => prev + 20);
+            }
+        }
+    };
+
+    return (
+        <>
+            <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}></div>
+            <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-[#f8fafc] shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                
+                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
+                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-xl font-bold text-violet-700 dark:text-violet-400 leading-tight">Server Plus</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 1: Pilih Negara</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><X size={22} className="text-slate-500" /></button>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-violet-400 dark:focus-within:border-violet-500">
+                        <Search size={18} className="text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Cari negara..." 
+                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
+                            value={searchTerm} 
+                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
+                    {loading ? (
+                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredCountries.length > 0 ? (
+                                <div className="flex flex-col gap-2.5">
+                                    {filteredCountries.slice(0, displayLimit).map((item, index) => (
+                                        <button 
+                                            key={item.id || index} 
+                                            onClick={() => onSelectCountry(item)} 
+                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-violet-400 dark:hover:border-violet-500 transition-all active:scale-[0.98]" 
+                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                <div className="text-2xl w-10 text-center flex justify-center">{getCountryFlag(item.name)}</div>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Negara'}</span>
+                                            </div>
+                                            <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                                    <Globe size={32} className="mx-auto mb-3 opacity-50" />
+                                    Negara tidak ditemukan
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+});
+
+const V3ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, loading, onSelectService, getOptimizedImage, getCountryFlag }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+    const [displayLimit, setDisplayLimit] = useState(20);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            setDisplayLimit(20); 
+        }
+    }, [isOpen]);
+
+    const filteredServices = useMemo(() => {
+        if (!Array.isArray(services)) return [];
+        return services.filter(service =>
+          (service.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
+        );
+    }, [services, deferredSearchTerm]);
+
+    const handleScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {
+            if (displayLimit < filteredServices.length) {
+                setDisplayLimit(prev => prev + 20);
+            }
+        }
+    };
+
+    return (
+        <>
+            <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onBack}></div>
+            <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                
+                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
+                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><ChevronRight size={22} className="text-slate-500 rotate-180" /></button>
+                            <div>
+                                <h2 className="text-xl font-bold text-violet-700 dark:text-violet-400 leading-tight flex items-center gap-2">
+                                    {selectedCountry ? <>{getCountryFlag(selectedCountry.name)} {selectedCountry.name || 'Negara'}</> : 'Server Plus'}
+                                </h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 2: Pilih Layanan</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-violet-400 dark:focus-within:border-violet-500">
+                        <Search size={18} className="text-slate-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Cari aplikasi..." 
+                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
+                            value={searchTerm} 
+                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
+                        />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
+                    {loading ? (
+                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {filteredServices.length > 0 ? (
+                                <div className="flex flex-col gap-2.5">
+                                    {filteredServices.slice(0, displayLimit).map((item, index) => (
+                                        <button 
+                                            key={item.code || index} 
+                                            onClick={() => onSelectService(item)} 
+                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-violet-400 dark:hover:border-violet-500 transition-all active:scale-[0.98]" 
+                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                                <div className="bg-slate-50 w-10 h-10 p-1.5 flex items-center justify-center rounded-xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+                                                   {item.service_img ? 
+                                                       <img src={getOptimizedImage(item.service_img)} className="w-full h-full object-contain" loading="lazy" alt="" />
+                                                       : <Smartphone size={18} className="text-slate-400" />
+                                                   }
+                                                </div>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Layanan'}</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-violet-600 bg-violet-50 dark:bg-violet-900/30 dark:text-violet-400 px-3 py-1.5 rounded-lg">
                                                 Cek Harga
                                             </span>
                                         </button>
@@ -639,6 +840,15 @@ export default function Order() {
   const [selectedV2Country, setSelectedV2Country] = useState(null);
   const [selectedV2Service, setSelectedV2Service] = useState(null);
 
+  // --- STATE DATA SERVER PLUS (V3) ---
+  const [v3Countries, setV3Countries] = useState([]);
+  const [v3Services, setV3Services] = useState([]);
+  const [loadingV3Countries, setLoadingV3Countries] = useState(false);
+  const [loadingV3Services, setLoadingV3Services] = useState(false);
+  
+  const [selectedV3Country, setSelectedV3Country] = useState(null);
+  const [selectedV3Service, setSelectedV3Service] = useState(null);
+
   // UI Controls
   const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
@@ -653,13 +863,17 @@ export default function Order() {
       show: false, data: null, loading: false, ordering: false
   });
 
+  const [v3PriceModal, setV3PriceModal] = useState({
+      show: false, data: null, loading: false, ordering: false, selectedServer: null
+  });
+
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false, confirmText: 'Ya, Lanjutkan' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [expandedFaq, setExpandedFaq] = useState(null);
 
   const lastFetchRef = useRef(0);
 
-  // Constants Cache
+  // Constants Cache V1
   const CACHE_KEY = 'otp_services_v12';
   const CACHE_TIME = 'otp_services_time_v12';
   const CACHE_DURATION = 60 * 60 * 1000;
@@ -678,6 +892,16 @@ export default function Order() {
   const V2_PRICE_PREFIX      = 'otp_v2_price_';
   const V2_PRICE_TIME_PREFIX = 'otp_v2_price_time_';
   const V2_PRICE_DURATION    = 2 * 60 * 1000; // 2 Menit Cache Harga
+
+  // Constants Cache V3
+  const V3_COUNTRIES_CACHE_KEY  = 'otp_v3_countries';
+  const V3_COUNTRIES_CACHE_TIME = 'otp_v3_countries_time';
+  const V3_SERVICES_CACHE_KEY   = 'otp_v3_srv';
+  const V3_SERVICES_CACHE_TIME  = 'otp_v3_srv_time';
+  const V3_PRICE_PREFIX         = 'otp_v3_price_';
+  const V3_PRICE_TIME_PREFIX    = 'otp_v3_price_time_';
+  const V3_CACHE_DURATION       = 60 * 60 * 1000; // 1 Jam
+  const V3_PRICE_DURATION       = 2 * 60 * 1000; // 2 Menit Cache Harga
 
   const faqData = [
     {
@@ -713,8 +937,12 @@ export default function Order() {
   ];
 
   useEffect(() => {
-    const savedOpImages = localStorage.getItem('operator_images_cache');
-    if (savedOpImages) setOpImagesCache(JSON.parse(savedOpImages));
+    try {
+        const savedOpImages = localStorage.getItem('operator_images_cache');
+        if (savedOpImages) setOpImagesCache(JSON.parse(savedOpImages));
+    } catch(e) {
+        localStorage.removeItem('operator_images_cache');
+    }
 
     fetchInitialData();
     
@@ -746,6 +974,7 @@ export default function Order() {
     socket.on('otp_received', (data) => {
         if (data && data.order_id) {
             setActiveOrders(prevOrders => {
+                if (!Array.isArray(prevOrders)) return [];
                 return prevOrders.map(order => {
                     const orderId = order.order_id || order.id;
                     if (orderId === data.order_id) {
@@ -782,9 +1011,10 @@ export default function Order() {
       if(!silent) setPing(Date.now() - start);
 
       const resHistory = await api.get('/history/list/order');
-      if (resHistory.data.success) {
+      if (resHistory.data.success && Array.isArray(resHistory.data.data)) {
          const filteredOrders = resHistory.data.data;
          setActiveOrders(prevOrders => {
+             if(!Array.isArray(prevOrders)) return filteredOrders;
              return filteredOrders.map(fetchedOrder => {
                  const fetchedId = fetchedOrder.order_id || fetchedOrder.id;
                  const existingOrder = prevOrders.find(o => (o.order_id || o.id) === fetchedId);
@@ -806,19 +1036,28 @@ export default function Order() {
     const now = Date.now();
 
     if (cachedData && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_DURATION)) {
-      setServices(JSON.parse(cachedData));
-      setLoadingServices(false);
-    } else {
       try {
-        const res = await api.get('/services/list');
-        if (res.data.success) {
-          setServices(res.data.data);
-          localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.data));
-          localStorage.setItem(CACHE_TIME, now.toString());
-        }
-      } catch (err) { }
-      setLoadingServices(false);
+          const parsed = JSON.parse(cachedData);
+          if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'service_code' in parsed[0]))) {
+              setServices(parsed);
+              setLoadingServices(false);
+              return;
+          }
+      } catch(e) {
+          localStorage.removeItem(CACHE_KEY);
+      }
     }
+    
+    // Fetch if cache missing or invalid
+    try {
+      const res = await api.get('/services/list');
+      if (res.data.success && Array.isArray(res.data.data)) {
+        setServices(res.data.data);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(res.data.data));
+        localStorage.setItem(CACHE_TIME, now.toString());
+      }
+    } catch (err) { }
+    setLoadingServices(false);
   };
 
   // ================================================================
@@ -834,21 +1073,29 @@ export default function Order() {
       const now = Date.now();
 
       if (cached && cachedTime && (now - parseInt(cachedTime, 10) < V2_CACHE_DURATION)) {
-          setV2Countries(JSON.parse(cached));
-          setLoadingV2Countries(false);
-      } else {
           try {
-              const res = await api.get('/country-v2/list');
-              if (res.data.success) {
-                  setV2Countries(res.data.data);
-                  localStorage.setItem(V2_COUNTRIES_CACHE_KEY, JSON.stringify(res.data.data));
-                  localStorage.setItem(V2_COUNTRIES_CACHE_TIME, now.toString());
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'id' in parsed[0]))) {
+                  setV2Countries(parsed);
+                  setLoadingV2Countries(false);
+                  return;
               }
-          } catch (err) {
-              showToast("Gagal memuat negara server termurah", "error");
-          } finally {
-              setLoadingV2Countries(false);
+          } catch(e) {
+              localStorage.removeItem(V2_COUNTRIES_CACHE_KEY);
           }
+      }
+      
+      try {
+          const res = await api.get('/country-v2/list');
+          if (res.data.success && Array.isArray(res.data.data)) {
+              setV2Countries(res.data.data);
+              localStorage.setItem(V2_COUNTRIES_CACHE_KEY, JSON.stringify(res.data.data));
+              localStorage.setItem(V2_COUNTRIES_CACHE_TIME, now.toString());
+          }
+      } catch (err) {
+          showToast("Gagal memuat negara server termurah", "error");
+      } finally {
+          setLoadingV2Countries(false);
       }
   };
 
@@ -868,14 +1115,23 @@ export default function Order() {
               const cachedTimeVal = localStorage.getItem(cacheTime);
               
               if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V2_CACHE_DURATION)) {
-                  setV2Services(JSON.parse(cached));
-              } else {
-                  const res = await api.get(`/services-v2/list?country=${country.id}`);
-                  if (res.data.success) {
-                      setV2Services(res.data.data);
-                      localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
-                      localStorage.setItem(cacheTime, now.toString());
+                  try {
+                      const parsed = JSON.parse(cached);
+                      if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'code' in parsed[0]))) {
+                          setV2Services(parsed);
+                          setLoadingV2Services(false);
+                          return;
+                      }
+                  } catch(e) {
+                      localStorage.removeItem(cacheKey);
                   }
+              } 
+              
+              const res = await api.get(`/services-v2/list?country=${country.id}`);
+              if (res.data.success && Array.isArray(res.data.data)) {
+                  setV2Services(res.data.data);
+                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                  localStorage.setItem(cacheTime, now.toString());
               }
           } catch (err) {
               showToast("Gagal memuat layanan server termurah", "error");
@@ -898,17 +1154,25 @@ export default function Order() {
           const cachedTimeVal = localStorage.getItem(cacheTime);
 
           if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V2_PRICE_DURATION)) {
-              setV2PriceModal({ show: true, data: JSON.parse(cached), loading: false, ordering: false });
-          } else {
-              const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}`);
-              if (res.data.success) {
-                  setV2PriceModal({ show: true, data: res.data.data, loading: false, ordering: false });
-                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
-                  localStorage.setItem(cacheTime, now.toString());
-              } else {
-                  setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
-                  showToast(res.data.message || "Gagal cek harga", "error");
+              try {
+                  const parsed = JSON.parse(cached);
+                  if (parsed && typeof parsed === 'object') {
+                      setV2PriceModal({ show: true, data: parsed, loading: false, ordering: false });
+                      return;
+                  }
+              } catch(e) {
+                  localStorage.removeItem(cacheKey);
               }
+          } 
+          
+          const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}`);
+          if (res.data.success) {
+              setV2PriceModal({ show: true, data: res.data.data, loading: false, ordering: false });
+              localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+              localStorage.setItem(cacheTime, now.toString());
+          } else {
+              setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+              showToast(res.data.message || "Gagal cek harga", "error");
           }
       } catch (err) {
           setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
@@ -943,6 +1207,160 @@ export default function Order() {
   };
 
   // ================================================================
+  // --- FLOW SERVER PLUS (V3) LOGIC ---
+  // ================================================================
+
+  const handleOpenV3 = async () => {
+      setSheetMode('v3_countries');
+      setLoadingV3Countries(true);
+      
+      const cached = localStorage.getItem(V3_COUNTRIES_CACHE_KEY);
+      const cachedTime = localStorage.getItem(V3_COUNTRIES_CACHE_TIME);
+      const now = Date.now();
+
+      if (cached && cachedTime && (now - parseInt(cachedTime, 10) < V3_CACHE_DURATION)) {
+          try {
+              const parsed = JSON.parse(cached);
+              // PENGAMAN CACHE: Pastikan ia array sungguhan dan strukturnya benar (ada id)
+              if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'id' in parsed[0]))) {
+                  setV3Countries(parsed);
+                  setLoadingV3Countries(false);
+                  return;
+              }
+          } catch(e) {
+              localStorage.removeItem(V3_COUNTRIES_CACHE_KEY);
+          }
+      }
+      
+      try {
+          const res = await api.get('/countries-v3/list');
+          if (res.data.success && Array.isArray(res.data.data)) {
+              setV3Countries(res.data.data);
+              localStorage.setItem(V3_COUNTRIES_CACHE_KEY, JSON.stringify(res.data.data));
+              localStorage.setItem(V3_COUNTRIES_CACHE_TIME, now.toString());
+          }
+      } catch (err) {
+          showToast("Gagal memuat negara server plus", "error");
+      } finally {
+          setLoadingV3Countries(false);
+      }
+  };
+
+  const handleV3CountryClick = async (country) => {
+      if (!country || !country.id) return showToast("Data negara tidak valid", "error");
+      
+      setSelectedV3Country(country);
+      setSheetMode('v3_services');
+      setV3Services([]);
+      setLoadingV3Services(true);
+
+      const cacheKey = V3_SERVICES_CACHE_KEY;
+      const cacheTime = V3_SERVICES_CACHE_TIME;
+      const now = Date.now();
+
+      setTimeout(async () => {
+          try {
+              const cached = localStorage.getItem(cacheKey);
+              const cachedTimeVal = localStorage.getItem(cacheTime);
+              
+              if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V3_CACHE_DURATION)) {
+                  try {
+                      const parsed = JSON.parse(cached);
+                      // PENGAMAN CACHE: Pastikan ia array sungguhan dan strukturnya benar (ada code)
+                      if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'code' in parsed[0]))) {
+                          setV3Services(parsed);
+                          setLoadingV3Services(false);
+                          return;
+                      }
+                  } catch(e) {
+                      localStorage.removeItem(cacheKey);
+                  }
+              } 
+              
+              const res = await api.get(`/services-v3/list`);
+              if (res.data.success && Array.isArray(res.data.data)) {
+                  setV3Services(res.data.data);
+                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+                  localStorage.setItem(cacheTime, now.toString());
+              }
+          } catch (err) {
+              showToast("Gagal memuat layanan server plus", "error");
+          } finally {
+              setLoadingV3Services(false);
+          }
+      }, 300);
+  };
+
+  const handleV3ServiceClick = async (service) => {
+      setSelectedV3Service(service);
+      setV3PriceModal({ show: true, data: null, loading: true, ordering: false, selectedServer: null });
+
+      const cacheKey = V3_PRICE_PREFIX + service.code + '_' + selectedV3Country.id;
+      const cacheTime = V3_PRICE_TIME_PREFIX + service.code + '_' + selectedV3Country.id;
+      const now = Date.now();
+
+      try {
+          const cached = localStorage.getItem(cacheKey);
+          const cachedTimeVal = localStorage.getItem(cacheTime);
+
+          if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V3_PRICE_DURATION)) {
+              try {
+                  const parsedData = JSON.parse(cached);
+                  if (parsedData && typeof parsedData === 'object' && 'servers' in parsedData) {
+                      const defaultServer = parsedData.servers && parsedData.servers.length > 0 ? parsedData.servers[0] : null;
+                      setV3PriceModal({ show: true, data: parsedData, loading: false, ordering: false, selectedServer: defaultServer });
+                      return;
+                  }
+              } catch(e) {
+                  localStorage.removeItem(cacheKey);
+              }
+          } 
+          
+          const res = await api.get(`/cekharga-v3/info?service=${service.code}&country=${selectedV3Country.id}`);
+          if (res.data.success) {
+              const defaultServer = res.data.data.servers && res.data.data.servers.length > 0 ? res.data.data.servers[0] : null;
+              setV3PriceModal({ show: true, data: res.data.data, loading: false, ordering: false, selectedServer: defaultServer });
+              localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+              localStorage.setItem(cacheTime, now.toString());
+          } else {
+              setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
+              showToast(res.data.message || "Gagal cek harga", "error");
+          }
+      } catch (err) {
+          setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
+          showToast("Gagal cek harga layanan", "error");
+      }
+  };
+
+  const processV3Buy = async (priceData) => {
+      const selectedServer = v3PriceModal.selectedServer;
+      if (!selectedServer) return showToast("Pilih server terlebih dahulu!", "error");
+      if (balance < selectedServer.price.sell) {
+          return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
+      }
+
+      setV3PriceModal(prev => ({ ...prev, ordering: true }));
+
+      try {
+          const res = await api.get(`/orders-v3/buy?service=${priceData.service}&country=${priceData.country}&server=${selectedServer.server}&operator=any&expected_price=${selectedServer.price.sell}`);
+          if (res.data.success) {
+              setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
+              setSheetMode(null); 
+              showToast("Order Server Plus Berhasil!", "success");
+              fetchInitialData();
+          } else {
+              setV3PriceModal(prev => ({ ...prev, ordering: false }));
+              showToast(res.data.message || "Order Gagal", "error");
+          }
+      } catch (err) {
+          setV3PriceModal(prev => ({ ...prev, ordering: false }));
+          const errorMsg = err.response?.data?.message || err.response?.data?.error?.message || "Gagal memproses order, coba lagi.";
+          showToast(errorMsg, "error");
+          fetchInitialData(true);
+      }
+  };
+
+  // ================================================================
   // --- GENERAL HANDLERS ---
   // ================================================================
 
@@ -966,6 +1384,8 @@ export default function Order() {
   };
 
   const handleServiceClick = (service) => {
+    if (!service || !service.service_code) return showToast("Layanan tidak valid", "error");
+
     setSelectedService(service);
     setSheetMode('countries');
     setCountries([]);
@@ -982,14 +1402,23 @@ export default function Order() {
           const cachedCountriesTime = localStorage.getItem(cacheTimeKey);
 
           if (cachedCountries && cachedCountriesTime && (now - parseInt(cachedCountriesTime, 10) < COUNTRIES_CACHE_DURATION)) {
-            setCountries(JSON.parse(cachedCountries));
-          } else {
-            const res = await api.get(`/countries/list?service_id=${service.service_code}`);
-            if (res.data.success) {
-              setCountries(res.data.data);
-              localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
-              localStorage.setItem(cacheTimeKey, now.toString());
-            }
+              try {
+                  const parsed = JSON.parse(cachedCountries);
+                  if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'number_id' in parsed[0]))) {
+                      setCountries(parsed);
+                      setLoadingCountries(false);
+                      return;
+                  }
+              } catch(e) {
+                  localStorage.removeItem(cacheKey);
+              }
+          } 
+          
+          const res = await api.get(`/countries/list?service_id=${service.service_code}`);
+          if (res.data.success && Array.isArray(res.data.data)) {
+            setCountries(res.data.data);
+            localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+            localStorage.setItem(cacheTimeKey, now.toString());
           }
         } catch (err) { 
           showToast("Gagal memuat negara", "error");
@@ -1011,11 +1440,15 @@ export default function Order() {
 
       try {
           const res = await api.get(`/operators/list?country=${country.name}&provider_id=${provider.provider_id}`);
-          if (res.data.success) {
+          if (res.data.success && Array.isArray(res.data.data)) {
               const ops = res.data.data;
               setOperatorModal(prev => ({ ...prev, operators: ops, loading: false }));
               
-              const currentCache = JSON.parse(localStorage.getItem('operator_images_cache') || '{}');
+              let currentCache = {};
+              try {
+                  currentCache = JSON.parse(localStorage.getItem('operator_images_cache') || '{}');
+              } catch(e) {}
+              
               let isUpdated = false;
               ops.forEach(op => {
                   if (op.name && op.image && !currentCache[op.name.toUpperCase()]) {
@@ -1078,13 +1511,18 @@ export default function Order() {
          try {
             const targetId = order.order_id || order.id || '';
             
-            // LOGIKA PEMISAHAN CANCEL V1 & V2
-            const cancelUrl = order.version === 'v2' 
-                ? `/order-v2/cancel?order_id=${targetId}` 
-                : `/orders/cancel?order_id=${targetId}`;
+            // LOGIKA PEMISAHAN CANCEL V1, V2 & V3
+            const cancelUrl = order.version === 'v3'
+                ? `/orders-v3/cancel?order_id=${targetId}`
+                : order.version === 'v2' 
+                    ? `/order-v2/cancel?order_id=${targetId}` 
+                    : `/orders/cancel?order_id=${targetId}`;
 
             await api.get(cancelUrl);
-            setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== targetId));
+            setActiveOrders(prev => {
+                if(!Array.isArray(prev)) return [];
+                return prev.filter(o => (o.order_id || o.id) !== targetId)
+            });
             
             closeConfirm();
             showToast("Pesanan dibatalkan", "success");
@@ -1099,7 +1537,10 @@ export default function Order() {
   };
 
   const handleCloseOrder = async (orderId) => {
-      setActiveOrders(prev => prev.filter(o => (o.order_id || o.id) !== orderId));
+      setActiveOrders(prev => {
+          if(!Array.isArray(prev)) return [];
+          return prev.filter(o => (o.order_id || o.id) !== orderId)
+      });
       let attempt = 0;
       while (attempt < 3) {
           try {
@@ -1117,11 +1558,6 @@ export default function Order() {
     return url; 
   };
 
-  // ================================================================
-  // PERUBAHAN UTAMA: getCountryFlag
-  // Sekarang mengembalikan komponen badge yang sangat rapi jika
-  // bendera negara tidak ditemukan di dalam dictionary.
-  // ================================================================
   const getCountryFlag = (countryName) => {
     if (!countryName) {
         return (
@@ -1153,12 +1589,10 @@ export default function Order() {
 
     const nameLower = countryName.toLowerCase();
     
-    // Jika ada di mapping, gunakan emoji bendera aslinya
     if (flags[nameLower]) {
       return flags[nameLower];
     }
 
-    // Jika TIDAK ADA, buat Avatar Bulat (Badge) yang modern & profesional
     const initial = countryName.charAt(0).toUpperCase();
     return (
       <div className="inline-flex items-center justify-center w-[1.3em] h-[1.3em] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[0.65em] font-bold border border-slate-200 dark:border-slate-700 align-middle shrink-0 shadow-sm">
@@ -1168,16 +1602,26 @@ export default function Order() {
   };
 
   const getServiceImg = (serviceName) => {
-    if (!serviceName || services.length === 0) return null;
-    const found = services.find(s => s.service_name?.toLowerCase() === serviceName?.toLowerCase());
+    if (!serviceName || !Array.isArray(services) || services.length === 0) return null;
+    const found = services.find(s => (s.service_name || '').toLowerCase() === serviceName?.toLowerCase());
     return found?.service_img || null;
   };
 
   const handleReorder = (order) => {
-    if (order.version === 'v2') {
-        // Reorder Server Termurah V2
-        if (v2Countries.length > 0) {
-            const countryV2 = v2Countries.find(c => String(c.id) === String(order.country) || c.name.toLowerCase() === order.countryName?.toLowerCase());
+    if (order.version === 'v3') {
+        if (Array.isArray(v3Countries) && v3Countries.length > 0) {
+            const countryV3 = v3Countries.find(c => String(c.id) === String(order.country) || (c.name || '').toLowerCase() === order.countryName?.toLowerCase());
+            if (countryV3) {
+                handleV3CountryClick(countryV3);
+            } else {
+                handleOpenV3();
+            }
+        } else {
+            handleOpenV3();
+        }
+    } else if (order.version === 'v2') {
+        if (Array.isArray(v2Countries) && v2Countries.length > 0) {
+            const countryV2 = v2Countries.find(c => String(c.id) === String(order.country) || (c.name || '').toLowerCase() === order.countryName?.toLowerCase());
             if (countryV2) {
                 handleV2CountryClick(countryV2);
             } else {
@@ -1187,13 +1631,14 @@ export default function Order() {
             handleOpenV2();
         }
     } else {
-        // Reorder Server Utama V1
-        const found = services.find(s => s.service_name?.toLowerCase() === order.service?.toLowerCase());
-        if (found) {
-            handleServiceClick(found);
-        } else {
-            setSheetMode('services');
+        if (Array.isArray(services)) {
+            const found = services.find(s => (s.service_name || '').toLowerCase() === order.service?.toLowerCase());
+            if (found) {
+                handleServiceClick(found);
+                return;
+            }
         }
+        setSheetMode('services');
     }
   };
 
@@ -1221,7 +1666,7 @@ export default function Order() {
       <div className="px-5 mt-6 space-y-6">
         
         {/* =========================================
-            TOMBOL PILIHAN ORDER (UTAMA & TERMURAH)
+            TOMBOL PILIHAN ORDER (UTAMA, TERMURAH, PLUS)
             ========================================= */}
         <div className="grid grid-cols-1 gap-4">
             
@@ -1262,6 +1707,25 @@ export default function Order() {
                     <Globe size={80} className="text-white" />
                 </div>
             </button>
+
+            {/* Tombol Server Plus (V3) */}
+            <button 
+                onClick={handleOpenV3} 
+                className="w-full group relative overflow-hidden rounded-3xl p-5 text-left shadow-lg transition-transform active:scale-95 bg-gradient-to-r from-violet-600 to-fuchsia-700 dark:from-violet-800 dark:to-fuchsia-900"
+            >
+                <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-bold text-white mb-0.5">Server Plus</h2>
+                        <p className="text-violet-100 text-xs opacity-90">Kualitas premium, multi-server</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                        <Plus size={20} className="text-white" />
+                    </div>
+                </div>
+                <div className="absolute -right-2 -bottom-4 opacity-10 rotate-12">
+                    <Zap size={80} className="text-white" />
+                </div>
+            </button>
             
         </div>
 
@@ -1284,7 +1748,7 @@ export default function Order() {
         </div>
 
         {/* KONDISI DAFTAR ORDER AKTIF ATAU EMPTY STATE */}
-        {activeOrders.length > 0 ? (
+        {Array.isArray(activeOrders) && activeOrders.length > 0 ? (
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1308,13 +1772,11 @@ export default function Order() {
                     </button>
                 </div>
 
-                {activeOrders.map((order) => {
-                    const orderId = order.order_id || order.id || '';
+                {activeOrders.map((order, orderIndex) => {
+                    const orderId = order.order_id || order.id || `order-${orderIndex}`;
                     
-                    // Fallback image handling
                     let serviceImg = null;
-                    if (order.version === 'v2') {
-                        // Jika V2 dan tidak ada logic fetch img history, bisa fallback ke icon smartphone
+                    if (order.version === 'v2' || order.version === 'v3') {
                         serviceImg = null; 
                     } else {
                         serviceImg = getServiceImg(order.service);
@@ -1324,12 +1786,11 @@ export default function Order() {
                     const smsText = order.sms_content || order.sms || order.message || 
                         (otpDisplay ? `Kode OTP ${order.service || ''} Anda adalah: ${otpDisplay}` : 'Pesan kosong diterima dari server.');
 
-                    // V2 tidak pakai operator, fallback ke 'any'
-                    const operatorName = order.version === 'v2' ? 'any' : (order.operator || 'any');
+                    const operatorName = (order.version === 'v2' || order.version === 'v3') ? 'any' : (order.operator || 'any');
                     const isOpAny = operatorName.toLowerCase() === 'any' || operatorName.toLowerCase() === 'random';
-                    const opImgCached = opImagesCache[operatorName.toUpperCase()];
+                    const opImgCached = opImagesCache[(operatorName || 'any').toUpperCase()];
 
-                    const finalCountryName = order.countryName || order.country;
+                    const finalCountryName = order.countryName || order.country || 'Unknown';
 
                     return (
                         <ActiveOrderCard
@@ -1483,19 +1944,19 @@ export default function Order() {
                               <div className="flex justify-between items-center">
                                   <span className="text-sm text-slate-500">Layanan</span>
                                   <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                      {v2PriceModal.data.name}
+                                      {v2PriceModal.data.name || 'Layanan'}
                                   </span>
                               </div>
                               <div className="flex justify-between items-center">
                                   <span className="text-sm text-slate-500">Negara</span>
                                   <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                      {getCountryFlag(v2PriceModal.data.countryName)} {v2PriceModal.data.countryName}
+                                      {getCountryFlag(v2PriceModal.data.countryName)} {v2PriceModal.data.countryName || 'Negara'}
                                   </span>
                               </div>
                               <div className="flex justify-between items-center">
                                   <span className="text-sm text-slate-500">Sisa Stok</span>
                                   <span className={`font-bold text-sm px-2 py-0.5 rounded ${v2PriceModal.data.stock > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700'}`}>
-                                      {v2PriceModal.data.stock} Tersedia
+                                      {v2PriceModal.data.stock || 0} Tersedia
                                   </span>
                               </div>
                               <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -1508,12 +1969,98 @@ export default function Order() {
 
                           <button 
                               onClick={() => processV2Buy(v2PriceModal.data)}
-                              disabled={v2PriceModal.ordering || v2PriceModal.data.stock <= 0}
-                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v2PriceModal.ordering || v2PriceModal.data.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'}`}
+                              disabled={v2PriceModal.ordering || !v2PriceModal.data || v2PriceModal.data.stock <= 0}
+                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v2PriceModal.ordering || !v2PriceModal.data || v2PriceModal.data.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'}`}
                           >
                               {v2PriceModal.ordering ? (
                                   <><Loader2 size={18} className="animate-spin" /> Memproses...</>
-                              ) : v2PriceModal.data.stock <= 0 ? (
+                              ) : (v2PriceModal.data && v2PriceModal.data.stock <= 0) ? (
+                                  'Stok Habis'
+                              ) : (
+                                  <><ShoppingBag size={18} /> Beli Sekarang</>
+                              )}
+                          </button>
+                      </div>
+                  ) : (
+                      <div className="text-center py-6 text-slate-500">Gagal memuat detail harga.</div>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* =========================================================
+          MODAL UNTUK KONFIRMASI HARGA & ORDER (SERVER PLUS V3)
+          ========================================================= */}
+      {v3PriceModal.show && (
+          <div 
+              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-5 animate-in fade-in duration-200" 
+              onClick={() => !v3PriceModal.ordering && setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })}
+          >
+              <div 
+                  className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 border border-slate-100 dark:border-slate-800" 
+                  onClick={e => e.stopPropagation()}
+              >
+                  {v3PriceModal.loading ? (
+                      <div className="flex flex-col items-center justify-center py-8">
+                          <Loader2 size={36} className="text-violet-500 animate-spin mb-4" />
+                          <p className="text-slate-500 font-medium">Mengecek daftar server...</p>
+                      </div>
+                  ) : v3PriceModal.data ? (
+                      <div>
+                          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                              <div>
+                                  <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Pilih Server Plus</h3>
+                                  <p className="text-xs text-slate-500">{v3PriceModal.data.name || 'Layanan'} - {v3PriceModal.data.countryName || 'Negara'}</p>
+                              </div>
+                              <button 
+                                  onClick={() => !v3PriceModal.ordering && setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })} 
+                                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                              >
+                                  <X size={20} />
+                              </button>
+                          </div>
+
+                          <div className="space-y-3 mb-6 max-h-[220px] overflow-y-auto hide-scrollbar">
+                              {Array.isArray(v3PriceModal.data.servers) && v3PriceModal.data.servers.length > 0 ? (
+                                  v3PriceModal.data.servers.map((srv, idx) => (
+                                      <div 
+                                          key={srv.server || idx} 
+                                          onClick={() => setV3PriceModal(prev => ({ ...prev, selectedServer: srv }))}
+                                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                                              v3PriceModal.selectedServer?.server === srv.server 
+                                              ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' 
+                                              : 'border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800/50'
+                                          }`}
+                                      >
+                                          <div className="flex justify-between items-center">
+                                              <div>
+                                                  <p className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                                                      {srv.serverName || 'Server'}
+                                                      {v3PriceModal.selectedServer?.server === srv.server && <CheckCircle2 size={14} className="text-violet-500" />}
+                                                  </p>
+                                                  <p className={`text-xs mt-0.5 ${srv.stock > 0 ? 'text-emerald-500' : 'text-red-500'}`}>Stok: {srv.stock || 0}</p>
+                                              </div>
+                                              <div className="text-right">
+                                                  <p className="font-black text-[15px] text-violet-600 dark:text-violet-400">Rp {(srv.price?.sell || 0).toLocaleString('id-ID')}</p>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  ))
+                              ) : (
+                                  <div className="text-center py-4 text-slate-500 text-sm">Tidak ada server yang tersedia saat ini.</div>
+                              )}
+                          </div>
+
+                          <button 
+                              onClick={() => processV3Buy(v3PriceModal.data)}
+                              disabled={v3PriceModal.ordering || !v3PriceModal.selectedServer || v3PriceModal.selectedServer.stock <= 0}
+                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v3PriceModal.ordering || !v3PriceModal.selectedServer || v3PriceModal.selectedServer.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-600/30'}`}
+                          >
+                              {v3PriceModal.ordering ? (
+                                  <><Loader2 size={18} className="animate-spin" /> Memproses...</>
+                              ) : (!v3PriceModal.selectedServer) ? (
+                                  'Pilih Server Dulu'
+                              ) : v3PriceModal.selectedServer.stock <= 0 ? (
                                   'Stok Habis'
                               ) : (
                                   <><ShoppingBag size={18} /> Beli Sekarang</>
@@ -1553,7 +2100,7 @@ export default function Order() {
                               <div key={i} className="min-w-[100px] h-[130px] bg-slate-800 animate-pulse rounded-2xl shrink-0"></div>
                           ))}
                       </div>
-                  ) : operatorModal.operators.length > 0 ? (
+                  ) : Array.isArray(operatorModal.operators) && operatorModal.operators.length > 0 ? (
                       <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-2 px-2">
                           
                           {/* Opsi ACAK / ANY */}
@@ -1575,8 +2122,8 @@ export default function Order() {
                           </button>
 
                           {/* List Operator */}
-                          {operatorModal.operators.filter(op => op.name !== 'any').map((op) => {
-                              const opIdentifier = op.id || op.name;
+                          {operatorModal.operators.filter(op => op && op.name !== 'any').map((op, opIdx) => {
+                              const opIdentifier = op.id || op.name || `op-${opIdx}`;
                               const isProcessing = operatorModal.processingOpId === opIdentifier;
                               return (
                                   <button
@@ -1587,12 +2134,12 @@ export default function Order() {
                                   >
                                       <div className="flex-1 flex items-center justify-center w-full">
                                           {op.image ? (
-                                              <img src={getOptimizedImage(op.image)} className="w-14 h-14 object-contain" alt={op.name} />
+                                              <img src={getOptimizedImage(op.image)} className="w-14 h-14 object-contain" alt={op.name || 'Operator'} />
                                           ) : (
                                               <span className="text-3xl">📡</span>
                                           )}
                                       </div>
-                                      <span className="font-bold text-slate-400 text-[13px] w-full text-center truncate capitalize">{op.name}</span>
+                                      <span className="font-bold text-slate-400 text-[13px] w-full text-center truncate capitalize">{op.name || 'Unknown'}</span>
 
                                       {isProcessing && (
                                           <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
@@ -1683,6 +2230,27 @@ export default function Order() {
           services={v2Services}
           loading={loadingV2Services}
           onSelectService={handleV2ServiceClick}
+          getOptimizedImage={getOptimizedImage}
+          getCountryFlag={getCountryFlag}
+      />
+
+      {/* IMPLEMENTASI DRAWERS V3 (PLUS) */}
+      <V3CountriesDrawer
+          isOpen={sheetMode === 'v3_countries'}
+          onClose={() => setSheetMode(null)}
+          countries={v3Countries}
+          loading={loadingV3Countries}
+          onSelectCountry={handleV3CountryClick}
+          getCountryFlag={getCountryFlag}
+      />
+
+      <V3ServicesDrawer
+          isOpen={sheetMode === 'v3_services'}
+          onBack={() => setSheetMode('v3_countries')}
+          selectedCountry={selectedV3Country}
+          services={v3Services}
+          loading={loadingV3Services}
+          onSelectService={handleV3ServiceClick}
           getOptimizedImage={getOptimizedImage}
           getCountryFlag={getCountryFlag}
       />
