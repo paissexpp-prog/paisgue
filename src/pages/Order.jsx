@@ -2122,10 +2122,14 @@ export default function Order() {
                                                   </p>
                                                   <div className="flex items-center gap-2 mt-1">
                                                       <span className={`text-[11px] font-bold ${srv.stok > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>Stok: {srv.stok || 0}</span>
-                                                      <span className="text-slate-300 dark:text-slate-600">•</span>
-                                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
-                                                          ⚡ {srv.tingkat_otp || 0}% Rate
-                                                      </span>
+                                                      {srv.tingkat_otp != null && (
+                                                          <>
+                                                              <span className="text-slate-300 dark:text-slate-600">•</span>
+                                                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
+                                                                  ⚡ {srv.tingkat_otp}% Rate
+                                                              </span>
+                                                          </>
+                                                      )}
                                                   </div>
                                               </div>
                                               <div className="text-right">
