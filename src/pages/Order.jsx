@@ -868,7 +868,7 @@ export default function Order() {
   });
 
   const [v2PriceModal, setV2PriceModal] = useState({
-      show: false, data: null, loading: false, ordering: false
+      show: false, data: null, loading: false, ordering: false, selectedServer: null
   });
 
   const [v3PriceModal, setV3PriceModal] = useState({
@@ -1195,7 +1195,7 @@ export default function Order() {
 
   const handleV2ServiceClick = async (service) => {
       setSelectedV2Service(service);
-      setV2PriceModal({ show: true, data: null, loading: true, ordering: false });
+      setV2PriceModal({ show: true, data: null, loading: true, ordering: false, selectedServer: null });
 
       const cacheKey = V2_PRICE_PREFIX + service.code + '_' + selectedV2Country.id;
       const cacheTime = V2_PRICE_TIME_PREFIX + service.code + '_' + selectedV2Country.id;
@@ -1207,9 +1207,10 @@ export default function Order() {
 
           if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V2_PRICE_DURATION)) {
               try {
-                  const parsed = JSON.parse(cached);
-                  if (parsed && typeof parsed === 'object') {
-                      setV2PriceModal({ show: true, data: parsed, loading: false, ordering: false });
+                  const parsedData = JSON.parse(cached);
+                  if (parsedData && typeof parsedData === 'object' && 'server' in parsedData) {
+                      const defaultServer = parsedData.server && parsedData.server.length > 0 ? parsedData.server[0] : null;
+                      setV2PriceModal({ show: true, data: parsedData, loading: false, ordering: false, selectedServer: defaultServer });
                       return;
                   }
               } catch(e) {
@@ -1218,31 +1219,39 @@ export default function Order() {
           } 
           
           const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}`);
-          if (res.data.success) {
-              setV2PriceModal({ show: true, data: res.data.data, loading: false, ordering: false });
-              localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+          if (res.data.success || res.data.status) {
+              const responseData = {
+                  ...res.data,
+                  serviceCode: service.code,
+                  countryId: selectedV2Country.id
+              };
+              const defaultServer = responseData.server && responseData.server.length > 0 ? responseData.server[0] : null;
+              setV2PriceModal({ show: true, data: responseData, loading: false, ordering: false, selectedServer: defaultServer });
+              localStorage.setItem(cacheKey, JSON.stringify(responseData));
               localStorage.setItem(cacheTime, now.toString());
           } else {
-              setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+              setV2PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
               showToast(res.data.message || "Gagal cek harga", "error");
           }
       } catch (err) {
-          setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+          setV2PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
           showToast("Gagal cek harga layanan", "error");
       }
   };
 
   const processV2Buy = async (priceData) => {
-      if (balance < priceData.price.sell) {
+      const selectedServer = v2PriceModal.selectedServer;
+      if (!selectedServer) return showToast("Pilih server terlebih dahulu!", "error");
+      if (balance < selectedServer.harga) {
           return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
       }
 
       setV2PriceModal(prev => ({ ...prev, ordering: true }));
 
       try {
-          const res = await api.get(`/order-v2/buy?service=${priceData.service}&country=${priceData.country}&expected_price=${priceData.price.sell}`);
-          if (res.data.success) {
-              setV2PriceModal({ show: false, data: null, loading: false, ordering: false });
+          const res = await api.get(`/order-v2/buy?service=${priceData.serviceCode}&country=${priceData.countryId}&expected_price=${selectedServer.harga}&provider_id=${selectedServer.id}`);
+          if (res.data.success || res.data.status) {
+              setV2PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
               setSheetMode(null); 
               showToast("Order Server Termurah Berhasil!", "success");
               fetchInitialData();
@@ -2067,7 +2076,7 @@ export default function Order() {
       {v2PriceModal.show && (
           <div 
               className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-5 animate-in fade-in duration-200" 
-              onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false })}
+              onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })}
           >
               <div 
                   className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 border border-slate-100 dark:border-slate-800" 
@@ -2080,51 +2089,66 @@ export default function Order() {
                       </div>
                   ) : v2PriceModal.data ? (
                       <div>
-                          <div className="flex items-center justify-between mb-5 border-b border-slate-100 dark:border-slate-800 pb-4">
-                              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Detail Pesanan</h3>
+                          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                              <div>
+                                  <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Pilih Server Termurah</h3>
+                                  <p className="text-xs text-slate-500">{v2PriceModal.data.layanan || 'Layanan'} - {v2PriceModal.data.negara || 'Negara'}</p>
+                              </div>
                               <button 
-                                  onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false })} 
+                                  onClick={() => !v2PriceModal.ordering && setV2PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })} 
                                   className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
                               >
                                   <X size={20} />
                               </button>
                           </div>
 
-                          <div className="space-y-4 mb-6">
-                              <div className="flex justify-between items-center">
-                                  <span className="text-sm text-slate-500">Layanan</span>
-                                  <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                      {v2PriceModal.data.name || 'Layanan'}
-                                  </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                  <span className="text-sm text-slate-500">Negara</span>
-                                  <span className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                      {getCountryFlag(v2PriceModal.data.countryName)} {v2PriceModal.data.countryName || 'Negara'}
-                                  </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                  <span className="text-sm text-slate-500">Sisa Stok</span>
-                                  <span className={`font-bold text-sm px-2 py-0.5 rounded ${v2PriceModal.data.stock > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700'}`}>
-                                      {v2PriceModal.data.stock || 0} Tersedia
-                                  </span>
-                              </div>
-                              <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-                                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Total Harga</span>
-                                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                                      Rp {v2PriceModal.data.price?.sell?.toLocaleString('id-ID') || 0}
-                                  </span>
-                              </div>
+                          <div className="space-y-3 mb-6 max-h-[260px] overflow-y-auto hide-scrollbar">
+                              {Array.isArray(v2PriceModal.data.server) && v2PriceModal.data.server.length > 0 ? (
+                                  v2PriceModal.data.server.map((srv, idx) => (
+                                      <div 
+                                          key={srv.id || idx} 
+                                          onClick={() => setV2PriceModal(prev => ({ ...prev, selectedServer: srv }))}
+                                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                                              v2PriceModal.selectedServer?.id === srv.id 
+                                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' 
+                                              : 'border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-800/50'
+                                          }`}
+                                      >
+                                          <div className="flex justify-between items-center">
+                                              <div>
+                                                  <p className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                                                      {srv.label || `Server ${idx + 1}`}
+                                                      {v2PriceModal.selectedServer?.id === srv.id && <CheckCircle2 size={14} className="text-emerald-500" />}
+                                                  </p>
+                                                  <div className="flex items-center gap-2 mt-1">
+                                                      <span className={`text-[11px] font-bold ${srv.stok > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>Stok: {srv.stok || 0}</span>
+                                                      <span className="text-slate-300 dark:text-slate-600">•</span>
+                                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
+                                                          ⚡ {srv.tingkat_otp || 0}% Rate
+                                                      </span>
+                                                  </div>
+                                              </div>
+                                              <div className="text-right">
+                                                  <p className="font-black text-[15px] text-emerald-600 dark:text-emerald-400">Rp {(srv.harga || 0).toLocaleString('id-ID')}</p>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  ))
+                              ) : (
+                                  <div className="text-center py-4 text-slate-500 text-sm">Tidak ada server yang tersedia saat ini.</div>
+                              )}
                           </div>
 
                           <button 
                               onClick={() => processV2Buy(v2PriceModal.data)}
-                              disabled={v2PriceModal.ordering || !v2PriceModal.data || v2PriceModal.data.stock <= 0}
-                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v2PriceModal.ordering || !v2PriceModal.data || v2PriceModal.data.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'}`}
+                              disabled={v2PriceModal.ordering || !v2PriceModal.selectedServer || v2PriceModal.selectedServer.stok <= 0}
+                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v2PriceModal.ordering || !v2PriceModal.selectedServer || v2PriceModal.selectedServer.stok <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/30'}`}
                           >
                               {v2PriceModal.ordering ? (
                                   <><Loader2 size={18} className="animate-spin" /> Memproses...</>
-                              ) : (v2PriceModal.data && v2PriceModal.data.stock <= 0) ? (
+                              ) : (!v2PriceModal.selectedServer) ? (
+                                  'Pilih Server Dulu'
+                              ) : v2PriceModal.selectedServer.stok <= 0 ? (
                                   'Stok Habis'
                               ) : (
                                   <><ShoppingBag size={18} /> Beli Sekarang</>
