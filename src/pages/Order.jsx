@@ -14,7 +14,7 @@ import {
   Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, 
   Clock, Copy, MessageSquare, RefreshCw,
   Wallet, History, Headphones, Brain, Info, Bug, Eye, BookOpen, FileText,
-  Zap
+  Zap, Bell
 } from 'lucide-react';
 
 // ================================================================
@@ -732,7 +732,7 @@ const V3ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
     const handleScroll = (e) => {
         const { scrollTop, scrollHeight, clientHeight } = e.target;
         if (scrollTop + clientHeight >= scrollHeight - 50) {
-            if (displayLimit < filteredServices.length) {
+            if (displayLimit < filteredCountries.length) {
                 setDisplayLimit(prev => prev + 20);
             }
         }
@@ -854,6 +854,14 @@ export default function Order() {
   const [selectedService, setSelectedService] = useState(null);
   const [expandedCountry, setExpandedCountry] = useState(null);
 
+  // Notifications State
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(
+      localStorage.getItem('ruangotp_notifications') === 'true'
+  );
+  const [browserPermission, setBrowserPermission] = useState(
+      'Notification' in window ? Notification.permission : 'default'
+  );
+
   // Modals
   const [operatorModal, setOperatorModal] = useState({
       show: false, country: null, provider: null, operators: [], loading: false, processingOpId: null
@@ -936,7 +944,34 @@ export default function Order() {
     }
   ];
 
+  // Helper Dinamis untuk Menampilkan Notifikasi (Support Mobile Chrome / Android)
+  const triggerNotification = (title, options) => {
+      try {
+          // Pendekatan utama untuk Android/Mobile Chrome: Gunakan Service Worker Registration jika tersedia
+          if ('serviceWorker' in navigator && 'PushManager' in window) {
+              navigator.serviceWorker.ready.then((registration) => {
+                  registration.showNotification(title, options);
+              }).catch(() => {
+                  // Fallback Desktop jika registrasi SW gagal di-load
+                  const n = new Notification(title, options);
+                  n.onclick = () => { window.focus(); n.close(); };
+              });
+          } else {
+              // Fallback jika tidak ada Service Worker support (misal iOS Safari lawas)
+              const n = new Notification(title, options);
+              n.onclick = () => { window.focus(); n.close(); };
+          }
+      } catch (err) {
+          console.error("Gagal trigger notif:", err);
+      }
+  };
+
   useEffect(() => {
+    // --- TAMBAHAN REGISTRASI SERVICE WORKER ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Reg Error:', err));
+    }
+
     try {
         const savedOpImages = localStorage.getItem('operator_images_cache');
         if (savedOpImages) setOpImagesCache(JSON.parse(savedOpImages));
@@ -988,6 +1023,23 @@ export default function Order() {
                     return order;
                 });
             });
+
+            // Trigger Push Notification Logic yang sudah Support Android/Mobile
+            const isNotifyOn = localStorage.getItem('ruangotp_notifications') === 'true';
+            if (isNotifyOn && 'Notification' in window && Notification.permission === 'granted') {
+                const otpCode = data.otp_code || (data.sms_content?.match(/\d+/)?.[0]) || '';
+                const serviceName = data.service || 'WhatsApp'; 
+                const message = data.sms_content || `<#> Kode ${serviceName}: ${otpCode}\nJangan bagikan kode ini.`;
+
+                triggerNotification(serviceName, {
+                    body: message,
+                    icon: "https://cdn.nekohime.site/file/HsGrgzQf.jpeg",
+                    badge: "https://cdn.nekohime.site/file/HsGrgzQf.jpeg",
+                    tag: data.order_id || 'otp-update',
+                    vibrate: [200, 100, 200, 100, 200, 100, 200], // Getaran panjang khas OTP masuk
+                    requireInteraction: true 
+                });
+            }
         }
         fetchInitialData(true);
     });
@@ -1642,6 +1694,48 @@ export default function Order() {
     }
   };
 
+  // --- Handlers for Notifications ---
+  const enableNotification = async () => {
+    if (!('Notification' in window)) {
+        return showToast("Browser Anda tidak mendukung notifikasi", "error");
+    }
+    
+    const sendWelcomeNotification = () => {
+        triggerNotification("RuangOTP Notifikasi", {
+             body: "Notifikasi berhasil diaktifkan! Anda akan menerima alert saat SMS OTP masuk.",
+             icon: "https://cdn.nekohime.site/file/HsGrgzQf.jpeg",
+             vibrate: [200, 100, 200]
+        });
+    };
+
+    if (Notification.permission === 'granted') {
+        setIsNotificationEnabled(true);
+        localStorage.setItem('ruangotp_notifications', 'true');
+        setBrowserPermission('granted');
+        showToast("Notifikasi diaktifkan", "success");
+        sendWelcomeNotification();
+    } else if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        setBrowserPermission(permission);
+        if (permission === 'granted') {
+            setIsNotificationEnabled(true);
+            localStorage.setItem('ruangotp_notifications', 'true');
+            showToast("Notifikasi diaktifkan", "success");
+            sendWelcomeNotification();
+        } else {
+            showToast("Izin notifikasi ditolak oleh browser", "error");
+        }
+    } else {
+        showToast("Silakan izinkan notifikasi di pengaturan browser Anda", "error");
+    }
+  };
+
+  const disableNotification = () => {
+      setIsNotificationEnabled(false);
+      localStorage.setItem('ruangotp_notifications', 'false');
+      showToast("Notifikasi dimatikan", "success");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 transition-colors duration-300 dark:bg-slate-900">
       
@@ -1846,8 +1940,64 @@ export default function Order() {
             </div>
         )}
 
-        {/* FAQ SECTION */}
+        {/* NOTIFIKASI REAL-TIME SECTION */}
         <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+                    <Bell size={24} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                    <h3 className="font-bold text-slate-800 dark:text-white">Notifikasi</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`relative flex h-2.5 w-2.5`}>
+                            {isNotificationEnabled && browserPermission === 'granted' && (
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            )}
+                            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isNotificationEnabled && browserPermission === 'granted' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {isNotificationEnabled && browserPermission === 'granted' ? 'Aktif' : 'Tidak Aktif'}
+                        </span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 ml-2">
+                             <Globe size={12}/> Browser
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex gap-3 w-full mb-5">
+                <button
+                    onClick={enableNotification}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 ${
+                        isNotificationEnabled && browserPermission === 'granted'
+                        ? 'bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-500 cursor-default'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700'
+                    }`}
+                >
+                    <RefreshCw size={16} /> Browser
+                </button>
+                <button
+                    onClick={disableNotification}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 ${
+                        !isNotificationEnabled
+                        ? 'bg-slate-100 text-slate-400 dark:bg-slate-900 dark:text-slate-500 cursor-default'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
+                    }`}
+                >
+                    Matikan
+                </button>
+            </div>
+
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900/50 dark:bg-blue-900/10">
+                <h4 className="font-bold text-slate-800 dark:text-white text-sm mb-2">Message Notifikasi Real-time</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Disarankan menggunakan notifikasi real-time agar SMS message dapat di terima tepat waktu tanpa delay walaupun situs ditutup saat mendaftar nomor.
+                </p>
+            </div>
+        </div>
+
+        {/* FAQ SECTION */}
+        <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
             <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
                     <Headphones size={24} className="text-blue-600 dark:text-blue-400" />
