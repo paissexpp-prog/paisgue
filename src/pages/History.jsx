@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
@@ -17,9 +17,17 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null); // Untuk accordion
   const [isOffline, setIsOffline] = useState(false); // State indikator pakai cache
+  
+  // State untuk Custom Toast Notification
+  const [toast, setToast] = useState({ show: false, message: '' });
+  const toastTimeout = useRef(null);
 
   useEffect(() => {
     fetchData();
+    // Cleanup timeout saat komponen di-unmount
+    return () => {
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+    };
   }, []);
 
   // --- FETCH DATA DENGAN SISTEM CACHE ---
@@ -77,7 +85,19 @@ export default function History() {
   const handleCopy = (text) => {
     if(!text) return;
     navigator.clipboard.writeText(text);
-    alert('ID berhasil disalin!'); 
+    
+    // Tampilkan custom toast alih-alih menggunakan alert bawaan
+    setToast({ show: true, message: 'ID berhasil disalin!' });
+    
+    // Reset timer jika user klik berkali-kali sebelum toast hilang
+    if (toastTimeout.current) {
+      clearTimeout(toastTimeout.current);
+    }
+    
+    // Sembunyikan toast setelah 2.5 detik
+    toastTimeout.current = setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 2500);
   };
 
   const formatDate = (dateString) => {
@@ -186,7 +206,9 @@ export default function History() {
                               <span className="text-slate-500">Order ID</span>
                               <div className="flex items-center gap-2">
                                 <span className="font-mono text-slate-700 dark:text-slate-300">{item.order_id}</span>
-                                <button onClick={() => handleCopy(item.order_id)} className="text-blue-500"><Copy size={12}/></button>
+                                <button onClick={() => handleCopy(item.order_id)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                                  <Copy size={14}/>
+                                </button>
                               </div>
                            </div>
                            {/* Jika ada SMS/OTP */}
@@ -245,7 +267,9 @@ export default function History() {
                               <span className="text-slate-500">Deposit ID</span>
                               <div className="flex items-center gap-2">
                                 <span className="font-mono text-slate-700 dark:text-slate-300">{item.id}</span>
-                                <button onClick={() => handleCopy(item.id)} className="text-blue-500"><Copy size={12}/></button>
+                                <button onClick={() => handleCopy(item.id)} className="text-blue-500 hover:text-blue-600 transition-colors">
+                                  <Copy size={14}/>
+                                </button>
                               </div>
                            </div>
                            <div className="flex justify-between">
@@ -261,6 +285,16 @@ export default function History() {
           )
         )}
       </div>
+
+      {/* --- CUSTOM TOAST NOTIFICATION --- */}
+      {toast.show && (
+        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-2.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-xl border border-slate-700/50 dark:bg-white dark:text-slate-900 dark:border-slate-200">
+            <CheckCircle2 size={16} className="text-emerald-400 dark:text-emerald-600" />
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* --- PENTING: BOTTOM NAV AGAR BISA KEMBALI --- */}
       <BottomNav />
