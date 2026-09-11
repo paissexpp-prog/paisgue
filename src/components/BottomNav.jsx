@@ -18,12 +18,6 @@ const BottomNav = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  const getIconClass = (path) => {
-    return isActive(path) 
-      ? `${color.text}` 
-      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400';
-  };
-
   return (
     <>
       {/* =========================================
@@ -176,7 +170,7 @@ const BottomNav = () => {
       {/* =========================================
           FLOATING BUTTON (HEADSET)
           ========================================= */}
-      <div className="fixed bottom-24 right-5 z-50">
+      <div className="fixed bottom-28 right-5 z-50">
         <button 
             onClick={() => setShowSupport(!showSupport)}
             className={`flex h-14 w-14 items-center justify-center rounded-[1.2rem] shadow-xl shadow-blue-900/20 transition-transform active:scale-90 ${color.btn}`}
@@ -186,76 +180,74 @@ const BottomNav = () => {
       </div>
 
       {/* =========================================
-          NAVBAR UTAMA (PENAMBAHAN ANIMASI NAIK)
+          NAVBAR UTAMA (FLOATING PILL DENGAN TEMA BIRU)
           ========================================= */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white px-6 py-2 pb-safe dark:border-slate-800 dark:bg-slate-950">
-        <div className="relative mx-auto flex max-w-md items-center justify-between">
+      <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 w-[92%] max-w-md px-1.5 py-1.5 rounded-full shadow-2xl bg-blue-500 dark:bg-blue-600 ring-1 ring-white/10">
+        <div className="flex items-center justify-between sm:justify-around gap-1">
           
           {/* Menu Home */}
           <button 
             onClick={() => navigate('/dashboard')}
-            className={`relative flex w-14 flex-col items-center gap-1 transition-all duration-300 ease-out ${
-              isActive('/dashboard') ? '-translate-y-1.5' : 'translate-y-0'
-            } ${getIconClass('/dashboard')}`}
+            className={`flex flex-col h-[56px] min-w-[64px] flex-1 items-center justify-center rounded-full transition-all duration-300 ease-out gap-0.5 ${
+              isActive('/dashboard') ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/10'
+            }`}
           >
-            <div className={`transition-transform duration-300 ${isActive('/dashboard') ? 'scale-110' : 'scale-100'}`}>
-              <Home size={24} />
+            <div className={`transition-transform duration-300 ${isActive('/dashboard') ? 'scale-105' : 'scale-100'}`}>
+              <Home size={22} className={isActive('/dashboard') ? 'text-blue-600 dark:text-blue-600' : 'text-white'}/>
             </div>
-            <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive('/dashboard') ? 'opacity-100' : 'opacity-80'}`}>Home</span>
-            {/* Titik Penanda Aktif */}
-            <div className={`absolute -bottom-2 h-1 w-1 rounded-full bg-current transition-all duration-300 ${isActive('/dashboard') ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+            <span className={`text-[10px] tracking-tight transition-opacity duration-300 ${isActive('/dashboard') ? 'font-bold text-blue-600 dark:text-blue-600' : 'font-medium text-white/90'}`}>Home</span>
           </button>
 
           {/* Menu Deposit */}
           <button 
             onClick={() => navigate('/deposit')}
-            className={`relative flex w-14 flex-col items-center gap-1 transition-all duration-300 ease-out ${
-              isActive('/deposit') ? '-translate-y-1.5' : 'translate-y-0'
-            } ${getIconClass('/deposit')}`}
+            className={`flex flex-col h-[56px] min-w-[64px] flex-1 items-center justify-center rounded-full transition-all duration-300 ease-out gap-0.5 ${
+              isActive('/deposit') ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/10'
+            }`}
           >
-            <div className={`transition-transform duration-300 ${isActive('/deposit') ? 'scale-110' : 'scale-100'}`}>
-              <Wallet size={24} />
+            <div className={`transition-transform duration-300 ${isActive('/deposit') ? 'scale-105' : 'scale-100'}`}>
+              <Wallet size={22} className={isActive('/deposit') ? 'text-blue-600 dark:text-blue-600' : 'text-white'}/>
             </div>
-            <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive('/deposit') ? 'opacity-100' : 'opacity-80'}`}>Deposit</span>
-            <div className={`absolute -bottom-2 h-1 w-1 rounded-full bg-current transition-all duration-300 ${isActive('/deposit') ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+            <span className={`text-[10px] tracking-tight transition-opacity duration-300 ${isActive('/deposit') ? 'font-bold text-blue-600 dark:text-blue-600' : 'font-medium text-white/90'}`}>Deposit</span>
           </button>
 
-          {/* ORDER BUTTON (Tengah - Tetap seperti bawaan) */}
-          <div className="relative -top-6">
-            <button 
-              onClick={() => navigate('/order')}
-              className={`rounded-full border-4 border-slate-50 p-4 shadow-lg transition-all hover:scale-105 dark:border-slate-900 ${color.btn}`}
-            >
-              <ShoppingBag size={24} />
-            </button>
-          </div>
+          {/* ORDER BUTTON */}
+          <button 
+            onClick={() => navigate('/order')}
+            className={`flex flex-col h-[56px] min-w-[64px] flex-1 items-center justify-center rounded-full transition-all duration-300 ease-out gap-0.5 ${
+              isActive('/order') ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/10'
+            }`}
+          >
+            <div className={`transition-transform duration-300 ${isActive('/order') ? 'scale-105' : 'scale-100'}`}>
+              <ShoppingBag size={22} className={isActive('/order') ? 'text-blue-600 dark:text-blue-600' : 'text-white'}/>
+            </div>
+            <span className={`text-[10px] tracking-tight transition-opacity duration-300 ${isActive('/order') ? 'font-bold text-blue-600 dark:text-blue-600' : 'font-medium text-white/90'}`}>Order</span>
+          </button>
 
           {/* Menu Activity */}
           <button 
             onClick={() => navigate('/history')}
-            className={`relative flex w-14 flex-col items-center gap-1 transition-all duration-300 ease-out ${
-              isActive('/history') ? '-translate-y-1.5' : 'translate-y-0'
-            } ${getIconClass('/history')}`}
+            className={`flex flex-col h-[56px] min-w-[64px] flex-1 items-center justify-center rounded-full transition-all duration-300 ease-out gap-0.5 ${
+              isActive('/history') ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/10'
+            }`}
           >
-            <div className={`transition-transform duration-300 ${isActive('/history') ? 'scale-110' : 'scale-100'}`}>
-              <Activity size={24} />
+            <div className={`transition-transform duration-300 ${isActive('/history') ? 'scale-105' : 'scale-100'}`}>
+              <Activity size={22} className={isActive('/history') ? 'text-blue-600 dark:text-blue-600' : 'text-white'}/>
             </div>
-            <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive('/history') ? 'opacity-100' : 'opacity-80'}`}>Activity</span>
-            <div className={`absolute -bottom-2 h-1 w-1 rounded-full bg-current transition-all duration-300 ${isActive('/history') ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+            <span className={`text-[10px] tracking-tight transition-opacity duration-300 ${isActive('/history') ? 'font-bold text-blue-600 dark:text-blue-600' : 'font-medium text-white/90'}`}>Activity</span>
           </button>
 
           {/* Menu Profile */}
           <button 
             onClick={() => navigate('/profile')}
-            className={`relative flex w-14 flex-col items-center gap-1 transition-all duration-300 ease-out ${
-              isActive('/profile') ? '-translate-y-1.5' : 'translate-y-0'
-            } ${getIconClass('/profile')}`}
+            className={`flex flex-col h-[56px] min-w-[64px] flex-1 items-center justify-center rounded-full transition-all duration-300 ease-out gap-0.5 ${
+              isActive('/profile') ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/10'
+            }`}
           >
-            <div className={`transition-transform duration-300 ${isActive('/profile') ? 'scale-110' : 'scale-100'}`}>
-              <User size={24} />
+            <div className={`transition-transform duration-300 ${isActive('/profile') ? 'scale-105' : 'scale-100'}`}>
+              <User size={22} className={isActive('/profile') ? 'text-blue-600 dark:text-blue-600' : 'text-white'}/>
             </div>
-            <span className={`text-[10px] font-medium transition-opacity duration-300 ${isActive('/profile') ? 'opacity-100' : 'opacity-80'}`}>Profile</span>
-            <div className={`absolute -bottom-2 h-1 w-1 rounded-full bg-current transition-all duration-300 ${isActive('/profile') ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+            <span className={`text-[10px] tracking-tight transition-opacity duration-300 ${isActive('/profile') ? 'font-bold text-blue-600 dark:text-blue-600' : 'font-medium text-white/90'}`}>Profile</span>
           </button>
 
         </div>
