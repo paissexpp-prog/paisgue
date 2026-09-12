@@ -4,20 +4,27 @@ import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
   ShoppingBag, Wallet, ChevronDown, ChevronUp, Copy, 
-  CheckCircle2, XCircle, Clock, Search, Filter, WifiOff 
+  CheckCircle2, XCircle, Clock, Search, Filter, WifiOff, Globe, MessageSquare 
 } from 'lucide-react';
 
 export default function History() {
   const { color } = useTheme();
 
   // --- STATE ---
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' atau 'deposits'
+  const [activeTab, setActiveTab] = useState('testimoni'); // 'testimoni', 'orders' atau 'deposits'
   const [orders, setOrders] = useState([]);
   const [deposits, setDeposits] = useState([]);
+  const [testimoni, setTestimoni] = useState([]); // State untuk Testimoni
+  
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null); // Untuk accordion
   const [isOffline, setIsOffline] = useState(false); // State indikator pakai cache
   
+  // State untuk Pagination Testimoni
+  const [testimoniPage, setTestimoniPage] = useState(0);
+  const [loadingMoreTestimoni, setLoadingMoreTestimoni] = useState(false);
+  const [hasMoreTestimoni, setHasMoreTestimoni] = useState(true);
+
   // State untuk Custom Toast Notification
   const [toast, setToast] = useState({ show: false, message: '' });
   const toastTimeout = useRef(null);
@@ -35,6 +42,7 @@ export default function History() {
     // 1. Cek & Muat Data dari Cache (Local Storage) terlebih dahulu
     const cachedOrders = localStorage.getItem('ruangotp_history_orders');
     const cachedDeposits = localStorage.getItem('ruangotp_history_deposits');
+    const cachedTestimoni = localStorage.getItem('ruangotp_history_testimoni');
 
     if (cachedOrders) {
         setOrders(JSON.parse(cachedOrders));
@@ -42,9 +50,12 @@ export default function History() {
     if (cachedDeposits) {
         setDeposits(JSON.parse(cachedDeposits));
     }
+    if (cachedTestimoni) {
+        setTestimoni(JSON.parse(cachedTestimoni));
+    }
 
     // Jika tidak ada cache sama sekali, baru tampilkan animasi loading skeleton
-    if (!cachedOrders && !cachedDeposits) {
+    if (!cachedOrders && !cachedDeposits && !cachedTestimoni) {
         setLoading(true);
     }
 
@@ -54,7 +65,6 @@ export default function History() {
       const resOrder = await api.get('/history/list');
       if (resOrder.data.success) {
         setOrders(resOrder.data.data);
-        // Simpan ke cache
         localStorage.setItem('ruangotp_history_orders', JSON.stringify(resOrder.data.data));
       }
 
@@ -62,8 +72,22 @@ export default function History() {
       const resDeposit = await api.get('/deposit/history');
       if (resDeposit.data.success) {
         setDeposits(resDeposit.data.data);
-        // Simpan ke cache
         localStorage.setItem('ruangotp_history_deposits', JSON.stringify(resDeposit.data.data));
+      }
+
+      // Ambil Testimoni (Page 0)
+      const resTestimoni = await api.get('/testimoni');
+      if (resTestimoni.data && resTestimoni.data.aktivitas_terbaru) {
+        setTestimoni(resTestimoni.data.aktivitas_terbaru);
+        localStorage.setItem('ruangotp_history_testimoni', JSON.stringify(resTestimoni.data.aktivitas_terbaru));
+        
+        // Reset pagination state tiap kali fetch awal berhasil
+        setTestimoniPage(0);
+        if (resTestimoni.data.aktivitas_terbaru.length === 0) {
+            setHasMoreTestimoni(false);
+        } else {
+            setHasMoreTestimoni(true);
+        }
       }
       
       // Jika berhasil, pastikan status offline false
@@ -74,6 +98,37 @@ export default function History() {
       setIsOffline(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- LOAD MORE TESTIMONI ---
+  const handleLoadMoreTestimoni = async () => {
+    const nextPage = testimoniPage + 1;
+    // Maksimal 5 halaman berdasarkan ketentuan backend
+    if (nextPage > 5) {
+        setHasMoreTestimoni(false);
+        return;
+    }
+
+    setLoadingMoreTestimoni(true);
+    try {
+        const res = await api.get(`/testimoni/${nextPage}`);
+        if (res.data && res.data.aktivitas_terbaru) {
+            const newData = res.data.aktivitas_terbaru;
+            setTestimoni(prev => [...prev, ...newData]);
+            setTestimoniPage(nextPage);
+            
+            // Jika data yang dikembalikan kosong atau sudah mencapai page 5, matikan tombol load more
+            if (newData.length === 0 || nextPage >= 5) {
+                setHasMoreTestimoni(false);
+            }
+        } else {
+            setHasMoreTestimoni(false);
+        }
+    } catch (error) {
+        console.error("Gagal memuat halaman testimoni berikutnya", error);
+    } finally {
+        setLoadingMoreTestimoni(false);
     }
   };
 
@@ -108,14 +163,14 @@ export default function History() {
   };
 
   const getStatusConfig = (status) => {
-    const s = status.toLowerCase();
-    if (s === 'success' || s === 'completed' || s === 'done') {
-      return { color: 'bg-emerald-100 text-emerald-600', icon: <CheckCircle2 size={14} />, label: 'Sukses' };
+    const s = status ? status.toLowerCase() : '';
+    if (s === 'success' || s === 'completed' || s === 'done' || s === 'berhasil' || s === 'sukses') {
+      return { color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400', icon: <CheckCircle2 size={14} />, label: status || 'Sukses' };
     }
     if (s === 'pending' || s === 'active' || s === 'processing') {
-      return { color: 'bg-amber-100 text-amber-600', icon: <Clock size={14} />, label: 'Pending' };
+      return { color: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400', icon: <Clock size={14} />, label: status || 'Pending' };
     }
-    return { color: 'bg-red-100 text-red-600', icon: <XCircle size={14} />, label: 'Gagal/Batal' };
+    return { color: 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400', icon: <XCircle size={14} />, label: status || 'Gagal' };
   };
 
   return (
@@ -135,18 +190,25 @@ export default function History() {
             </div>
         )}
         
-        {/* --- TAB SWITCHER (2 TOMBOL) --- */}
-        <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+        {/* --- TAB SWITCHER (3 TOMBOL) --- */}
+        <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-x-auto hide-scrollbar">
+          <button 
+            onClick={() => { setActiveTab('testimoni'); setExpandedId(null); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 min-w-[100px] rounded-lg text-sm font-bold transition-all ${activeTab === 'testimoni' ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+          >
+            <Globe size={16} /> Live
+          </button>
+          
           <button 
             onClick={() => { setActiveTab('orders'); setExpandedId(null); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'orders' ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 min-w-[100px] rounded-lg text-sm font-bold transition-all ${activeTab === 'orders' ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
           >
             <ShoppingBag size={16} /> Pesanan
           </button>
           
           <button 
             onClick={() => { setActiveTab('deposits'); setExpandedId(null); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'deposits' ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 min-w-[100px] rounded-lg text-sm font-bold transition-all ${activeTab === 'deposits' ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
           >
             <Wallet size={16} /> Deposit
           </button>
@@ -159,7 +221,61 @@ export default function History() {
            // Skeleton Loading
            [1,2,3,4].map(i => <div key={i} className="h-20 w-full bg-slate-200 rounded-2xl animate-pulse dark:bg-slate-800"></div>)
         ) : (
-          activeTab === 'orders' ? (
+          activeTab === 'testimoni' ? (
+            // === LIST TESTIMONI (LIVE ACTIVITY) ===
+            <>
+              {testimoni.length > 0 ? testimoni.map((item, idx) => {
+                const isDeposit = item.jenis && item.jenis.toLowerCase() === 'deposit';
+                const statusConfig = getStatusConfig(item.status);
+                
+                return (
+                  <div key={idx} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm p-4 flex items-center justify-between dark:border-slate-800 dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                     <div className="flex items-center gap-3 min-w-0">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isDeposit ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'}`}>
+                           {isDeposit ? <Wallet size={20} /> : <MessageSquare size={20} />}
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                           <h4 className="truncate text-sm font-bold text-slate-800 dark:text-white flex items-center gap-1">
+                             {item.nama} 
+                             <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">({item.negara})</span>
+                           </h4>
+                           <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                             {isDeposit ? `Deposit Saldo ${item.nominal}` : `Order ${item.layanan} - ${item.nomor}`}
+                           </p>
+                        </div>
+                     </div>
+                     
+                     <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                        <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                          <Clock size={10}/> {item.waktu}
+                        </span>
+                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${statusConfig.color}`}>
+                           {statusConfig.icon} <span className="capitalize">{statusConfig.label}</span>
+                        </span>
+                     </div>
+                  </div>
+                );
+              }) : <div className="text-center py-10 text-slate-400">Belum ada aktivitas terbaru</div>}
+
+              {/* TOMBOL TAMPILKAN LEBIH BANYAK */}
+              {hasMoreTestimoni && testimoni.length > 0 && (
+                <div className="flex justify-center pt-2 pb-6">
+                  <button
+                    onClick={handleLoadMoreTestimoni}
+                    disabled={loadingMoreTestimoni}
+                    className="flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    {loadingMoreTestimoni ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-400" />
+                    ) : (
+                      <ChevronDown size={16} />
+                    )}
+                    {loadingMoreTestimoni ? 'Memuat Data...' : 'Tampilkan Lebih Banyak'}
+                  </button>
+                </div>
+              )}
+            </>
+          ) : activeTab === 'orders' ? (
             // === LIST ORDERS ===
             orders.length > 0 ? orders.map((item) => {
               const status = getStatusConfig(item.status);
@@ -179,7 +295,7 @@ export default function History() {
                          </div>
                       </div>
                       
-                      {/* PENAMBAHAN FLEX CONTAINER UNTUK HARGA/STATUS + IKON PANAH */}
+                      {/* FLEX CONTAINER UNTUK HARGA/STATUS + IKON PANAH */}
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col items-end gap-1">
                            <span className="font-bold text-slate-800 dark:text-white">Rp {item.total_price?.toLocaleString('id-ID')}</span>
@@ -244,7 +360,7 @@ export default function History() {
                          </div>
                       </div>
                       
-                      {/* PENAMBAHAN FLEX CONTAINER UNTUK HARGA/STATUS + IKON PANAH */}
+                      {/* FLEX CONTAINER UNTUK HARGA/STATUS + IKON PANAH */}
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col items-end gap-1">
                            <span className="font-bold text-slate-800 dark:text-white">Rp {item.request_amount?.toLocaleString('id-ID')}</span>
