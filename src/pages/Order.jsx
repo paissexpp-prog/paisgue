@@ -52,7 +52,7 @@ const formatTime = (seconds) => {
 // ================================================================
 const ActiveOrderCard = memo(({
     order, color,
-    onCopy, onCancel, onClose, onReorder, onShowToast,
+    onCopy, onCancel, onClose, onReorder, onShowToast, onResend,
     getOptimizedImage,
     serviceImg, countryFlag, opImgCached,
     otpDisplay, smsText, operatorName, isOpAny
@@ -182,7 +182,11 @@ const ActiveOrderCard = memo(({
                             </div>
                         ) : (
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                                {remaining > 0 ? (
+                                {order.is_retry ? (
+                                    <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                        Proses kirim ulang. Menunggu SMS kedua...
+                                    </span>
+                                ) : remaining > 0 ? (
                                     <>
                                         Tunggu <span className="font-bold text-red-500">{formatTime(remaining)}</span> sebelum klik batal.
                                     </>
@@ -200,12 +204,22 @@ const ActiveOrderCard = memo(({
                 <div className="flex gap-3 mt-3">
                     {isSmsReceived ? (
                         <>
-                            <button
-                                onClick={() => onShowToast("Fitur Kirim Ulang segera hadir", "success")}
-                                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors active:scale-95"
-                            >
-                                <RefreshCw size={15} /> Kirim Ulang
-                            </button>
+                            {order.version === 'v3' ? (
+                                <button
+                                    onClick={() => onShowToast("Fitur Kirim Ulang segera hadir", "success")}
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                                >
+                                    <RefreshCw size={15} /> Kirim Ulang
+                                </button>
+                            ) : !order.is_retry ? (
+                                <button
+                                    onClick={onResend}
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 text-slate-600 font-bold text-sm hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors active:scale-95"
+                                >
+                                    <RefreshCw size={15} /> Kirim Ulang
+                                </button>
+                            ) : null}
+                            
                             <button
                                 onClick={onClose}
                                 className="flex-1 py-3 rounded-xl border border-emerald-600/50 bg-emerald-50 text-emerald-600 font-bold text-sm hover:bg-emerald-100 dark:bg-emerald-900/10 dark:text-emerald-500 dark:hover:bg-emerald-900/30 transition-colors flex items-center justify-center gap-2 active:scale-95"
@@ -221,16 +235,19 @@ const ActiveOrderCard = memo(({
                             >
                                 <ShoppingBag size={15} /> Beli lagi
                             </button>
-                            <button
-                                onClick={onCancel}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
-                                    remaining > 0
-                                        ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-600'
-                                        : 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10'
-                                }`}
-                            >
-                                <X size={15} /> Batal
-                            </button>
+                            
+                            {!order.is_retry && (
+                                <button
+                                    onClick={onCancel}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-bold transition-colors active:scale-95 ${
+                                        remaining > 0
+                                            ? 'border-slate-200 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:text-slate-600'
+                                            : 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/10'
+                                    }`}
+                                >
+                                    <X size={15} /> Batal
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
@@ -1597,6 +1614,56 @@ export default function Order() {
      });
   };
 
+  const handleResendClick = (order) => {
+      showConfirm(
+          "Kirim Ulang SMS?", 
+          "Yakin meminta kirim ulang SMS? Pada tahap ini pesanan tidak dapat dibatalkan lagi dan akan otomatis selesai jika tidak menerima SMS dalam sisa waktu 20 menit.", 
+          async () => {
+              setConfirmModal(prev => ({ ...prev, loading: true }));
+              try {
+                  const targetId = order.order_id || order.id || '';
+                  
+                  // LOGIKA PEMISAHAN RESEND V1 & V2
+                  const resendUrl = order.version === 'v2'
+                      ? `/order-v2/resend?order_id=${targetId}`
+                      : `/orders/resend?order_id=${targetId}`; // Endpoint untuk v1 (server utama)
+                  
+                  const res = await api.get(resendUrl);
+                  
+                  if (res.data.success) {
+                      setActiveOrders(prev => {
+                          if(!Array.isArray(prev)) return [];
+                          return prev.map(o => {
+                              if ((o.order_id || o.id) === targetId) {
+                                  return { 
+                                      ...o, 
+                                      status: 'ACTIVE', 
+                                      is_retry: true, 
+                                      old_otp_code: o.otp_code || (o.sms_content?.match(/\d+/)?.[0]),
+                                      otp_code: null,
+                                      sms_content: null
+                                  };
+                              }
+                              return o;
+                          });
+                      });
+                      closeConfirm();
+                      showToast(res.data.message || "Permintaan kirim ulang berhasil", "success");
+                      fetchInitialData();
+                  } else {
+                      closeConfirm();
+                      showToast(res.data.message || "Gagal kirim ulang", "error");
+                  }
+              } catch(e) { 
+                  closeConfirm();
+                  const errorMsg = e.response?.data?.error?.message || e.response?.data?.message || "Gagal kirim ulang";
+                  showToast(errorMsg, "error");
+                  fetchInitialData(true);
+              }
+          }
+      );
+  };
+
   const handleCloseOrder = async (orderId) => {
       setActiveOrders(prev => {
           if(!Array.isArray(prev)) return [];
@@ -1905,6 +1972,7 @@ export default function Order() {
                             onClose={() => handleCloseOrder(orderId)}
                             onReorder={() => handleReorder(order)}
                             onShowToast={showToast}
+                            onResend={() => handleResendClick(order)}
                             getOptimizedImage={getOptimizedImage}
                             serviceImg={serviceImg}
                             countryFlag={getCountryFlag(finalCountryName)}
