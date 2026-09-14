@@ -4,7 +4,8 @@ import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
   ShoppingBag, Wallet, ChevronDown, ChevronUp, Copy, 
-  CheckCircle2, XCircle, Clock, Search, Filter, WifiOff, Globe, MessageSquare 
+  CheckCircle2, XCircle, Clock, Search, Filter, WifiOff, Globe, MessageSquare,
+  TrendingUp // Icon tambahan untuk grafik
 } from 'lucide-react';
 
 export default function History() {
@@ -25,17 +26,50 @@ export default function History() {
   const [loadingMoreTestimoni, setLoadingMoreTestimoni] = useState(false);
   const [hasMoreTestimoni, setHasMoreTestimoni] = useState(true);
 
+  // --- STATE UNTUK GRAFIK TRANSAKSI ---
+  const [statsData, setStatsData] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [chartPeriod, setChartPeriod] = useState('daily'); // 'daily', 'weekly', 'monthly'
+
   // State untuk Custom Toast Notification
   const [toast, setToast] = useState({ show: false, message: '' });
   const toastTimeout = useRef(null);
 
   useEffect(() => {
     fetchData();
+    fetchStats(); // Panggil data grafik saat komponen dimuat
+    
     // Cleanup timeout saat komponen di-unmount
     return () => {
       if (toastTimeout.current) clearTimeout(toastTimeout.current);
     };
   }, []);
+
+  // --- FETCH DATA STATISTIK (GRAFIK) ---
+  const fetchStats = async () => {
+    const cachedStats = localStorage.getItem('ruangotp_history_stats');
+    if (cachedStats) {
+      setStatsData(JSON.parse(cachedStats));
+      setStatsLoading(false);
+    } else {
+      setStatsLoading(true);
+    }
+
+    try {
+      // Dinamis mengambil tahun sekarang
+      const currentYear = new Date().getFullYear(); 
+      const res = await api.get(`/testimoni/stats/${currentYear}`);
+      
+      if (res.data && res.data.success) {
+        setStatsData(res.data.chart);
+        localStorage.setItem('ruangotp_history_stats', JSON.stringify(res.data.chart));
+      }
+    } catch (err) {
+      console.error("Gagal load statistik transaksi", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   // --- FETCH DATA DENGAN SISTEM CACHE ---
   const fetchData = async () => {
@@ -224,6 +258,75 @@ export default function History() {
           activeTab === 'testimoni' ? (
             // === LIST TESTIMONI (LIVE ACTIVITY) ===
             <>
+              {/* --- BAGIAN GRAFIK TRANSAKSI (SaaS Style) --- */}
+              {statsLoading ? (
+                 <div className="h-56 w-full bg-slate-200 rounded-2xl animate-pulse dark:bg-slate-800 mb-4"></div>
+              ) : statsData ? (
+                 <div className="bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 mb-4 shadow-sm transition-colors">
+                    {/* Header Grafik */}
+                    <div className="flex justify-between items-center mb-5">
+                       <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                           <TrendingUp size={18} className="text-blue-500" />
+                           {statsData.title || "Total Transaksi"}
+                       </h3>
+                       {/* Segmented Control (Pill) */}
+                       <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 text-[10px] font-bold">
+                           <button 
+                              onClick={() => setChartPeriod('daily')} 
+                              className={`px-2.5 py-1.5 rounded-md transition-all duration-200 ${chartPeriod === 'daily' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                           >
+                              Harian
+                           </button>
+                           <button 
+                              onClick={() => setChartPeriod('weekly')} 
+                              className={`px-2.5 py-1.5 rounded-md transition-all duration-200 ${chartPeriod === 'weekly' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                           >
+                              Mingguan
+                           </button>
+                           <button 
+                              onClick={() => setChartPeriod('monthly')} 
+                              className={`px-2.5 py-1.5 rounded-md transition-all duration-200 ${chartPeriod === 'monthly' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                           >
+                              Bulanan
+                           </button>
+                       </div>
+                    </div>
+
+                    {/* Tampilan Bar Chart */}
+                    <div className="h-32 flex items-end justify-between gap-1.5 mt-2">
+                        {(() => {
+                           const currentData = statsData[chartPeriod]?.data || [];
+                           // Cari nilai tertinggi untuk mengkalkulasi persentase tinggi batang grafik. Default 1 untuk hindari bagi 0.
+                           const maxVal = Math.max(...currentData.map(d => d.value), 1); 
+
+                           return currentData.map((item, i) => (
+                              <div key={i} className="relative flex flex-col items-center flex-1 group h-full justify-end">
+                                 {/* Hover Tooltip - Muncul saat di hover */}
+                                 <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded pointer-events-none whitespace-nowrap z-10 shadow-lg dark:bg-white dark:text-slate-900">
+                                    {item.value.toLocaleString('id-ID')}
+                                 </div>
+                                 
+                                 {/* Wrapper Batang */}
+                                 <div className="w-full max-w-[28px] bg-blue-50 dark:bg-blue-900/20 rounded-t-sm flex items-end justify-center overflow-hidden h-full">
+                                    {/* Batang Warna (Terisi sesuai persentase) */}
+                                    <div
+                                       className="w-full bg-blue-500 dark:bg-blue-600 rounded-t-sm transition-all duration-700 ease-out group-hover:bg-blue-400 dark:group-hover:bg-blue-500"
+                                       style={{ height: `${(item.value / maxVal) * 100}%` }}
+                                    ></div>
+                                 </div>
+                                 
+                                 {/* Label Bawah (Hari/Bulan/Minggu) */}
+                                 <span className="text-[9px] text-slate-500 dark:text-slate-400 mt-2 font-semibold truncate max-w-full">
+                                    {item.label}
+                                 </span>
+                              </div>
+                           ));
+                        })()}
+                    </div>
+                 </div>
+              ) : null}
+              {/* --- END OF GRAFIK TRANSAKSI --- */}
+
               {testimoni.length > 0 ? testimoni.map((item, idx) => {
                 const isDeposit = item.jenis && item.jenis.toLowerCase() === 'deposit';
                 const statusConfig = getStatusConfig(item.status);
