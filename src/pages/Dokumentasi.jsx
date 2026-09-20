@@ -829,7 +829,7 @@ export default function Dokumentasi() {
             <h3 className="font-bold">Butuh Bantuan?</h3>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed mb-4">Pastikan IP Server Anda sudah terdaftar di menu <strong>Whitelist IP</strong> sebelum melakukan request API.</p>
-          <button onClick={() => window.open('https://t.me/cs_ruangotp', '_blank')} className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${color.btn}`}>
+          <button onClick={() => window.open('https://t.me/cs_putra', '_blank')} className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${color.btn}`}>
             <ExternalLink size={14} /> Hubungi Developer CS
           </button>
         </div>

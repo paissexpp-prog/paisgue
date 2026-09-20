@@ -259,7 +259,7 @@ export default function Welcome() {
             "@context": "https://schema.org",
             "@graph": [
               { "@type": "WebSite", "@id": "https://ruangotp.io/#website", "url": "https://ruangotp.io/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.io/?s={search_term_string}", "query-input": "required name=search_term_string" } },
-              { "@type": "Organization", "@id": "https://ruangotp.io/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.io/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_ruangotp", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_ruangotp"] },
+              { "@type": "Organization", "@id": "https://ruangotp.io/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.io/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/HsGrgzQf.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_putra", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_putra"] },
               { "@type": "WebPage", "@id": "https://ruangotp.io/#webpage", "url": "https://ruangotp.io/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.io/#website" }, "about": { "@id": "https://ruangotp.io/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
             ]
           })}
@@ -589,7 +589,7 @@ export default function Welcome() {
               <Link to="/register" className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-4 text-base font-bold shadow-lg transition-all hover:scale-105 active:scale-95 text-slate-900">
                 Get Started — Gratis <ArrowRight size={18} />
               </Link>
-              <a href="https://t.me/cs_ruangotp" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-base font-bold text-white transition-all hover:bg-white/10 hover:scale-105 active:scale-95">
+              <a href="https://t.me/cs_putra" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-base font-bold text-white transition-all hover:bg-white/10 hover:scale-105 active:scale-95">
                 <Send size={18} /> Hubungi CS
               </a>
             </div>
@@ -611,7 +611,7 @@ export default function Welcome() {
           </div>
           <div className="mx-auto max-w-xl grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[
-              { href: 'https://t.me/cs_ruangotp', icon: <Send size={20}/>, label: 'CS Telegram', sub: '@cs_ruangotp', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+              { href: 'https://t.me/cs_putra', icon: <Send size={20}/>, label: 'CS Telegram', sub: '@cs_putra', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
               { href: 'mailto:paismd07@gmail.com', icon: <Mail size={20}/>, label: 'Email Support', sub: 'paismd07@gmail.com', color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
               { href: 'https://t.me/ruangotp', icon: <Radio size={20}/>, label: 'Channel Telegram', sub: '@ruangotp', color: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400' },
               { href: 'https://whatsapp.com/channel/0029VbCNWVk84OmIdF16fK2z', icon: <MessageSquare size={20}/>, label: 'Saluran WhatsApp', sub: 'Berita Resmi', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
@@ -655,8 +655,8 @@ export default function Welcome() {
               <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-400">Company</h4>
               <ul className="space-y-3">
                 <li><Link to="/ketentuan" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Ketentuan Layanan</Link></li>
-                <li><a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Tentang Kami</a></li>
-                <li><a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="https://t.me/cs_putra" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Tentang Kami</a></li>
+                <li><a href="https://t.me/cs_putra" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Privacy Policy</a></li>
               </ul>
             </div>
             <div>
@@ -670,7 +670,7 @@ export default function Welcome() {
             <div>
               <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-slate-400">Contacts Us</h4>
               <ul className="space-y-3">
-                <li><a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Telegram CS</a></li>
+                <li><a href="https://t.me/cs_putra" target="_blank" rel="noreferrer" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Telegram CS</a></li>
                 <li><a href="mailto:paismd07@gmail.com" className="text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">Email</a></li>
               </ul>
               <h4 className="mt-6 mb-4 text-xs font-black uppercase tracking-widest text-slate-400">Channel</h4>

@@ -155,7 +155,7 @@ const sections = [
     content: [
       'Jika Anda menemui kendala teknis, pertanyaan seputar aturan ini, atau indikasi error pada saldo, tim pengelola siap membantu Anda melalui:',
       '• Email Resmi: paismd07@gmail.com',
-      '• Telegram Admin: @cs_ruangotp'
+      '• Telegram Admin: @cs_putra'
     ],
   },
   {
@@ -316,8 +316,8 @@ export default function Ketentuan() {
         <div className="rounded-2xl border border-slate-100 bg-white p-5 text-center dark:border-slate-800 dark:bg-slate-950">
           <p className="text-xs text-slate-400 leading-relaxed">
             Pertanyaan seputar ketentuan ini? Hubungi kami di{' '}
-            <a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className={`font-bold hover:underline ${color.text}`}>
-              @cs_ruangotp
+            <a href="https://t.me/cs_putra" target="_blank" rel="noreferrer" className={`font-bold hover:underline ${color.text}`}>
+              @cs_putra
             </a>
           </p>
           <p className="mt-2 text-[10px] text-slate-300 dark:text-slate-600">

@@ -67,7 +67,7 @@ const BottomNav = () => {
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hubungi Admin</p>
                             
                             {/* CS Telegram */}
-                            <a href="https://t.me/cs_ruangotp" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl bg-slate-800 p-3 hover:bg-slate-700 transition-colors border border-slate-700/50">
+                            <a href="https://t.me/cs_putra" target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl bg-slate-800 p-3 hover:bg-slate-700 transition-colors border border-slate-700/50">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/20">
                                     <Send size={18} className="-ml-0.5 mt-0.5" />
                                 </div>

@@ -34,7 +34,7 @@ const NotFound = () => {
 
           {/* Tombol Support */}
           <a
-            href="https://t.me/cs_ruangotp"
+            href="https://t.me/cs_putra"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-6 py-3 rounded-xl font-semibold transition-all hover:bg-slate-50 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-sm"

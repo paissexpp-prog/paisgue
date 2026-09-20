@@ -155,7 +155,7 @@ const Maintenance = () => {
 
           {/* Tombol Sekunder: CS */}
           <a
-            href="https://t.me/cs_ruangotp"
+            href="https://t.me/cs_putra"
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full sm:w-auto items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 px-7 py-3.5 rounded-xl font-semibold transition-all hover:bg-slate-50 dark:hover:bg-slate-700 hover:scale-105 active:scale-95 shadow-sm"
