@@ -635,201 +635,6 @@ const V2ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, load
 });
 
 // ================================================================
-// --- DRAWER SERVER PLUS (V3) ---
-// ================================================================
-const V3CountriesDrawer = memo(({ isOpen, onClose, countries, loading, onSelectCountry, getCountryFlag }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const deferredSearchTerm = useDeferredValue(searchTerm);
-    const [displayLimit, setDisplayLimit] = useState(20);
-
-    useEffect(() => {
-        if (!isOpen) {
-            setSearchTerm('');
-            setDisplayLimit(20); 
-        }
-    }, [isOpen]);
-
-    const filteredCountries = useMemo(() => {
-        if (!Array.isArray(countries)) return [];
-        return countries.filter(c =>
-          (c.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
-        );
-    }, [countries, deferredSearchTerm]);
-
-    const handleScroll = (e) => {
-        const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollTop + clientHeight >= scrollHeight - 50) {
-            if (displayLimit < filteredCountries.length) {
-                setDisplayLimit(prev => prev + 20);
-            }
-        }
-    };
-
-    return (
-        <>
-            <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onClose}></div>
-            <div className={`fixed bottom-0 left-0 right-0 z-50 transform rounded-t-[2rem] bg-[#f8fafc] shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                
-                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
-                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h2 className="text-xl font-bold text-violet-700 dark:text-violet-400 leading-tight">Server Plus</h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 1: Pilih Negara</p>
-                        </div>
-                        <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><X size={22} className="text-slate-500" /></button>
-                    </div>
-                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-violet-400 dark:focus-within:border-violet-500">
-                        <Search size={18} className="text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Cari negara..." 
-                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
-                            value={searchTerm} 
-                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
-                        />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
-                    {loading ? (
-                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
-                    ) : (
-                        <div className="space-y-4">
-                            {filteredCountries.length > 0 ? (
-                                <div className="flex flex-col gap-2.5">
-                                    {filteredCountries.slice(0, displayLimit).map((item, index) => (
-                                        <button 
-                                            key={item.id || index} 
-                                            onClick={() => onSelectCountry(item)} 
-                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-violet-400 dark:hover:border-violet-500 transition-all active:scale-[0.98]" 
-                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
-                                        >
-                                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                                <div className="text-2xl w-10 text-center flex justify-center">{getCountryFlag(item.name)}</div>
-                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Negara'}</span>
-                                            </div>
-                                            <ChevronRight size={18} className="text-slate-400 dark:text-slate-500 shrink-0" />
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                                    <Globe size={32} className="mx-auto mb-3 opacity-50" />
-                                    Negara tidak ditemukan
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </>
-    );
-});
-
-const V3ServicesDrawer = memo(({ isOpen, onBack, selectedCountry, services, loading, onSelectService, getOptimizedImage, getCountryFlag }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const deferredSearchTerm = useDeferredValue(searchTerm);
-    const [displayLimit, setDisplayLimit] = useState(20);
-
-    useEffect(() => {
-        if (!isOpen) {
-            setSearchTerm('');
-            setDisplayLimit(20); 
-        }
-    }, [isOpen]);
-
-    const filteredServices = useMemo(() => {
-        if (!Array.isArray(services)) return [];
-        return services.filter(service =>
-          (service.name || '').toLowerCase().includes(deferredSearchTerm.toLowerCase())
-        );
-    }, [services, deferredSearchTerm]);
-
-    const handleScroll = (e) => {
-        const { scrollTop, scrollHeight, clientHeight } = e.target;
-        if (scrollTop + clientHeight >= scrollHeight - 50) {
-            if (displayLimit < filteredCountries.length) {
-                setDisplayLimit(prev => prev + 20);
-            }
-        }
-    };
-
-    return (
-        <>
-            <div className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={onBack}></div>
-            <div className={`fixed bottom-0 left-0 right-0 z-[60] transform rounded-t-[2rem] bg-white shadow-2xl transition-transform duration-300 dark:bg-[#0d1017] max-h-[90vh] h-[90vh] flex flex-col ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                
-                <div className="pt-3 pb-4 px-6 bg-white dark:bg-[#0d1017] rounded-t-[2rem] z-10 border-b border-slate-100 dark:border-[#1e2333]">
-                    <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 mb-5 dark:bg-slate-700"></div>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-[#1e2333] transition-colors"><ChevronRight size={22} className="text-slate-500 rotate-180" /></button>
-                            <div>
-                                <h2 className="text-xl font-bold text-violet-700 dark:text-violet-400 leading-tight flex items-center gap-2">
-                                    {selectedCountry ? <>{getCountryFlag(selectedCountry.name)} {selectedCountry.name || 'Negara'}</> : 'Server Plus'}
-                                </h2>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Langkah 2: Pilih Layanan</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 dark:bg-[#1e2333] dark:border-transparent transition-colors focus-within:border-violet-400 dark:focus-within:border-violet-500">
-                        <Search size={18} className="text-slate-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Cari aplikasi..." 
-                            className="bg-transparent w-full outline-none text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400" 
-                            value={searchTerm} 
-                            onChange={(e) => { setSearchTerm(e.target.value); setDisplayLimit(20); }} 
-                        />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-5 py-5 pb-10 hide-scrollbar" onScroll={handleScroll}>
-                    {loading ? (
-                        <div className="space-y-4">{[...Array(6)].map((_,i) => <div key={i} className="h-16 bg-slate-200 rounded-2xl animate-pulse dark:bg-[#1e2333]"></div>)}</div>
-                    ) : (
-                        <div className="space-y-4">
-                            {filteredServices.length > 0 ? (
-                                <div className="flex flex-col gap-2.5">
-                                    {filteredServices.slice(0, displayLimit).map((item, index) => (
-                                        <button 
-                                            key={item.code || index} 
-                                            onClick={() => onSelectService(item)} 
-                                            className="flex items-center justify-between p-4 rounded-2xl border border-transparent bg-white shadow-sm dark:border-[#2a2e45] dark:bg-[#151924] hover:border-violet-400 dark:hover:border-violet-500 transition-all active:scale-[0.98]" 
-                                            style={{ animation: `waveFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`, animationDelay: `${(index % 20) * 0.03}s`, opacity: 0 }}
-                                        >
-                                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                                                <div className="bg-slate-50 w-10 h-10 p-1.5 flex items-center justify-center rounded-xl border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
-                                                   {item.service_img ? 
-                                                       <img src={getOptimizedImage(item.service_img)} className="w-full h-full object-contain" loading="lazy" alt="" />
-                                                       : <Smartphone size={18} className="text-slate-400" />
-                                                   }
-                                                </div>
-                                                <span className="font-bold text-slate-700 dark:text-slate-200 text-[15px] truncate tracking-wide">{item.name || 'Layanan'}</span>
-                                            </div>
-                                            <span className="text-xs font-bold text-violet-600 bg-violet-50 dark:bg-violet-900/30 dark:text-violet-400 px-3 py-1.5 rounded-lg">
-                                                Cek Harga
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12 text-slate-400 font-medium bg-white dark:bg-[#151924] rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                                    <Smartphone size={32} className="mx-auto mb-3 opacity-50" />
-                                    Layanan tidak ditemukan
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </>
-    );
-});
-
-
-// ================================================================
 // --- MAIN COMPONENT ORDER ---
 // ================================================================
 export default function Order() {
@@ -857,15 +662,6 @@ export default function Order() {
   const [selectedV2Country, setSelectedV2Country] = useState(null);
   const [selectedV2Service, setSelectedV2Service] = useState(null);
 
-  // --- STATE DATA SERVER PLUS (V3) ---
-  const [v3Countries, setV3Countries] = useState([]);
-  const [v3Services, setV3Services] = useState([]);
-  const [loadingV3Countries, setLoadingV3Countries] = useState(false);
-  const [loadingV3Services, setLoadingV3Services] = useState(false);
-  
-  const [selectedV3Country, setSelectedV3Country] = useState(null);
-  const [selectedV3Service, setSelectedV3Service] = useState(null);
-
   // UI Controls
   const [sheetMode, setSheetMode] = useState(null); 
   const [selectedService, setSelectedService] = useState(null);
@@ -885,10 +681,6 @@ export default function Order() {
   });
 
   const [v2PriceModal, setV2PriceModal] = useState({
-      show: false, data: null, loading: false, ordering: false, selectedServer: null
-  });
-
-  const [v3PriceModal, setV3PriceModal] = useState({
       show: false, data: null, loading: false, ordering: false, selectedServer: null
   });
 
@@ -917,16 +709,6 @@ export default function Order() {
   const V2_PRICE_PREFIX      = 'otp_v2_price_';
   const V2_PRICE_TIME_PREFIX = 'otp_v2_price_time_';
   const V2_PRICE_DURATION    = 2 * 60 * 1000; // 2 Menit Cache Harga
-
-  // Constants Cache V3
-  const V3_COUNTRIES_CACHE_KEY  = 'otp_v3_countries';
-  const V3_COUNTRIES_CACHE_TIME = 'otp_v3_countries_time';
-  const V3_SERVICES_CACHE_KEY   = 'otp_v3_srv';
-  const V3_SERVICES_CACHE_TIME  = 'otp_v3_srv_time';
-  const V3_PRICE_PREFIX         = 'otp_v3_price_';
-  const V3_PRICE_TIME_PREFIX    = 'otp_v3_price_time_';
-  const V3_CACHE_DURATION       = 60 * 60 * 1000; // 1 Jam
-  const V3_PRICE_DURATION       = 2 * 60 * 1000; // 2 Menit Cache Harga
 
   const faqData = [
     {
@@ -1285,160 +1067,6 @@ export default function Order() {
   };
 
   // ================================================================
-  // --- FLOW SERVER PLUS (V3) LOGIC ---
-  // ================================================================
-
-  const handleOpenV3 = async () => {
-      setSheetMode('v3_countries');
-      setLoadingV3Countries(true);
-      
-      const cached = localStorage.getItem(V3_COUNTRIES_CACHE_KEY);
-      const cachedTime = localStorage.getItem(V3_COUNTRIES_CACHE_TIME);
-      const now = Date.now();
-
-      if (cached && cachedTime && (now - parseInt(cachedTime, 10) < V3_CACHE_DURATION)) {
-          try {
-              const parsed = JSON.parse(cached);
-              // PENGAMAN CACHE: Pastikan ia array sungguhan dan strukturnya benar (ada id)
-              if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'id' in parsed[0]))) {
-                  setV3Countries(parsed);
-                  setLoadingV3Countries(false);
-                  return;
-              }
-          } catch(e) {
-              localStorage.removeItem(V3_COUNTRIES_CACHE_KEY);
-          }
-      }
-      
-      try {
-          const res = await api.get('/countries-v3/list');
-          if (res.data.success && Array.isArray(res.data.data)) {
-              setV3Countries(res.data.data);
-              localStorage.setItem(V3_COUNTRIES_CACHE_KEY, JSON.stringify(res.data.data));
-              localStorage.setItem(V3_COUNTRIES_CACHE_TIME, now.toString());
-          }
-      } catch (err) {
-          showToast("Gagal memuat negara server plus", "error");
-      } finally {
-          setLoadingV3Countries(false);
-      }
-  };
-
-  const handleV3CountryClick = async (country) => {
-      if (!country || !country.id) return showToast("Data negara tidak valid", "error");
-      
-      setSelectedV3Country(country);
-      setSheetMode('v3_services');
-      setV3Services([]);
-      setLoadingV3Services(true);
-
-      const cacheKey = V3_SERVICES_CACHE_KEY;
-      const cacheTime = V3_SERVICES_CACHE_TIME;
-      const now = Date.now();
-
-      setTimeout(async () => {
-          try {
-              const cached = localStorage.getItem(cacheKey);
-              const cachedTimeVal = localStorage.getItem(cacheTime);
-              
-              if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V3_CACHE_DURATION)) {
-                  try {
-                      const parsed = JSON.parse(cached);
-                      // PENGAMAN CACHE: Pastikan ia array sungguhan dan strukturnya benar (ada code)
-                      if (Array.isArray(parsed) && (parsed.length === 0 || (parsed[0] && typeof parsed[0] === 'object' && 'code' in parsed[0]))) {
-                          setV3Services(parsed);
-                          setLoadingV3Services(false);
-                          return;
-                      }
-                  } catch(e) {
-                      localStorage.removeItem(cacheKey);
-                  }
-              } 
-              
-              const res = await api.get(`/services-v3/list`);
-              if (res.data.success && Array.isArray(res.data.data)) {
-                  setV3Services(res.data.data);
-                  localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
-                  localStorage.setItem(cacheTime, now.toString());
-              }
-          } catch (err) {
-              showToast("Gagal memuat layanan server plus", "error");
-          } finally {
-              setLoadingV3Services(false);
-          }
-      }, 300);
-  };
-
-  const handleV3ServiceClick = async (service) => {
-      setSelectedV3Service(service);
-      setV3PriceModal({ show: true, data: null, loading: true, ordering: false, selectedServer: null });
-
-      const cacheKey = V3_PRICE_PREFIX + service.code + '_' + selectedV3Country.id;
-      const cacheTime = V3_PRICE_TIME_PREFIX + service.code + '_' + selectedV3Country.id;
-      const now = Date.now();
-
-      try {
-          const cached = localStorage.getItem(cacheKey);
-          const cachedTimeVal = localStorage.getItem(cacheTime);
-
-          if (cached && cachedTimeVal && (now - parseInt(cachedTimeVal, 10) < V3_PRICE_DURATION)) {
-              try {
-                  const parsedData = JSON.parse(cached);
-                  if (parsedData && typeof parsedData === 'object' && 'servers' in parsedData) {
-                      const defaultServer = parsedData.servers && parsedData.servers.length > 0 ? parsedData.servers[0] : null;
-                      setV3PriceModal({ show: true, data: parsedData, loading: false, ordering: false, selectedServer: defaultServer });
-                      return;
-                  }
-              } catch(e) {
-                  localStorage.removeItem(cacheKey);
-              }
-          } 
-          
-          const res = await api.get(`/cekharga-v3/info?service=${service.code}&country=${selectedV3Country.id}`);
-          if (res.data.success) {
-              const defaultServer = res.data.data.servers && res.data.data.servers.length > 0 ? res.data.data.servers[0] : null;
-              setV3PriceModal({ show: true, data: res.data.data, loading: false, ordering: false, selectedServer: defaultServer });
-              localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
-              localStorage.setItem(cacheTime, now.toString());
-          } else {
-              setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
-              showToast(res.data.message || "Gagal cek harga", "error");
-          }
-      } catch (err) {
-          setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
-          showToast("Gagal cek harga layanan", "error");
-      }
-  };
-
-  const processV3Buy = async (priceData) => {
-      const selectedServer = v3PriceModal.selectedServer;
-      if (!selectedServer) return showToast("Pilih server terlebih dahulu!", "error");
-      if (balance < selectedServer.price.sell) {
-          return showToast("Saldo tidak mencukupi untuk membeli layanan ini!", "error");
-      }
-
-      setV3PriceModal(prev => ({ ...prev, ordering: true }));
-
-      try {
-          const res = await api.get(`/orders-v3/buy?service=${priceData.service}&country=${priceData.country}&server=${selectedServer.server}&operator=any&expected_price=${selectedServer.price.sell}`);
-          if (res.data.success) {
-              setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null });
-              setSheetMode(null); 
-              showToast("Order Server Plus Berhasil!", "success");
-              fetchInitialData();
-          } else {
-              setV3PriceModal(prev => ({ ...prev, ordering: false }));
-              showToast(res.data.message || "Order Gagal", "error");
-          }
-      } catch (err) {
-          setV3PriceModal(prev => ({ ...prev, ordering: false }));
-          const errorMsg = err.response?.data?.message || err.response?.data?.error?.message || "Gagal memproses order, coba lagi.";
-          showToast(errorMsg, "error");
-          fetchInitialData(true);
-      }
-  };
-
-  // ================================================================
   // --- GENERAL HANDLERS ---
   // ================================================================
 
@@ -1589,7 +1217,7 @@ export default function Order() {
          try {
             const targetId = order.order_id || order.id || '';
             
-            // LOGIKA PEMISAHAN CANCEL V1, V2 & V3
+            // LOGIKA PEMISAHAN CANCEL V1, V2 & V3 (Tetap mempertahankan pembatalan jika user memiliki riwayat V3 yang aktif)
             const cancelUrl = order.version === 'v3'
                 ? `/orders-v3/cancel?order_id=${targetId}`
                 : order.version === 'v2' 
@@ -1737,16 +1365,8 @@ export default function Order() {
 
   const handleReorder = (order) => {
     if (order.version === 'v3') {
-        if (Array.isArray(v3Countries) && v3Countries.length > 0) {
-            const countryV3 = v3Countries.find(c => String(c.id) === String(order.country) || (c.name || '').toLowerCase() === order.countryName?.toLowerCase());
-            if (countryV3) {
-                handleV3CountryClick(countryV3);
-            } else {
-                handleOpenV3();
-            }
-        } else {
-            handleOpenV3();
-        }
+        showToast("Server Plus saat ini sudah ditiadakan.", "error");
+        return;
     } else if (order.version === 'v2') {
         if (Array.isArray(v2Countries) && v2Countries.length > 0) {
             const countryV2 = v2Countries.find(c => String(c.id) === String(order.country) || (c.name || '').toLowerCase() === order.countryName?.toLowerCase());
@@ -1836,7 +1456,7 @@ export default function Order() {
       <div className="px-5 mt-6 space-y-6">
         
         {/* =========================================
-            TOMBOL PILIHAN ORDER (UTAMA, TERMURAH, PLUS)
+            TOMBOL PILIHAN ORDER (UTAMA, TERMURAH)
             ========================================= */}
         <div className="grid grid-cols-1 gap-4">
             
@@ -1875,25 +1495,6 @@ export default function Order() {
                 </div>
                 <div className="absolute -right-2 -bottom-4 opacity-10 rotate-12">
                     <Globe size={80} className="text-white" />
-                </div>
-            </button>
-
-            {/* Tombol Server Plus (V3) */}
-            <button 
-                onClick={handleOpenV3} 
-                className="w-full group relative overflow-hidden rounded-3xl p-5 text-left shadow-lg transition-transform active:scale-95 bg-gradient-to-r from-violet-600 to-fuchsia-700 dark:from-violet-800 dark:to-fuchsia-900"
-            >
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-bold text-white mb-0.5">Server Plus</h2>
-                        <p className="text-violet-100 text-xs opacity-90">Kualitas premium, multi-server</p>
-                    </div>
-                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
-                        <Plus size={20} className="text-white" />
-                    </div>
-                </div>
-                <div className="absolute -right-2 -bottom-4 opacity-10 rotate-12">
-                    <Zap size={80} className="text-white" />
                 </div>
             </button>
             
@@ -2234,92 +1835,6 @@ export default function Order() {
           </div>
       )}
 
-      {/* =========================================================
-          MODAL UNTUK KONFIRMASI HARGA & ORDER (SERVER PLUS V3)
-          ========================================================= */}
-      {v3PriceModal.show && (
-          <div 
-              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-5 animate-in fade-in duration-200" 
-              onClick={() => !v3PriceModal.ordering && setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })}
-          >
-              <div 
-                  className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 border border-slate-100 dark:border-slate-800" 
-                  onClick={e => e.stopPropagation()}
-              >
-                  {v3PriceModal.loading ? (
-                      <div className="flex flex-col items-center justify-center py-8">
-                          <Loader2 size={36} className="text-violet-500 animate-spin mb-4" />
-                          <p className="text-slate-500 font-medium">Mengecek daftar server...</p>
-                      </div>
-                  ) : v3PriceModal.data ? (
-                      <div>
-                          <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-                              <div>
-                                  <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Pilih Server Plus</h3>
-                                  <p className="text-xs text-slate-500">{v3PriceModal.data.name || 'Layanan'} - {v3PriceModal.data.countryName || 'Negara'}</p>
-                              </div>
-                              <button 
-                                  onClick={() => !v3PriceModal.ordering && setV3PriceModal({ show: false, data: null, loading: false, ordering: false, selectedServer: null })} 
-                                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
-                              >
-                                  <X size={20} />
-                              </button>
-                          </div>
-
-                          <div className="space-y-3 mb-6 max-h-[220px] overflow-y-auto hide-scrollbar">
-                              {Array.isArray(v3PriceModal.data.servers) && v3PriceModal.data.servers.length > 0 ? (
-                                  v3PriceModal.data.servers.map((srv, idx) => (
-                                      <div 
-                                          key={srv.server || idx} 
-                                          onClick={() => setV3PriceModal(prev => ({ ...prev, selectedServer: srv }))}
-                                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
-                                              v3PriceModal.selectedServer?.server === srv.server 
-                                              ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' 
-                                              : 'border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800/50'
-                                          }`}
-                                      >
-                                          <div className="flex justify-between items-center">
-                                              <div>
-                                                  <p className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
-                                                      {srv.serverName || 'Server'}
-                                                      {v3PriceModal.selectedServer?.server === srv.server && <CheckCircle2 size={14} className="text-violet-500" />}
-                                                  </p>
-                                                  <p className={`text-xs mt-0.5 ${srv.stock > 0 ? 'text-emerald-500' : 'text-red-500'}`}>Stok: {srv.stock || 0}</p>
-                                              </div>
-                                              <div className="text-right">
-                                                  <p className="font-black text-[15px] text-violet-600 dark:text-violet-400">Rp {(srv.price?.sell || 0).toLocaleString('id-ID')}</p>
-                                              </div>
-                                          </div>
-                                      </div>
-                                  ))
-                              ) : (
-                                  <div className="text-center py-4 text-slate-500 text-sm">Tidak ada server yang tersedia saat ini.</div>
-                              )}
-                          </div>
-
-                          <button 
-                              onClick={() => processV3Buy(v3PriceModal.data)}
-                              disabled={v3PriceModal.ordering || !v3PriceModal.selectedServer || v3PriceModal.selectedServer.stock <= 0}
-                              className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-transform active:scale-95 ${v3PriceModal.ordering || !v3PriceModal.selectedServer || v3PriceModal.selectedServer.stock <= 0 ? 'bg-slate-400 cursor-not-allowed' : 'bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-600/30'}`}
-                          >
-                              {v3PriceModal.ordering ? (
-                                  <><Loader2 size={18} className="animate-spin" /> Memproses...</>
-                              ) : (!v3PriceModal.selectedServer) ? (
-                                  'Pilih Server Dulu'
-                              ) : v3PriceModal.selectedServer.stock <= 0 ? (
-                                  'Stok Habis'
-                              ) : (
-                                  <><ShoppingBag size={18} /> Beli Sekarang</>
-                              )}
-                          </button>
-                      </div>
-                  ) : (
-                      <div className="text-center py-6 text-slate-500">Gagal memuat detail harga.</div>
-                  )}
-              </div>
-          </div>
-      )}
-
       {/* MODAL OPERATOR SELULER (SERVER UTAMA V1) */}
       {operatorModal.show && (
           <div 
@@ -2476,27 +1991,6 @@ export default function Order() {
           services={v2Services}
           loading={loadingV2Services}
           onSelectService={handleV2ServiceClick}
-          getOptimizedImage={getOptimizedImage}
-          getCountryFlag={getCountryFlag}
-      />
-
-      {/* IMPLEMENTASI DRAWERS V3 (PLUS) */}
-      <V3CountriesDrawer
-          isOpen={sheetMode === 'v3_countries'}
-          onClose={() => setSheetMode(null)}
-          countries={v3Countries}
-          loading={loadingV3Countries}
-          onSelectCountry={handleV3CountryClick}
-          getCountryFlag={getCountryFlag}
-      />
-
-      <V3ServicesDrawer
-          isOpen={sheetMode === 'v3_services'}
-          onBack={() => setSheetMode('v3_countries')}
-          selectedCountry={selectedV3Country}
-          services={v3Services}
-          loading={loadingV3Services}
-          onSelectService={handleV3ServiceClick}
           getOptimizedImage={getOptimizedImage}
           getCountryFlag={getCountryFlag}
       />
