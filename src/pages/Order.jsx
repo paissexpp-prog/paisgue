@@ -14,7 +14,7 @@ import {
   Smartphone, Loader2, CheckCircle2, AlertCircle, HelpCircle, 
   Clock, Copy, MessageSquare, RefreshCw,
   Wallet, History, Headphones, Brain, Info, Bug, Eye, BookOpen, FileText,
-  Zap, Bell, Lock
+  Zap, Bell
 } from 'lucide-react';
 
 // ================================================================
@@ -1379,13 +1379,14 @@ export default function Order() {
             handleOpenV2();
         }
     } else {
-        // V1 DI-LOCK KARENA MAINTENANCE
-        showConfirm(
-            "Server Maintenance 🛠️",
-            "Server Utama saat ini sedang dalam masa perbaikan/maintenance.\n\nSilakan menggunakan Server Termurah untuk transaksi Anda sementara waktu.",
-            closeConfirm,
-            "Saya Mengerti" // Tombol ini tidak akan menampilkan "Batal"
-        );
+        if (Array.isArray(services)) {
+            const found = services.find(s => (s.service_name || '').toLowerCase() === order.service?.toLowerCase());
+            if (found) {
+                handleServiceClick(found);
+                return;
+            }
+        }
+        setSheetMode('services');
     }
   };
 
@@ -1459,39 +1460,22 @@ export default function Order() {
             ========================================= */}
         <div className="grid grid-cols-1 gap-4">
             
-            {/* Tombol Server Utama (Maintenance Mode) */}
+            {/* Tombol Server Utama */}
             <button 
-                onClick={() => {
-                    showConfirm(
-                        "Server Maintenance 🛠️",
-                        "Server Utama saat ini sedang dalam masa perbaikan/maintenance.\n\nSilakan menggunakan Server Termurah untuk sementara waktu.",
-                        closeConfirm,
-                        "Saya Mengerti"
-                    );
-                }} 
-                className="w-full group relative overflow-hidden rounded-3xl p-6 text-left shadow-lg transition-transform active:scale-95 bg-slate-800 dark:bg-slate-800/80 border border-slate-700 opacity-95"
+                onClick={() => setSheetMode('services')} 
+                className="w-full group relative overflow-hidden rounded-3xl p-6 text-left shadow-xl transition-transform active:scale-95 bg-gradient-to-r from-slate-900 to-slate-800 dark:from-blue-900 dark:to-slate-900"
             >
-                {/* Overlay gelap sebagai indikasi terkunci */}
-                <div className="absolute inset-0 bg-black/40 z-0"></div>
                 <div className="relative z-10 flex items-center justify-between">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <h2 className="text-2xl font-bold text-white/50">Server Utama</h2>
-                            {/* Badge Maintenance Merah/Amber */}
-                            <span className="flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-400 backdrop-blur-sm uppercase tracking-wider">
-                                <Lock size={10} /> Maintenance
-                            </span>
-                        </div>
-                        <p className="text-slate-400 text-sm opacity-80">(Get Virtual Number)</p>
+                        <h2 className="text-2xl font-bold text-white mb-1">Server Utama</h2>
+                        <p className="text-slate-300 text-sm opacity-90">(Get Virtual Number)</p>
                     </div>
-                    {/* Ikon Gembok di ujung kanan */}
-                    <div className="h-12 w-12 rounded-full bg-slate-700/50 flex items-center justify-center backdrop-blur-sm transition-all border border-slate-600">
-                        <Lock size={20} className="text-slate-400" />
+                    <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/20 transition-all">
+                        <Plus size={24} className="text-white" />
                     </div>
                 </div>
-                {/* Efek grayscale pada background HP agar tidak mencolok */}
-                <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12 grayscale">
-                    <Smartphone size={100} className="text-slate-500" />
+                <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
+                    <Smartphone size={100} className="text-white" />
                 </div>
             </button>
 
@@ -1953,7 +1937,6 @@ export default function Order() {
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 whitespace-pre-line leading-relaxed">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          {/* "Batal" hanya akan muncul jika text BUKAN "Saya Mengerti", ini pintar untuk popup peringatan satu-arah */}
                           {confirmModal.confirmText !== 'Saya Mengerti' && <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">Batal</button>}
                           <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 flex items-center justify-center gap-2">
                               {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
@@ -1969,7 +1952,7 @@ export default function Order() {
           {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span className="text-sm font-bold">{toast.message}</span>
       </div>
 
-      {/* IMPLEMENTASI DRAWERS V1 (TIDAK DIHAPUS, HANYA DILONCATI KARENA BUTTON DI LOCK) */}
+      {/* IMPLEMENTASI DRAWERS V1 */}
       <ServicesDrawer
           isOpen={sheetMode === 'services'}
           onClose={() => setSheetMode(null)}
