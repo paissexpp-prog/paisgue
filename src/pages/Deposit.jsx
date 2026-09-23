@@ -47,7 +47,7 @@ export default function Deposit() {
 
     socket.on('deposit_success', (data) => {
         // Tampilkan notifikasi dan refresh data saat deposit masuk
-        setToast({ show: true, message: '✅ Deposit berhasil masuk!', type: 'success' });
+        setToast({ show: true, message: 'Deposit berhasil masuk!', type: 'success' });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
         fetchHistory();
     });
