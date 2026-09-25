@@ -8,7 +8,7 @@ import {
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
   Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X,
-  AlertCircle, HelpCircle, Code2, RefreshCw
+  AlertCircle, HelpCircle, Code2, RefreshCw, Link2, Activity
 } from 'lucide-react';
 
 export default function Profile() {
@@ -24,6 +24,14 @@ export default function Profile() {
   const [whitelistLoading, setWhitelistLoading] = useState(false);
   const [showWhitelistModal, setShowWhitelistModal] = useState(false);
   const [ipInput, setIpInput] = useState('');
+
+  // Webhook States
+  const [webhookInfo, setWebhookInfo] = useState(null);
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [webhookUrlInput, setWebhookUrlInput] = useState('');
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
+  const [isUpdatingWebhook, setIsUpdatingWebhook] = useState(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   // State untuk visibilitas ID
   const [showId, setShowId] = useState(false);
@@ -43,10 +51,12 @@ export default function Profile() {
   const CACHE_USER_KEY = 'avinotp_profile_user';
   const CACHE_STATS_KEY = 'avinotp_profile_stats';
   const CACHE_WHITELIST_KEY = 'avinotp_profile_whitelist';
+  const CACHE_WEBHOOK_KEY = 'avinotp_profile_webhook';
 
   useEffect(() => {
     fetchUserData();
     fetchWhitelist();
+    fetchWebhookInfo();
   }, []);
 
   const fetchUserData = async () => {
@@ -111,6 +121,25 @@ export default function Profile() {
     }
   };
 
+  const fetchWebhookInfo = async () => {
+    // Cek cache webhook
+    const cachedWebhook = localStorage.getItem(CACHE_WEBHOOK_KEY);
+    if (cachedWebhook) {
+      setWebhookInfo(JSON.parse(cachedWebhook));
+    }
+
+    // Tembak API
+    try {
+      const res = await api.get('/webhook-setting/info');
+      if (res.data.success && res.data.data) {
+        setWebhookInfo(res.data.data);
+        localStorage.setItem(CACHE_WEBHOOK_KEY, JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.error("Gagal memuat info webhook dari API, fallback ke cache", err);
+    }
+  };
+
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -143,6 +172,7 @@ export default function Profile() {
     }
   };
 
+  // --- FUNGSI WHITELIST ---
   const handleAddWhitelist = async () => {
     if (!ipInput) return;
     setWhitelistLoading(true);
@@ -187,12 +217,48 @@ export default function Profile() {
     }
   };
 
+  // --- FUNGSI WEBHOOK ---
+  const handleUpdateWebhook = async () => {
+    if (!webhookUrlInput) {
+      showToast("URL Webhook tidak boleh kosong", "error");
+      return;
+    }
+    setIsUpdatingWebhook(true);
+    try {
+      const res = await api.post('/webhook-setting/update', { webhook_url: webhookUrlInput });
+      if (res.data.success) {
+        setWebhookInfo(res.data.data);
+        localStorage.setItem(CACHE_WEBHOOK_KEY, JSON.stringify(res.data.data));
+        showToast(res.data.message || "Pengaturan Webhook berhasil diperbarui.", "success");
+      }
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || "Gagal memperbarui webhook", "error");
+    } finally {
+      setIsUpdatingWebhook(false);
+    }
+  };
+
+  const handleTestWebhook = async () => {
+    setIsTestingWebhook(true);
+    try {
+      const res = await api.post('/webhook-setting/test');
+      if (res.data.success) {
+        showToast(res.data.message || "Webhook berhasil dikirim dan diterima!", "success");
+      }
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || "Test Webhook gagal", "error");
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  };
+
   const confirmLogout = () => {
     // Bersihkan semua data cache profil saat logout agar aman
     localStorage.removeItem('token');
     localStorage.removeItem(CACHE_USER_KEY);
     localStorage.removeItem(CACHE_STATS_KEY);
     localStorage.removeItem(CACHE_WHITELIST_KEY);
+    localStorage.removeItem(CACHE_WEBHOOK_KEY);
     navigate('/login');
   };
 
@@ -365,7 +431,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 4. KEAMANAN (WHITELIST IP & DOKUMENTASI) */}
+        {/* 4. KEAMANAN (WHITELIST IP, WEBHOOK, & DOKUMENTASI) */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Developer Tools</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
@@ -406,6 +472,38 @@ export default function Profile() {
                 </button>
               </div>
             )}
+
+            {/* Webhook API Row */}
+            <button 
+              onClick={() => {
+                setWebhookUrlInput(webhookInfo?.webhook_url || '');
+                setShowWebhookSecret(false);
+                setShowWebhookModal(true);
+              }}
+              className="w-full flex items-center justify-between p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-100 dark:border-slate-800"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-opacity-20`}>
+                  <Link2 size={18} />
+                </div>
+                <div className="text-left flex flex-col">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Webhook URL</span>
+                  {webhookInfo?.webhook_url && (
+                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{webhookInfo.webhook_url}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                 {!webhookInfo?.webhook_url ? (
+                     <>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800">Belum Set</span>
+                        <Plus size={18} className="text-slate-400" />
+                     </>
+                 ) : (
+                     <ChevronRight size={18} className="text-slate-400" />
+                 )}
+              </div>
+            </button>
 
             {/* DOKUMENTASI API ROW */}
             <button 
@@ -496,6 +594,87 @@ export default function Profile() {
                 {whitelistLoading ? <Loader2 size={18} className="animate-spin"/> : <CheckCircle size={18}/>}
                 Simpan Alamat IP
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- WEBHOOK MODAL --- */}
+      {showWebhookModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 border border-slate-100 dark:border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Pengaturan Webhook</h3>
+                <button onClick={() => setShowWebhookModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"><X size={20}/></button>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Endpoint URL</label>
+                <div className="relative">
+                  <input 
+                    type="url"
+                    value={webhookUrlInput}
+                    onChange={(e) => setWebhookUrlInput(e.target.value)}
+                    placeholder="https://domain-anda.com/api/callback"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl py-3.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {webhookInfo?.webhook_secret && (
+                <div className="mb-6">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Webhook Secret</label>
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl py-3.5 px-4">
+                    <span className="text-sm font-mono text-slate-700 dark:text-slate-300 flex-1 truncate">
+                      {showWebhookSecret ? webhookInfo.webhook_secret : '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'}
+                    </span>
+                    <button 
+                        onClick={() => setShowWebhookSecret(!showWebhookSecret)} 
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                        title={showWebhookSecret ? "Sembunyikan Secret" : "Tampilkan Secret"}
+                    >
+                        {showWebhookSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                    <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                    <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(webhookInfo.webhook_secret);
+                          showToast("Secret Berhasil disalin!", "success");
+                        }} 
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
+                        title="Salin Secret"
+                    >
+                        <Copy size={16} />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
+                    Gunakan secret ini untuk memverifikasi signature payload HMAC SHA-256 yang dikirimkan ke server Anda.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 mt-6">
+                <button 
+                  onClick={handleUpdateWebhook}
+                  disabled={isUpdatingWebhook || !webhookUrlInput}
+                  className={`w-full py-3.5 rounded-2xl font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${color.btn} disabled:opacity-50 disabled:grayscale`}
+                >
+                  {isUpdatingWebhook ? <Loader2 size={18} className="animate-spin"/> : <CheckCircle size={18}/>}
+                  Simpan Pengaturan
+                </button>
+
+                {webhookInfo?.webhook_url && (
+                  <button 
+                    onClick={handleTestWebhook}
+                    disabled={isTestingWebhook}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {isTestingWebhook ? <Loader2 size={18} className="animate-spin"/> : <Activity size={18}/>}
+                    Test Webhook
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
