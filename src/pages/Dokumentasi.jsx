@@ -124,8 +124,8 @@ export default function Dokumentasi() {
     }, 100);
   };
 
-  // ── Status badge ─────────────────────────────────────────────
-  const StatusBadge = ({ status }) => {
+  // ── Status badge (Diubah menjadi fungsi murni agar tidak remounting) ──
+  const renderStatusBadge = (status) => {
     const isOk = status >= 200 && status < 300;
     const isWarn = status >= 400 && status < 500;
     const cls = isOk
@@ -140,8 +140,8 @@ export default function Dokumentasi() {
     );
   };
 
-  // ── Executor Panel ───────────────────────────────────────────
-  const ExecutorPanel = ({ endpointData, execKey }) => {
+  // ── Executor Panel (Diubah menjadi fungsi murni agar tidak remounting) ──
+  const renderExecutorPanel = (endpointData, execKey) => {
     const exec = execStates[execKey] || {};
     const userId = getUserId();
     const isLoggedIn = !!userId;
@@ -238,7 +238,7 @@ export default function Dokumentasi() {
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Response</span>
-                  <StatusBadge status={exec.status} />
+                  {renderStatusBadge(exec.status)}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1 text-[10px] text-slate-400">
@@ -579,7 +579,7 @@ export default function Dokumentasi() {
                     </div>
 
                     {/* EXECUTOR PANEL */}
-                    <ExecutorPanel endpointData={currentData} execKey={execKey} />
+                    {renderExecutorPanel(currentData, execKey)}
 
                   </div>
                 </div>
