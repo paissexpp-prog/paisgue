@@ -6,7 +6,8 @@ import {
   Globe, Code2, Copy, ExternalLink, 
   ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
   ShoppingCart, MessageSquare, XCircle, Wallet, RefreshCw, 
-  Trash2, Send, Lock, Info, Play, Loader2, Wifi, LogIn
+  Trash2, Send, Lock, Info, Play, Loader2, Wifi, LogIn,
+  Radio, ShieldCheck, Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -18,7 +19,7 @@ export default function Dokumentasi() {
 
   const [expandedIndex, setExpandedIndex] = useState(null);
   
-  // PERBAIKAN BUG: Gunakan object state agar tiap accordion punya memori tab masing-masing (Terisolasi)
+  // Gunakan object state agar tiap accordion punya memori tab masing-masing (Terisolasi)
   const [activeSubTabs, setActiveSubTabs] = useState({}); 
   const [toast, setToast] = useState({ show: false, message: '' });
 
@@ -41,7 +42,6 @@ export default function Dokumentasi() {
   };
 
   const toggleAccordion = (index) => {
-    // Tidak perlu lagi mereset sub-tab di sini, biarkan user ingat posisi tab terakhirnya
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
@@ -595,8 +595,174 @@ export default function Dokumentasi() {
           })}
         </div>
 
+        {/* WEBHOOK DOCS (SECTION BARU) */}
+        <div className="space-y-3 mt-8">
+          <h3 className="px-1 text-sm font-bold text-violet-500 uppercase tracking-widest flex items-center gap-2"><Radio size={16} /> Webhook Integration</h3>
+          
+          <div className={`rounded-3xl border transition-all duration-300 ${expandedIndex === 200 ? 'bg-white dark:bg-slate-950 shadow-lg border-violet-500/30 ring-1 ring-violet-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+            <button onClick={() => toggleAccordion(200)} className="w-full p-5 flex items-center justify-between outline-none group">
+              <div className="flex items-center gap-4">
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-violet-50 text-violet-600 dark:bg-violet-900/30">
+                  POST
+                </span>
+                <div className="text-left">
+                  <h4 className={`font-bold text-sm transition-colors ${expandedIndex === 200 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-700 dark:text-slate-200'}`}>Notifikasi Webhook</h4>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">Real-time Callback API</p>
+                </div>
+              </div>
+              {expandedIndex === 200 ? <ChevronUp size={18} className="text-violet-500" /> : <ChevronDown size={18} className="text-slate-400" />}
+            </button>
+
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedIndex === 200 ? 'max-h-[4000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="px-5 pb-6 space-y-6">
+                <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
+                
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Webhook RuangOTP memungkinkan sistem Anda (Bot/Website) menerima notifikasi secara <strong>real-time</strong> saat terjadi pembaruan status transaksi. Anda tidak perlu lagi melakukan <em>polling</em> (mengecek status berkali-kali) ke server kami.
+                </p>
+
+                {/* Tombol Arahkan ke Profil */}
+                <div className="p-4 rounded-2xl bg-violet-50 border border-violet-100 dark:bg-violet-900/10 dark:border-violet-900/30">
+                  <h4 className="font-bold text-sm text-violet-700 dark:text-violet-400 mb-2">Mendaftarkan Endpoint Webhook</h4>
+                  <p className="text-xs text-violet-600/80 dark:text-violet-300/80 mb-4 leading-relaxed">
+                    Untuk mulai menerima Webhook, Anda harus mendaftarkan URL tujuan (*endpoint* API Anda) dan mendapatkan <code>webhook_secret</code> di halaman Profil.
+                  </p>
+                  <button onClick={() => navigate('/profile')} className="w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700 shadow-lg shadow-violet-600/20 transition-all active:scale-95">
+                    <Settings size={14} /> Atur Webhook di Profil
+                  </button>
+                </div>
+
+                {/* Keamanan & Validasi */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck size={16} className="text-emerald-500" />
+                    <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Keamanan & Validasi (HMAC SHA256)</p>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                    Untuk memastikan bahwa data (POST Request) yang masuk ke server Anda benar-benar berasal dari RuangOTP, kami melampirkan header <code>x-ruangotp-signature</code>. Signature ini dihasilkan dari enkripsi HMAC SHA256 menggunakan <code>webhook_secret</code> milik Anda terhadap raw body (JSON).
+                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Validasi (Node.js/Express)</p>
+                    <button onClick={() => handleCopy(`const crypto = require('crypto');\n\napp.post('/api/callback/ruangotp', (req, res) => {\n    const signature = req.headers['x-ruangotp-signature'];\n    const payloadString = JSON.stringify(req.body);\n    const secret = "WEBHOOK_SECRET_ANDA";\n\n    const expectedSignature = crypto\n        .createHmac('sha256', secret)\n        .update(payloadString)\n        .digest('hex');\n\n    if (signature !== expectedSignature) {\n        return res.status(401).send('Signature tidak valid!');\n    }\n\n    // Proses data Anda di sini...\n    console.log("Data Valid:", req.body);\n    \n    // PENTING: Anda WAJIB merespon dengan status 200 OK\n    res.status(200).send('OK'); \n});`)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin Kode</button>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute top-3 left-3 flex gap-1.5 z-10">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                    </div>
+                    <pre className="p-4 pt-10 bg-slate-900 rounded-xl text-[10px] font-mono text-blue-300 overflow-x-auto border border-slate-800 shadow-lg leading-relaxed">
+{`const crypto = require('crypto');
+
+app.post('/api/callback/ruangotp', (req, res) => {
+    const signature = req.headers['x-ruangotp-signature'];
+    const payloadString = JSON.stringify(req.body);
+    const secret = "WEBHOOK_SECRET_ANDA";
+
+    const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(payloadString)
+        .digest('hex');
+
+    if (signature !== expectedSignature) {
+        return res.status(401).send('Signature tidak valid!');
+    }
+
+    // Proses data Anda di sini...
+    console.log("Data Valid:", req.body);
+    
+    // PENTING: Anda WAJIB merespon dengan status 200 OK
+    res.status(200).send('OK'); 
+});`}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Payload Event */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-3">Format Payload (Data yang Diterima)</p>
+                  
+                  <div className="space-y-4">
+                    {/* Event OTP */}
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Event: <code className="text-emerald-500">otp.completed</code> <span className="font-normal text-[10px] text-slate-400 ml-1">(Saat OTP Masuk)</span></p>
+                        <button onClick={() => handleCopy(`{\n  "event": "otp.completed",\n  "data": {\n    "order_id": "RUANGOTP123456",\n    "phone_number": "628123456789",\n    "otp_code": "123456",\n    "sms_content": "Kode verifikasi WhatsApp Anda adalah 123456",\n    "service": "WhatsApp",\n    "status": "COMPLETED"\n  },\n  "timestamp": "2026-09-25T16:09:51.000Z"\n}`)} className="text-[10px] font-bold text-emerald-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                      </div>
+                      <pre className="p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">
+{`{
+  "event": "otp.completed",
+  "data": {
+    "order_id": "RUANGOTP123456",
+    "phone_number": "628123456789",
+    "otp_code": "123456",
+    "sms_content": "Kode verifikasi WhatsApp Anda adalah 123456",
+    "service": "WhatsApp",
+    "status": "COMPLETED"
+  },
+  "timestamp": "2026-09-25T16:09:51.000Z"
+}`}
+                      </pre>
+                    </div>
+
+                    {/* Event Deposit */}
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Event: <code className="text-blue-500">deposit.success</code> <span className="font-normal text-[10px] text-slate-400 ml-1">(Saat Saldo Masuk)</span></p>
+                        <button onClick={() => handleCopy(`{\n  "event": "deposit.success",\n  "data": {\n    "deposit_id": "DEP-123456",\n    "amount": 50000,\n    "method": "qris",\n    "status": "success"\n  },\n  "timestamp": "2026-09-25T16:09:51.000Z"\n}`)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                      </div>
+                      <pre className="p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-blue-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">
+{`{
+  "event": "deposit.success",
+  "data": {
+    "deposit_id": "DEP-123456",
+    "amount": 50000,
+    "method": "qris",
+    "status": "success"
+  },
+  "timestamp": "2026-09-25T16:09:51.000Z"
+}`}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mekanisme Retry */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-3">Mekanisme Retry (Sistem Antrean)</p>
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                    <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>RuangOTP menggunakan standar industri <strong>Fire-and-Forget</strong> dengan mekanisme Retry.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Server kami mengharapkan respon HTTP <code>200 OK</code> dari server Anda dalam waktu maksimal <strong>5 detik</strong>.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Jika server Anda sedang <em>down</em>, <em>timeout</em>, atau mengembalikan status selain 200 (misal: 404, 500), kami akan memasukkan notifikasi tersebut ke dalam antrean.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Server kami akan mencoba mengirim ulang data tersebut secara otomatis setiap <strong>30 detik</strong>.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Jika pengiriman gagal hingga <strong>3 kali berturut-turut</strong>, data akan dianggap kedaluwarsa dan dihentikan pengirimannya.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ERROR DOCS */}
-        <div className="space-y-3">
+        <div className="space-y-3 mt-8">
           <h3 className="px-1 text-sm font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><AlertTriangle size={16} /> Error Responses</h3>
           {ERROR_DOCS.map((err, index) => {
             const itemIndex = index + 100;
@@ -629,7 +795,7 @@ export default function Dokumentasi() {
         </div>
 
         {/* FOOTER */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950 mt-8">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-xl bg-orange-50 text-orange-500 dark:bg-orange-900/20"><Globe size={20} /></div>
             <h3 className="font-bold">Butuh Bantuan?</h3>
