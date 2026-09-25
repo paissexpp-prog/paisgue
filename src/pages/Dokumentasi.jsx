@@ -17,7 +17,9 @@ export default function Dokumentasi() {
   const navigate = useNavigate();
 
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [activeSubTab, setActiveSubTab] = useState(0);
+  
+  // PERBAIKAN BUG: Gunakan object state agar tiap accordion punya memori tab masing-masing (Terisolasi)
+  const [activeSubTabs, setActiveSubTabs] = useState({}); 
   const [toast, setToast] = useState({ show: false, message: '' });
 
   // State untuk executor: { [key]: { loading, status, latency, data, error } }
@@ -39,12 +41,8 @@ export default function Dokumentasi() {
   };
 
   const toggleAccordion = (index) => {
-    if (expandedIndex === index) {
-      setExpandedIndex(null);
-    } else {
-      setExpandedIndex(index);
-      setActiveSubTab(0);
-    }
+    // Tidak perlu lagi mereset sub-tab di sini, biarkan user ingat posisi tab terakhirnya
+    setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   // Auto-ambil User ID dari JWT di localStorage
@@ -124,7 +122,7 @@ export default function Dokumentasi() {
     }, 100);
   };
 
-  // ── Status badge (Diubah menjadi fungsi murni agar tidak remounting) ──
+  // ── Status badge ──
   const renderStatusBadge = (status) => {
     const isOk = status >= 200 && status < 300;
     const isWarn = status >= 400 && status < 500;
@@ -140,7 +138,7 @@ export default function Dokumentasi() {
     );
   };
 
-  // ── Executor Panel (Diubah menjadi fungsi murni agar tidak remounting) ──
+  // ── Executor Panel ──
   const renderExecutorPanel = (endpointData, execKey) => {
     const exec = execStates[execKey] || {};
     const userId = getUserId();
@@ -484,8 +482,12 @@ export default function Dokumentasi() {
           {API_DOCS.map((api, index) => {
             const isExpanded = expandedIndex === index;
             const isMulti = api.tabs && api.tabs.length > 0;
-            const currentData = isMulti ? api.tabs[activeSubTab] : api;
-            const execKey = getExecKey(index, isMulti ? activeSubTab : 0);
+            
+            // MENGAMBIL STATE TAB SECARA TERISOLASI
+            const currentSubTab = activeSubTabs[index] || 0;
+            // SAFETY FALLBACK: Jika tab yang diminta tidak ada, otomatis fallback ke tab index 0
+            const currentData = isMulti ? (api.tabs[currentSubTab] || api.tabs[0]) : api; 
+            const execKey = getExecKey(index, isMulti ? currentSubTab : 0);
 
             return (
               <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 shadow-lg border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
@@ -512,7 +514,12 @@ export default function Dokumentasi() {
                     {isMulti && (
                       <div className={`grid gap-2 ${api.tabs.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
                         {api.tabs.map((tab, idx) => (
-                          <button key={idx} onClick={() => setActiveSubTab(idx)} className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeSubTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}>
+                          <button 
+                            key={idx} 
+                            // Update tab HANYA untuk accordion yang spesifik
+                            onClick={() => setActiveSubTabs(prev => ({ ...prev, [index]: idx }))} 
+                            className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${currentSubTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
+                          >
                             {tab.icon}
                             <span>{tab.name.split('. ')[1]}</span>
                           </button>
