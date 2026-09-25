@@ -6,7 +6,7 @@ import {
   Globe, Code2, Copy, ExternalLink, 
   ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
   ShoppingCart, MessageSquare, XCircle, Wallet, RefreshCw, 
-  Trash2, Zap, Lock, Info, Star, Play, Loader2, Wifi, LogIn
+  Trash2, Send, Lock, Info, Play, Loader2, Wifi, LogIn
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -16,7 +16,6 @@ export default function Dokumentasi() {
   const { color } = useTheme();
   const navigate = useNavigate();
 
-  const [activeVersion, setActiveVersion] = useState('v1');
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState(0);
   const [toast, setToast] = useState({ show: false, message: '' });
@@ -48,12 +47,6 @@ export default function Dokumentasi() {
     }
   };
 
-  const handleVersionSwitch = (v) => {
-    setActiveVersion(v);
-    setExpandedIndex(null);
-    setActiveSubTab(0);
-  };
-
   // Auto-ambil User ID dari JWT di localStorage
   const getUserId = () => {
     try {
@@ -67,7 +60,7 @@ export default function Dokumentasi() {
   };
 
   // Key unik per endpoint+subtab agar state tidak bentrok
-  const getExecKey = (index, subTab = 0) => `${activeVersion}_${index}_${subTab}`;
+  const getExecKey = (index, subTab = 0) => `api_${index}_${subTab}`;
 
   // Handle perubahan input
   const handleInputChange = (key, paramName, value) => {
@@ -158,12 +151,11 @@ export default function Dokumentasi() {
       <div className="mt-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Header executor */}
         <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Coba Sekarang</span>
         </div>
 
         <div className="p-4 space-y-3 bg-white dark:bg-slate-950">
-
           {/* User ID (read-only, auto-fill dari JWT) */}
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
@@ -243,7 +235,7 @@ export default function Dokumentasi() {
           {!exec.loading && exec.data !== undefined && (
             <div ref={el => responseRefs.current[execKey] = el} className="space-y-2">
               {/* Meta: status + latency */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Response</span>
                   <StatusBadge status={exec.status} />
@@ -280,272 +272,150 @@ export default function Dokumentasi() {
   };
 
   // ================================================================
-  // V1 DOCS
+  // SINGLE API DOCS CONFIGURATION
   // ================================================================
-  const API_DOCS_V1 = [
-    {
-      title: "Daftar Layanan",
-      method: "GET",
-      url: "/v1/services/list",
-      desc: "Mengambil daftar seluruh layanan OTP yang tersedia (WhatsApp, Telegram, DANA, dll).",
-      parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" }
-      ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    { "service_code": 13, "service_name": "WhatsApp", "category": "Social", "status": true },\n    { "service_code": 59, "service_name": "DANA", "category": "E-wallet", "status": true }\n  ]\n}`
-    },
+  const API_DOCS = [
     {
       title: "Daftar Negara",
       method: "GET",
-      url: "/v1/countries/list",
-      desc: "Melihat negara beserta harga dan stok yang tersedia untuk layanan tertentu.",
+      url: "/country-v2/list",
+      desc: "Mengambil daftar seluruh negara yang tersedia pada layanan OTP.",
       parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-        { name: "service_id", type: "query", required: true, desc: "Kode layanan (cth: 13 untuk WA)" }
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis jika melalui panel, dikirim di Header)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/countries/list?service_id=13', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    {\n      "number_id": 837,\n      "name": "Indonesia",\n      "prefix": "+62",\n      "stock_total": 3306,\n      "pricelist": [\n        { "provider_id": 3237, "server_id": 2, "stock": 7, "price": 750, "price_format": "Rp750" }\n      ]\n    }\n  ]\n}`
+      codeSnippet: `axios.get('https://api.ruangotp.net/api/country-v2/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{\n  "success": true,\n  "data": [\n    { "id": 1, "name": "Indonesia" },\n    { "id": 2, "name": "Malaysia" }\n  ]\n}`
     },
     {
-      title: "Daftar Operator",
+      title: "Daftar Layanan (Berdasarkan Negara)",
       method: "GET",
-      url: "/v1/operators/list",
-      desc: "Melihat pilihan operator kartu SIM yang tersedia untuk negara tertentu.",
+      url: "/services-v2/list",
+      desc: "Mengambil daftar layanan OTP yang tersedia berdasarkan ID negara tertentu.",
       parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-        { name: "country", type: "query", required: true, desc: "Nama negara (cth: Indonesia)" },
-        { name: "provider_id", type: "query", required: true, desc: "ID Provider dari endpoint countries" }
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+        { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 1 untuk Indonesia)" }
       ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/operators/list?country=Indonesia&provider_id=3237', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    { "id": 1, "name": "any", "image": "..." },\n    { "id": 3, "name": "telkomsel", "image": "..." }\n  ]\n}`
+      codeSnippet: `axios.get('https://api.ruangotp.net/api/services-v2/list', {\n  params: { country: 1 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{\n  "success": true,\n  "data": [\n    { "service_code": "wa", "service_name": "WhatsApp" },\n    { "service_code": "tg", "service_name": "Telegram" }\n  ]\n}`
     },
     {
-      id: "transaksi_order_v1",
+      title: "Cek Harga & Provider",
+      method: "GET",
+      url: "/cekharga-v2/info",
+      desc: "Mengecek informasi provider beserta harganya untuk layanan dan negara tertentu.",
+      parameters: [
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+        { name: "service", type: "query", required: true, desc: "Kode layanan (Contoh: wa)" },
+        { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 1)" }
+      ],
+      codeSnippet: `axios.get('https://api.ruangotp.net/api/cekharga-v2/info', {\n  params: { service: 'wa', country: 1 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{\n  "success": true,\n  "data": [\n    { "provider_id": 10, "provider_name": "Server A", "price": 500, "stock": 120 },\n    { "provider_id": 12, "provider_name": "Server B", "price": 650, "stock": 45 }\n  ]\n}`
+    },
+    {
+      id: "transaksi_order",
       title: "Transaksi Nomor (Order)",
-      desc: "Menu lengkap untuk melakukan pembelian nomor, pengecekan SMS, dan pembatalan pesanan.",
+      desc: "Lakukan pemesanan nomor virtual, cek SMS, membatalkan pesanan, atau meminta ulang OTP (resend).",
       tabs: [
         {
-          name: "1. Order Nomor",
+          name: "1. Beli Nomor",
           icon: <ShoppingCart size={14}/>,
           method: "GET",
-          url: "/v1/orders/buy",
+          url: "/order-v2/buy",
           desc: "Melakukan pembelian nomor virtual baru.",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "number_id", type: "query", required: true, desc: "ID Negara (dari endpoint Countries)" },
-            { name: "provider_id", type: "query", required: true, desc: "ID Provider (dari pricelist Countries)" },
-            { name: "operator_id", type: "query", required: true, desc: "ID Operator (dari endpoint Operators, atau 'any')" },
-            { name: "expected_price", type: "query", required: true, desc: "Harga sesuai pricelist" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "service", type: "query", required: true, desc: "Kode layanan (Contoh: wa)" },
+            { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 1)" },
+            { name: "provider_id", type: "query", required: true, desc: "ID Provider dari endpoint cekharga" },
+            { name: "expected_price", type: "query", required: true, desc: "Harga sesuai yang tampil di endpoint cekharga" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/buy', {\n  params: { number_id: 837, provider_id: 3237, operator_id: 'any', expected_price: 750 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Pembelian berhasil",\n  "data": {\n    "order_id": "RUANGOTP405817",\n    "phone_number": "+62 857 2105 2792",\n    "price": 750,\n    "remaining_balance": 6500\n  }\n}`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/order-v2/buy', {\n  params: { service: 'wa', country: 1, provider_id: 10, expected_price: 500 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "data": {\n    "order_id": "ORD-987654321",\n    "number": "+6281234567890",\n    "price": 500,\n    "balance": 14500\n  }\n}`
         },
         {
-          name: "2. Cek Status SMS",
+          name: "2. Cek Status",
           icon: <MessageSquare size={14}/>,
           method: "GET",
-          url: "/v1/orders/check-status",
-          desc: "Mengecek apakah SMS/OTP sudah masuk. Lakukan polling setiap 3-5 detik.",
+          url: "/order-v2/check-status",
+          desc: "Mengecek apakah OTP sudah masuk. Sebaiknya lakukan polling per 3-5 detik.",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "order_id", type: "query", required: true, desc: "ID Order (RUANGOTP...)" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order Anda (Contoh: ORD-987654321)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/check-status', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `// ACTIVE — Menunggu SMS\n{ "success": true, "data": { "order_id": "RUANGOTP405817", "status": "ACTIVE" } }\n\n// COMPLETED — Ada OTP\n{ "success": true, "data": { "order_id": "RUANGOTP405817", "status": "COMPLETED", "otp_code": "4585" } }`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/order-v2/check-status', {\n  params: { order_id: 'ORD-987654321' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "data": {\n    "order_id": "ORD-987654321",\n    "status": "COMPLETED",\n    "otp": "654321"\n  }\n}`
         },
         {
-          name: "3. Cancel Order",
+          name: "3. Resend OTP",
+          icon: <Send size={14}/>,
+          method: "GET",
+          url: "/order-v2/resend",
+          desc: "Membuka kembali pesanan untuk menerima OTP baru (resend).",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order Anda (Contoh: ORD-987654321)" }
+          ],
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/order-v2/resend', {\n  params: { order_id: 'ORD-987654321' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "message": "Resend berhasil diaktifkan. Silakan cek status berkala."\n}`
+        },
+        {
+          name: "4. Cancel Order",
           icon: <XCircle size={14}/>,
           method: "GET",
-          url: "/v1/orders/cancel",
-          desc: "Membatalkan pesanan dan mengembalikan saldo. Minimal 4 menit setelah order.",
+          url: "/order-v2/cancel",
+          desc: "Membatalkan pesanan dan mengembalikan saldo. (Biasanya terdapat limit waktu sebelum dapat dicancel).",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "order_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan (Contoh: 12345)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/orders/cancel', {\n  params: { order_id: 'RUANGOTP405817' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Pesanan berhasil dibatalkan. Saldo telah dikembalikan.",\n  "data": { "order_id": "RUANGOTP405817", "refund_amount": 750, "current_balance": 7250 }\n}`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/order-v2/cancel', {\n  params: { order_id: '12345' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "message": "Pesanan dibatalkan",\n  "data": { "refund": 500, "balance": 15000 }\n}`
         }
       ]
     },
     {
-      id: "transaksi_deposit_v1",
+      id: "transaksi_deposit",
       title: "Transaksi Deposit",
-      desc: "Kelola deposit saldo otomatis via QRIS (Server 1).",
+      desc: "Kelola pembuatan invoice deposit, cek status, dan pembatalan otomatis via QRIS.",
       tabs: [
         {
           name: "1. Buat Tagihan",
           icon: <Wallet size={14}/>,
           method: "GET",
-          url: "/v1/deposit/create",
-          desc: "Membuat tagihan deposit QRIS. Scan QR yang dikembalikan untuk melakukan pembayaran.",
+          url: "/deposit/create",
+          desc: "Membuat invoice deposit. Response akan mengembalikan QRIS image/string.",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "amount", type: "query", required: true, desc: "Nominal deposit (Min. Rp500)" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "amount", type: "query", required: true, desc: "Nominal deposit (Contoh: 50000)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "QRIS Berhasil dibuat",\n  "data": {\n    "deposit_id": "DEP-816176",\n    "amount_received": 10000,\n    "total_pay": 10569,\n    "qr_image": "data:image/png;base64,....",\n    "expired_at": 1773668680946\n  }\n}`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/deposit/create', {\n  params: { amount: 50000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "data": {\n    "deposit_id": "DEP-123456",\n    "amount": 50000,\n    "fee": 500,\n    "total": 50500,\n    "qr_url": "https://..."\n  }\n}`
         },
         {
           name: "2. Cek Status",
           icon: <RefreshCw size={14}/>,
           method: "GET",
-          url: "/v1/deposit/cekstatus",
-          desc: "Mengecek status pembayaran deposit.",
+          url: "/deposit/check-status",
+          desc: "Mengecek apakah deposit sudah berhasil dibayar.",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit (DEP-...)" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit Anda (Contoh: DEP-123456)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/cekstatus', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{ "success": true, "data": { "deposit_id": "DEP-816176", "status": "pending" } }\n{ "success": true, "data": { "deposit_id": "DEP-816176", "status": "success" } }`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/deposit/check-status', {\n  params: { deposit_id: 'DEP-123456' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "data": {\n    "deposit_id": "DEP-123456",\n    "status": "PAID",\n    "amount_received": 50000\n  }\n}`
         },
         {
           name: "3. Batalkan",
           icon: <Trash2 size={14}/>,
           method: "GET",
-          url: "/v1/deposit/cancel",
-          desc: "Membatalkan tagihan deposit yang masih berstatus pending.",
+          url: "/deposit/cancel",
+          desc: "Membatalkan invoice deposit yang masih pending.",
           parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan" }
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan (Contoh: DEP-123456789)" }
           ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v1/deposit/cancel', {\n  params: { deposit_id: 'DEP-816176' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Deposit berhasil dibatalkan",\n  "data": { "deposit_id": "DEP-816176", "status": "canceled" }\n}`
-        }
-      ]
-    }
-  ];
-
-  // ================================================================
-  // V2 DOCS
-  // ================================================================
-  const API_DOCS_V2 = [
-    {
-      title: "Daftar Layanan",
-      method: "GET",
-      url: "/v2/services/list",
-      desc: "Mengambil daftar layanan yang tersedia di Server 2 RuangOTP (Mendukung layanan Global).",
-      parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" }
-      ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/services/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    { "service_code": "whatsapp", "service_name": "WhatsApp" },\n    { "service_code": "telegram", "service_name": "Telegram" }\n  ]\n}`
-    },
-    {
-      title: "Daftar Negara & Harga",
-      method: "GET",
-      url: "/v2/countries/list",
-      desc: "Melihat stok dan harga per layanan. Gunakan field product_code untuk melakukan order.",
-      parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-        { name: "service_id", type: "query", required: true, desc: "Kode layanan (cth: whatsapp, telegram)" }
-      ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/countries/list', {\n  params: { service_id: 'whatsapp' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    {\n      "country_id": 6,\n      "country_name": "INDONESIA",\n      "pricelist": [\n        { "server_name": "Server 1", "product_code": "RUANGOTP_6_whatsapp", "price": 1150, "stock": 312 }\n      ]\n    }\n  ]\n}`
-    },
-    {
-      title: "Daftar Operator",
-      method: "GET",
-      url: "/v2/operators/list",
-      desc: "Melihat operator yang tersedia untuk negara tertentu.",
-      parameters: [
-        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-        { name: "country_id", type: "query", required: true, desc: "ID Negara (cth: 6 untuk Indonesia)" }
-      ],
-      codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/operators/list', {\n  params: { country_id: 6 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-      response: `{\n  "success": true,\n  "data": [\n    { "operator_code": "any",       "operator_name": "AUTOMATIC" },\n    { "operator_code": "telkomsel", "operator_name": "TELKOMSEL" }\n  ]\n}`
-    },
-    {
-      id: "transaksi_order_v2",
-      title: "Transaksi Nomor (Order)",
-      desc: "Beli nomor, cek OTP, dan batalkan pesanan menggunakan Server 2 RuangOTP.",
-      tabs: [
-        {
-          name: "1. Order Nomor",
-          icon: <ShoppingCart size={14}/>,
-          method: "GET",
-          url: "/v2/orders/buy",
-          desc: "Membeli nomor virtual. Gunakan product_code dari endpoint Countries.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "product_code", type: "query", required: true, desc: "Kode produk (cth: RUANGOTP_6_whatsapp)" },
-            { name: "operator_id", type: "query", required: true, desc: "Kode operator (cth: any, telkomsel)" },
-            { name: "expected_price", type: "query", required: true, desc: "Harga sesuai pricelist" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/buy', {\n  params: { product_code: 'RUANGOTP_6_whatsapp', operator_id: 'any', expected_price: 1150 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Order success",\n  "data": { "invoice_id": "RUANGOTP512834", "number": "+62 895 3421 8821", "price": 1150, "balance": 8850 }\n}`
-        },
-        {
-          name: "2. Cek Status SMS",
-          icon: <MessageSquare size={14}/>,
-          method: "GET",
-          url: "/v2/orders/check-status",
-          desc: "Mengecek status OTP. Lakukan polling setiap 3-5 detik.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "invoice_id", type: "query", required: true, desc: "ID Order dari endpoint buy (RUANGOTP...)" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/check-status', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `// ACTIVE\n{ "success": true, "data": { "invoice_id": "RUANGOTP512834", "status": "ACTIVE", "otp": "WAITING" } }\n\n// COMPLETED\n{ "success": true, "data": { "invoice_id": "RUANGOTP512834", "status": "COMPLETED", "otp": "847291" } }`
-        },
-        {
-          name: "3. Cancel Order",
-          icon: <XCircle size={14}/>,
-          method: "GET",
-          url: "/v2/orders/cancel",
-          desc: "Membatalkan pesanan dan mengembalikan saldo. Minimal 4 menit setelah order.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "invoice_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/orders/cancel', {\n  params: { invoice_id: 'RUANGOTP512834' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Cancelled & Refunded",\n  "data": { "invoice_id": "RUANGOTP512834", "refund": 1150, "balance": 10000 }\n}`
-        }
-      ]
-    },
-    {
-      id: "transaksi_deposit_v2",
-      title: "Transaksi Deposit",
-      desc: "Kelola deposit saldo otomatis via QRIS (Server 2).",
-      tabs: [
-        {
-          name: "1. Buat Tagihan",
-          icon: <Wallet size={14}/>,
-          method: "GET",
-          url: "/v2/deposit/create",
-          desc: "Membuat tagihan deposit QRIS. Nominal sudah termasuk biaya admin.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "amount", type: "query", required: true, desc: "Nominal deposit (Min. Rp500)" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/create', {\n  params: { amount: 10000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Deposit Berhasil dibuat",\n  "data": {\n    "invoice_id": "DEP-523901",\n    "status": "pending",\n    "payment_method": "qris",\n    "balance_received": 10000,\n    "payment_amount": 10569,\n    "qr_image": "https://...",\n    "qr_string": "00020101...",\n    "valid_until": "2026-03-16T12:15:00.000Z"\n  }\n}`
-        },
-        {
-          name: "2. Cek Status",
-          icon: <RefreshCw size={14}/>,
-          method: "GET",
-          url: "/v2/deposit/cekstatus",
-          desc: "Mengecek status pembayaran.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "invoice_id", type: "query", required: true, desc: "ID Deposit (DEP-...)" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/cekstatus', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{ "success": true, "data": { "invoice_id": "DEP-523901", "status": "pending" } }\n{ "success": true, "data": { "invoice_id": "DEP-523901", "status": "success" } }`
-        },
-        {
-          name: "3. Batalkan",
-          icon: <Trash2 size={14}/>,
-          method: "GET",
-          url: "/v2/deposit/cancel",
-          desc: "Membatalkan tagihan yang masih pending.",
-          parameters: [
-            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis)" },
-            { name: "invoice_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan" }
-          ],
-          codeSnippet: `axios.get('https://api.ruangotp.net/api/v2/deposit/cancel', {\n  params: { invoice_id: 'DEP-523901' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
-          response: `{\n  "success": true,\n  "message": "Deposit berhasil dibatalkan",\n  "data": { "invoice_id": "DEP-523901", "status": "canceled" }\n}`
+          codeSnippet: `axios.get('https://api.ruangotp.net/api/deposit/cancel', {\n  params: { deposit_id: 'DEP-123456789' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{\n  "success": true,\n  "message": "Deposit berhasil dibatalkan"\n}`
         }
       ]
     }
@@ -558,13 +428,7 @@ export default function Dokumentasi() {
     { title: "Rate Limit / Terlalu Banyak Request", code: 429, desc: "Terjadi jika Anda mengirim terlalu banyak request dalam waktu singkat.", response: `{ "success": false, "error": { "message": "Terlalu banyak percobaan, silakan coba lagi nanti." } }` }
   ];
 
-  const currentDocs = activeVersion === 'v1' ? API_DOCS_V1 : API_DOCS_V2;
-  const baseUrl = activeVersion === 'v1'
-    ? 'https://api.ruangotp.net/api/v1'
-    : 'https://api.ruangotp.net/api/v2';
-
-  const v1Features = ["Server: RuangOTP S1", "190+ Negara", "Parameter: order_id", "Deposit via QRIS (S1)"];
-  const v2Features = ["Server: RuangOTP S2", "190+ Negara", "Parameter: invoice_id", "Deposit via QRIS (S2)"];
+  const baseUrl = 'https://api.ruangotp.net/api';
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
@@ -589,7 +453,7 @@ export default function Dokumentasi() {
             </div>
             <h2 className="text-2xl font-bold mb-1">Dokumentasi API</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Integrasi mudah dengan contoh kode dan executor langsung.
+              Integrasikan sistem Anda dengan mudah. Gunakan header <code>x-user-id</code> pada setiap request.
             </p>
           </div>
           <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12">
@@ -597,51 +461,11 @@ export default function Dokumentasi() {
           </div>
         </div>
 
-        {/* VERSION SWITCHER */}
-        <div className="space-y-3">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Pilih Versi API</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => handleVersionSwitch('v1')} className={`relative p-4 rounded-2xl border-2 text-left transition-all duration-200 active:scale-95 ${activeVersion === 'v1' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-800'}`}>
-              {activeVersion === 'v1' && <div className="absolute top-2 right-2"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500"><CheckCircle2 size={12} className="text-white" /></span></div>}
-              <div className={`p-2 w-fit rounded-xl mb-2 ${activeVersion === 'v1' ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-slate-100 dark:bg-slate-900'}`}>
-                <Server size={16} className={activeVersion === 'v1' ? 'text-blue-600' : 'text-slate-400'} />
-              </div>
-              <p className={`font-bold text-sm mb-0.5 ${activeVersion === 'v1' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>API V1</p>
-              <p className="text-[10px] text-slate-400 leading-relaxed">RuangOTP S1 · 190+ Negara</p>
-            </button>
-
-            <button onClick={() => handleVersionSwitch('v2')} className={`relative p-4 rounded-2xl border-2 text-left transition-all duration-200 active:scale-95 ${activeVersion === 'v2' ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20' : 'border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-800'}`}>
-              {activeVersion === 'v2' && <div className="absolute top-2 right-2"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500"><CheckCircle2 size={12} className="text-white" /></span></div>}
-              <div className={`p-2 w-fit rounded-xl mb-2 ${activeVersion === 'v2' ? 'bg-violet-100 dark:bg-violet-900/40' : 'bg-slate-100 dark:bg-slate-900'}`}>
-                <Zap size={16} className={activeVersion === 'v2' ? 'text-violet-600' : 'text-slate-400'} />
-              </div>
-              <p className={`font-bold text-sm mb-0.5 ${activeVersion === 'v2' ? 'text-violet-700 dark:text-violet-400' : 'text-slate-700 dark:text-slate-300'}`}>API V2</p>
-              <p className="text-[10px] text-slate-400 leading-relaxed">RuangOTP S2 · Global</p>
-            </button>
-          </div>
-
-          {/* Info strip */}
-          <div className={`p-4 rounded-2xl border text-xs leading-relaxed ${activeVersion === 'v1' ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30' : 'bg-violet-50 border-violet-100 dark:bg-violet-900/10 dark:border-violet-900/30'}`}>
-            <div className="flex items-start gap-2">
-              <Info size={14} className={`mt-0.5 shrink-0 ${activeVersion === 'v1' ? 'text-blue-500' : 'text-violet-500'}`} />
-              <div>
-                <p className={`font-bold mb-1 ${activeVersion === 'v1' ? 'text-blue-700 dark:text-blue-400' : 'text-violet-700 dark:text-violet-400'}`}>{activeVersion === 'v1' ? 'Tentang API V1' : 'Tentang API V2'}</p>
-                {activeVersion === 'v1' ? (
-                  <p className="text-slate-500 dark:text-slate-400">Gunakan <strong>order_id</strong> untuk semua operasi order. Parameter utama: <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">number_id</code>, <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">provider_id</code>, <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">operator_id</code>.</p>
-                ) : (
-                  <p className="text-slate-500 dark:text-slate-400">Gunakan <strong>invoice_id</strong> untuk semua operasi order. Parameter utama: <code className="bg-violet-100 dark:bg-violet-900/30 px-1 rounded">product_code</code> (format: <code className="bg-violet-100 dark:bg-violet-900/30 px-1 rounded">RUANGOTP_6_whatsapp</code>).</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* BASE URL */}
+        {/* BASE URL INFO */}
         <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
           <div className="flex items-center gap-2 mb-2">
-            <Server size={14} className={activeVersion === 'v1' ? 'text-blue-500' : 'text-violet-500'} />
+            <Server size={14} className="text-blue-500" />
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base URL</span>
-            <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${activeVersion === 'v1' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-violet-50 text-violet-600 dark:bg-violet-900/30'}`}>{activeVersion.toUpperCase()}</span>
           </div>
           <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
             <code className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate">{baseUrl}</code>
@@ -649,7 +473,7 @@ export default function Dokumentasi() {
           </div>
           <div className="flex items-center gap-2 mt-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
             <Lock size={12} className="text-amber-500 shrink-0" />
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">Semua endpoint V1 & V2 membutuhkan <strong>Whitelist IP</strong>. Daftarkan IP server Anda di menu Profil terlebih dahulu.</p>
+            <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed">Semua endpoint membutuhkan <strong>Whitelist IP</strong>. Daftarkan IP server Anda di menu Profil terlebih dahulu.</p>
           </div>
         </div>
 
@@ -657,26 +481,26 @@ export default function Dokumentasi() {
         <div className="space-y-3">
           <h3 className="px-1 text-sm font-bold text-slate-400 uppercase tracking-widest">Endpoints</h3>
           
-          {currentDocs.map((api, index) => {
+          {API_DOCS.map((api, index) => {
             const isExpanded = expandedIndex === index;
             const isMulti = api.tabs && api.tabs.length > 0;
             const currentData = isMulti ? api.tabs[activeSubTab] : api;
             const execKey = getExecKey(index, isMulti ? activeSubTab : 0);
 
             return (
-              <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 shadow-lg' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'} ${isExpanded ? (activeVersion === 'v1' ? 'border-blue-500/30 ring-1 ring-blue-500/20' : 'border-violet-500/30 ring-1 ring-violet-500/20') : ''}`}>
+              <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 shadow-lg border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
                 
                 <button onClick={() => toggleAccordion(index)} className="w-full p-5 flex items-center justify-between outline-none group">
                   <div className="flex items-center gap-4">
-                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${isMulti ? (activeVersion === 'v1' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-violet-50 text-violet-600 dark:bg-violet-900/30') : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'}`}>
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${isMulti ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'}`}>
                       {isMulti ? "MULTI" : api.method}
                     </span>
                     <div className="text-left">
-                      <h4 className={`font-bold text-sm transition-colors ${isExpanded ? (activeVersion === 'v1' ? 'text-blue-600 dark:text-blue-400' : 'text-violet-600 dark:text-violet-400') : 'text-slate-700 dark:text-slate-200'}`}>{api.title}</h4>
+                      <h4 className={`font-bold text-sm transition-colors ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>{api.title}</h4>
                       {!isMulti && <p className="text-[10px] text-slate-400 font-mono mt-0.5">{api.url}</p>}
                     </div>
                   </div>
-                  {isExpanded ? <ChevronUp size={18} className={activeVersion === 'v1' ? 'text-blue-500' : 'text-violet-500'} /> : <ChevronDown size={18} className="text-slate-400" />}
+                  {isExpanded ? <ChevronUp size={18} className="text-blue-500" /> : <ChevronDown size={18} className="text-slate-400" />}
                 </button>
 
                 <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[4000px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -686,9 +510,9 @@ export default function Dokumentasi() {
 
                     {/* Sub tabs */}
                     {isMulti && (
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className={`grid gap-2 ${api.tabs.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
                         {api.tabs.map((tab, idx) => (
-                          <button key={idx} onClick={() => setActiveSubTab(idx)} className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeSubTab === idx ? (activeVersion === 'v1' ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-violet-600 text-white border-violet-600') : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}>
+                          <button key={idx} onClick={() => setActiveSubTab(idx)} className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${activeSubTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}>
                             {tab.icon}
                             <span>{tab.name.split('. ')[1]}</span>
                           </button>
@@ -732,7 +556,7 @@ export default function Dokumentasi() {
                     {/* Code snippet */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Kode (Node.js)</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Kode</p>
                         <button onClick={() => handleCopy(currentData.codeSnippet)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin Kode</button>
                       </div>
                       <div className="relative">
@@ -762,31 +586,6 @@ export default function Dokumentasi() {
               </div>
             );
           })}
-        </div>
-
-        {/* V1 vs V2 */}
-        <div className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden shadow-sm">
-          <div className="p-5 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              <Star size={16} className="text-amber-500" />
-              <h3 className="font-bold text-sm">Perbedaan V1 vs V2</h3>
-            </div>
-          </div>
-          <div className="p-5">
-            <div className="grid grid-cols-2 gap-3 text-[11px]">
-              <div className="space-y-2">
-                <p className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1"><Server size={12}/> API V1</p>
-                {v1Features.map((f, i) => <div key={i} className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></div><span className="text-slate-600 dark:text-slate-400">{f}</span></div>)}
-              </div>
-              <div className="space-y-2">
-                <p className="font-bold text-violet-600 dark:text-violet-400 flex items-center gap-1"><Zap size={12}/> API V2</p>
-                {v2Features.map((f, i) => <div key={i} className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div><span className="text-slate-600 dark:text-slate-400">{f}</span></div>)}
-              </div>
-            </div>
-            <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed border border-slate-100 dark:border-slate-800">
-              💡 <strong>Tip:</strong> V1 dan V2 sama-sama mendukung nomor dari 190+ Negara. Perbedaannya hanya terletak pada struktur parameter inti (<code>order_id</code> vs <code>invoice_id</code>) serta jalur server backend untuk kecepatan respons.
-            </div>
-          </div>
         </div>
 
         {/* ERROR DOCS */}
