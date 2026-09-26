@@ -7,13 +7,12 @@ import { jwtDecode } from 'jwt-decode';
 import { 
   Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, 
   Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2, RefreshCw,
-  ShieldCheck, Zap, Copy
+  ShieldCheck, Zap, Copy, Gift
 } from 'lucide-react';
 
 export default function Deposit() {
   const { color } = useTheme();
-  const [amount, setAmount] = useState(10000); // Set default ke 10.000 agar lebih umum
-  // Karena hanya 1 server, kita set statis ke qris1
+  const [amount, setAmount] = useState(10000); 
   const [selectedProvider] = useState('qris1'); 
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,13 +43,12 @@ export default function Deposit() {
 
     const socket = io('https://api.ruangotp.net', {
         auth: { userId },
-        transports: ['websocket'], // FIX: paksa WebSocket agar tidak memakan slot koneksi HTTP
+        transports: ['websocket'], 
         reconnectionAttempts: 5,
         reconnectionDelay: 3000,
     });
 
     socket.on('deposit_success', (data) => {
-        // Tampilkan notifikasi dan refresh data saat deposit masuk
         setToast({ show: true, message: 'Deposit berhasil masuk!', type: 'success' });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
         fetchHistory();
@@ -110,7 +108,6 @@ export default function Deposit() {
 
     setLoading(true);
     try {
-      // Karena opsi Qris 2 dihapus, kita langsung panggil endpoint server utama
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
         setQrisData({
@@ -135,7 +132,6 @@ export default function Deposit() {
           async () => {
               setConfirmModal(prev => ({ ...prev, loading: true }));
               try {
-                  // Endpoint difokuskan hanya untuk server utama
                   const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
                   if (res.data.success) {
                       closeConfirm();
@@ -196,7 +192,7 @@ export default function Deposit() {
               </label>
               
               {/* Input Nominal Dinamis */}
-              <div className="relative mb-5">
+              <div className="relative">
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rp</span>
                 <input 
                   type="number" 
@@ -206,6 +202,16 @@ export default function Deposit() {
                   placeholder="10000"
                   min="500"
                 />
+              </div>
+
+              {/* Indikator Kalkulator Bonus Real-time (SaaS UX) */}
+              <div className="mb-5 mt-2 h-5">
+                {amount >= 20000 && (
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in slide-in-from-left-2 duration-300">
+                        <Gift size={14} />
+                        <span>Mendapat Bonus 5%: +Rp {(amount * 0.05).toLocaleString('id-ID')}</span>
+                    </div>
+                )}
               </div>
 
               {/* Quick Amounts */}
@@ -223,6 +229,49 @@ export default function Deposit() {
                           {val / 1000}k
                       </button>
                   ))}
+              </div>
+
+              {/* =========================================================
+                  KARTU PROMO BONUS 5% (SAAS STYLE) 
+                  ========================================================= */}
+              <div className="mb-6 overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-teal-50/30 p-4 dark:border-emerald-800/30 dark:from-emerald-900/10 dark:to-teal-900/5">
+                  <div className="mb-4 flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                          <Gift size={20} />
+                      </div>
+                      <div>
+                          <h4 className="text-sm font-black tracking-tight text-emerald-800 dark:text-emerald-400">Promo Extra Saldo 5%</h4>
+                          <p className="text-[10px] font-medium text-emerald-600/80 dark:text-emerald-400/70">Otomatis masuk tanpa syarat</p>
+                      </div>
+                  </div>
+                  
+                  {/* Tabel Tingkatan Bonus */}
+                  <div className="space-y-1.5">
+                      {[
+                          { dep: 20000, bon: 1000 },
+                          { dep: 50000, bon: 2500 },
+                          { dep: 100000, bon: 5000 },
+                          { dep: 250000, bon: 12500 },
+                          { dep: 500000, bon: 25000 },
+                          { dep: 1000000, bon: 50000 },
+                      ].map((tier, idx) => (
+                          <div 
+                              key={idx} 
+                              onClick={() => setAmount(tier.dep)}
+                              className="group flex cursor-pointer items-center justify-between rounded-xl bg-white/60 px-3.5 py-2.5 text-xs transition-colors hover:bg-white dark:bg-slate-900/40 dark:hover:bg-slate-900/60"
+                          >
+                              <span className="font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                                  Rp {tier.dep.toLocaleString('id-ID')}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                  <span className="text-slate-400/50">→</span>
+                                  <span className="font-black text-emerald-600 dark:text-emerald-400">
+                                      +Rp {tier.bon.toLocaleString('id-ID')}
+                                  </span>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
               </div>
 
               {/* Server Terpilih (Statis) */}
@@ -301,7 +350,14 @@ export default function Deposit() {
                     <div className="space-y-4 text-left mb-6">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Saldo Diterima</span>
-                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
+                            <div className="flex flex-col items-end">
+                                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
+                                {qrisData.amount_received >= 20000 && (
+                                    <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-500/80">
+                                        (Termasuk Bonus 5%)
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Metode</span>
