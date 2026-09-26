@@ -6,14 +6,15 @@ import { io } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
 import { 
   Wallet, QrCode, AlertCircle, History, CheckCircle2, XCircle, 
-  Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2, RefreshCw 
+  Clock, Trash2, ChevronDown, ChevronUp, HelpCircle, Loader2, RefreshCw,
+  ShieldCheck, Zap, Copy
 } from 'lucide-react';
 
 export default function Deposit() {
   const { color } = useTheme();
-  const [amount, setAmount] = useState(5000);
-  const [selectedProvider, setSelectedProvider] = useState(''); 
-  const [isProviderOpen, setIsProviderOpen] = useState(false);
+  const [amount, setAmount] = useState(10000); // Set default ke 10.000 agar lebih umum
+  // Karena hanya 1 server, kita set statis ke qris1
+  const [selectedProvider] = useState('qris1'); 
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
@@ -22,6 +23,9 @@ export default function Deposit() {
 
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, loading: false });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Pilihan nominal cepat
+  const quickAmounts = [10000, 25000, 50000, 100000];
 
   useEffect(() => {
     fetchHistory();
@@ -102,20 +106,16 @@ export default function Deposit() {
   };
 
   const handleDeposit = async () => {
-    if (amount < 500) return showToast('Minimal deposit Rp500', 'error');
-    if (!selectedProvider) return showToast('Pilih Server QRIS terlebih dahulu', 'error');
+    if (amount < 500) return showToast('Minimal deposit Rp 500', 'error');
 
     setLoading(true);
     try {
-      const endpoint = selectedProvider === 'qris2' 
-        ? `/atlantic/create?amount=${amount}` 
-        : `/deposit/create?amount=${amount}`;
-
-      const res = await api.get(endpoint);
+      // Karena opsi Qris 2 dihapus, kita langsung panggil endpoint server utama
+      const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
         setQrisData({
             ...res.data.data,
-            merchant: selectedProvider === 'qris2' ? 'Atlantic' : 'RumahOTP'
+            merchant: 'RumahOTP'
         });
         fetchHistory();
         showToast('Tagihan berhasil dibuat', 'success');
@@ -135,11 +135,8 @@ export default function Deposit() {
           async () => {
               setConfirmModal(prev => ({ ...prev, loading: true }));
               try {
-                  const cancelEndpoint = qrisData.merchant === 'Atlantic' 
-                    ? '/atlantic/cancel' 
-                    : '/deposit/cancel';
-
-                  const res = await api.get(`${cancelEndpoint}?deposit_id=${qrisData.deposit_id}`);
+                  // Endpoint difokuskan hanya untuk server utama
+                  const res = await api.get(`/deposit/cancel?deposit_id=${qrisData.deposit_id}`);
                   if (res.data.success) {
                       closeConfirm();
                       setQrisData(null);
@@ -164,193 +161,250 @@ export default function Deposit() {
   const getStatusBadge = (status) => {
     switch(status) {
       case 'success':
-        return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Sukses</span>;
+        return <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"><CheckCircle2 size={12}/> Sukses</span>;
       case 'pending':
-        return <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pending</span>;
+        return <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"><Clock size={12}/> Pending</span>;
       default:
-        return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400">Gagal</span>;
+        return <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-1 text-[10px] font-bold text-red-700 dark:bg-red-500/10 dark:text-red-400"><XCircle size={12}/> Gagal</span>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50/50 pb-28 transition-colors duration-300 dark:bg-slate-950">
       
-      <div className="sticky top-0 z-40 border-b border-slate-100 bg-white/90 px-5 pb-4 pt-8 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Isi Saldo</h1>
+      {/* Header */}
+      <div className="sticky top-0 z-40 border-b border-slate-200/60 bg-white/80 px-6 pb-4 pt-6 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
+        <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${color.bg} ${color.text}`}>
+                <Wallet size={20} />
+            </div>
+            <div>
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white">Isi Saldo</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Topup instan via QRIS 24 Jam</p>
+            </div>
+        </div>
       </div>
 
       <div className="mx-auto mt-6 max-w-md px-5">
         
         {!qrisData ? (
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <div className="mb-6 flex items-center gap-4 border-b border-slate-50 pb-4 dark:border-slate-800">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${color.bg} ${color.text}`}>
-                <Wallet size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Topup QRIS Instant</h3>
-                <p className="text-xs text-slate-400">Otomatis masuk 24 Jam</p>
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <label className="mb-2 block text-xs font-bold text-slate-500 dark:text-slate-400">Nominal Deposit (Rp)</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">Rp</span>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Form Nominal */}
+            <div className="rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm dark:border-slate-800/60 dark:bg-slate-900">
+              <label className="mb-3 block text-sm font-bold text-slate-700 dark:text-slate-300">
+                  Nominal Deposit
+              </label>
+              
+              {/* Input Nominal Dinamis */}
+              <div className="relative mb-5">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">Rp</span>
                 <input 
                   type="number" 
-                  className={`w-full rounded-xl border bg-slate-50 py-3.5 pl-10 pr-4 text-lg font-bold text-slate-800 transition-all focus:outline-none focus:ring-1 dark:bg-slate-900 dark:text-white ${color.border} ${color.ring}`}
+                  className={`w-full rounded-2xl border bg-slate-50 py-4 pl-14 pr-5 text-2xl font-black text-slate-800 transition-all focus:outline-none focus:ring-2 dark:bg-slate-950 dark:text-white ${color.border} ${color.ring}`}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="5000"
+                  placeholder="10000"
                   min="500"
                 />
               </div>
-            </div>
 
-            <div className="mb-6 relative">
-              <label className="mb-2 block text-xs font-bold text-slate-500 dark:text-slate-400">Pilih Server QRIS</label>
-              
-              <div 
-                onClick={() => setIsProviderOpen(!isProviderOpen)}
-                className={`flex w-full cursor-pointer items-center justify-between rounded-xl border bg-slate-50 p-4 transition-all dark:bg-slate-900 ${color.border} ${isProviderOpen ? `ring-1 ${color.ring}` : ''} ${!selectedProvider ? 'border-amber-200 dark:border-amber-900/50' : ''}`}
-              >
-                <div>
-                  <p className={`text-sm font-bold ${selectedProvider ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {selectedProvider === 'qris1' ? 'QRIS 1' : selectedProvider === 'qris2' ? 'QRIS 2' : 'Pilih Server...'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {selectedProvider === 'qris1' ? 'Server Utama' : selectedProvider === 'qris2' ? 'Server Alternatif' : 'Wajib dipilih sebelum lanjut'}
-                  </p>
-                </div>
-                <ChevronDown size={18} className={`text-slate-400 transition-transform ${isProviderOpen ? 'rotate-180' : ''}`} />
+              {/* Quick Amounts */}
+              <div className="mb-6 grid grid-cols-4 gap-2">
+                  {quickAmounts.map((val) => (
+                      <button 
+                          key={val}
+                          onClick={() => setAmount(val)}
+                          className={`rounded-xl border py-2 text-xs font-bold transition-all ${
+                              parseInt(amount) === val 
+                              ? `${color.bg}${color.border} ${color.text} ring-1${color.ring}`
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/80'
+                          }`}
+                      >
+                          {val / 1000}k
+                      </button>
+                  ))}
               </div>
 
-              {isProviderOpen && (
-                <div className="absolute left-0 top-full z-10 mt-2 w-full overflow-hidden rounded-xl border border-slate-100 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900 animate-in slide-in-from-top-2 fade-in duration-200">
-                  <div 
-                    onClick={() => { setSelectedProvider('qris1'); setIsProviderOpen(false); }}
-                    className={`cursor-pointer p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedProvider === 'qris1' ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
-                  >
-                    <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 1</p>
-                    <p className="text-[10px] text-slate-400">Server Utama</p>
+              {/* Server Terpilih (Statis) */}
+              <div className="mb-6">
+                <label className="mb-3 block text-sm font-bold text-slate-700 dark:text-slate-300">Pilih Metode</label>
+                <div className={`flex w-full items-center justify-between rounded-2xl border bg-slate-50 p-4 transition-all dark:bg-slate-950 ${color.border} ring-1 ${color.ring}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color.bg} ${color.text}`}>
+                        <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS Utama</p>
+                      <p className="text-[10px] font-medium text-slate-500">Bebas Biaya Admin (S&K)</p>
+                    </div>
                   </div>
-                  <div className="border-t border-slate-50 dark:border-slate-800/50"></div>
-                  <div 
-                    onClick={() => { setSelectedProvider('qris2'); setIsProviderOpen(false); }}
-                    className={`cursor-pointer p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedProvider === 'qris2' ? 'bg-slate-50 dark:bg-slate-800/50' : ''}`}
-                  >
-                    <p className="text-sm font-bold text-slate-800 dark:text-white">QRIS 2</p>
-                    <p className="text-[10px] text-slate-400">Server Alternatif</p>
-                  </div>
+                  <CheckCircle2 size={20} className={color.text} />
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div className={`mb-6 flex gap-3 rounded-xl p-4 ${color.bg}`}>
-              <AlertCircle size={20} className={`shrink-0 mt-0.5 ${color.text}`} />
-              <p className={`text-xs leading-relaxed ${color.text}`}>
-                Minimal deposit <span className="font-bold">Rp 500</span>. Biaya admin mungkin berlaku sesuai provider QRIS.
-              </p>
-            </div>
+              {/* Informasi Minimal */}
+              <div className="mb-6 flex items-start gap-3 rounded-2xl bg-amber-50 p-4 dark:bg-amber-500/10">
+                <AlertCircle size={20} className="shrink-0 text-amber-600 dark:text-amber-500" />
+                <p className="text-xs font-medium leading-relaxed text-amber-800 dark:text-amber-400">
+                  Minimal deposit <span className="font-bold">Rp 500</span>. Harap screenshot QRIS dan bayar sebelum batas waktu habis.
+                </p>
+              </div>
 
-            <button 
-              onClick={handleDeposit}
-              disabled={loading}
-              className={`w-full rounded-xl py-4 font-bold shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 ${
-                !selectedProvider ? 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500' : color.btn
-              }`}
-            >
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Memproses...' : 'Buat Tagihan QRIS'}
-            </button>
+              <button 
+                onClick={handleDeposit}
+                disabled={loading || !amount || amount < 500}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold shadow-lg transition-all active:scale-[0.98] ${
+                  loading || !amount || amount < 500
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500 shadow-none' 
+                  : `${color.btn} hover:shadow-xl`
+                }`}
+              >
+                {loading ? <Loader2 size={20} className="animate-spin" /> : <Zap size={20} className="fill-current" />}
+                {loading ? 'Memproses Tagihan...' : 'Buat Tagihan QRIS'}
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300 relative">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                <QrCode size={24} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Scan Pembayaran</h3>
-            <p className="mt-1 text-xs text-slate-400">Scan QRIS di bawah ini sebelum expired</p>
+          <div className="animate-in zoom-in-95 fade-in duration-500">
+            {/* Tampilan QRIS Ala Invoice/Receipt */}
+            <div className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+                
+                {/* Aksen Header */}
+                <div className={`h-2 w-full ${color.bg}`}></div>
 
-            <div className="my-6 inline-block rounded-2xl border-2 border-dashed border-slate-200 p-2 dark:border-slate-700">
-               <img src={qrisData.qr_image} alt="QRIS" className="h-56 w-56 object-contain" />
-            </div>
+                <div className="p-6 text-center">
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+                        <QrCode size={28} className={color.text} />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white">Menunggu Pembayaran</h3>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Scan QRIS menggunakan aplikasi E-Wallet/M-Banking</p>
 
-            <div className="mb-6 space-y-2 rounded-xl bg-slate-50 p-4 dark:bg-slate-900">
-               <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">Total Bayar</span>
-                  <span className="font-bold text-slate-800 dark:text-white">Rp {qrisData.total_pay.toLocaleString('id-ID')}</span>
-               </div>
-               <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">Saldo Masuk</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
-               </div>
-               <div className="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500 dark:text-slate-400">ID Referensi</span>
-                  <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{qrisData.deposit_id}</span>
-               </div>
-            </div>
+                    <div className="my-6 flex justify-center">
+                        <div className="relative rounded-3xl border-2 border-dashed border-slate-200 bg-white p-3 dark:border-slate-700">
+                            <img src={qrisData.qr_image} alt="QRIS" className="h-60 w-60 object-contain rounded-xl" />
+                        </div>
+                    </div>
 
-            <div className="flex flex-col gap-3">
-              <button 
-                  onClick={handleManualRefresh}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 py-3 font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:border-blue-900/30 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40"
-              >
-                  <RefreshCw size={18} className={historyLoading ? "animate-spin" : ""} />
-                  Cek Status Pembayaran
-              </button>
+                    <div className="flex flex-col gap-1 mb-6">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Tagihan</span>
+                        <span className={`text-3xl font-black ${color.text}`}>
+                            Rp {qrisData.total_pay.toLocaleString('id-ID')}
+                        </span>
+                    </div>
 
-              <button 
-                onClick={handleCancelClick}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 py-3 font-bold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
-              >
-                <Trash2 size={18} /> Batalkan Deposit
-              </button>
+                    {/* Garis Pemisah ala Struk */}
+                    <div className="relative mb-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <div className="absolute -left-8 -top-3 h-6 w-6 rounded-full bg-slate-50 dark:bg-slate-950"></div>
+                        <div className="absolute -right-8 -top-3 h-6 w-6 rounded-full bg-slate-50 dark:bg-slate-950"></div>
+                    </div>
+
+                    <div className="space-y-4 text-left mb-6">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Saldo Diterima</span>
+                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Rp {qrisData.amount_received.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Metode</span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200">QRIS Instant</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">ID Transaksi</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 select-all">{qrisData.deposit_id}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex p-2 gap-2 bg-slate-50 dark:bg-slate-950/50">
+                    <button 
+                        onClick={handleManualRefresh}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all ${color.bg} ${color.text} hover:opacity-80`}
+                    >
+                        <RefreshCw size={18} className={historyLoading ? "animate-spin" : ""} />
+                        Cek Pembayaran
+                    </button>
+                    <button 
+                        onClick={handleCancelClick}
+                        className="flex items-center justify-center rounded-2xl bg-red-50 px-4 py-3.5 text-red-600 transition-all hover:bg-red-100 dark:bg-red-500/10 dark:text-red-500 dark:hover:bg-red-500/20"
+                    >
+                        <Trash2 size={20} />
+                    </button>
+                </div>
             </div>
           </div>
         )}
 
+        {/* Histori Transaksi */}
         <div className="mt-8">
-          <div className="mb-4 flex items-center gap-2">
-            <History size={18} className="text-slate-400" />
-            <h3 className="font-bold text-slate-700 dark:text-slate-200">Riwayat Terakhir</h3>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <History size={18} className="text-slate-600 dark:text-slate-300" />
+                <h3 className="font-bold text-slate-800 dark:text-white">Riwayat Terakhir</h3>
+            </div>
           </div>
 
           <div className="space-y-3">
             {historyLoading ? (
-               <div className="py-6 text-center text-sm text-slate-400">Memuat riwayat...</div>
+               <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 py-10 dark:border-slate-800">
+                   <Loader2 size={24} className={`animate-spin mb-2 ${color.text}`} />
+                   <p className="text-xs font-medium text-slate-400">Memuat riwayat...</p>
+               </div>
             ) : history.length > 0 ? (
               history.map((item) => (
-                <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all dark:border-slate-800 dark:bg-slate-950">
-                   <div onClick={() => toggleExpand(item.id)} className="flex cursor-pointer items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                       <div className="flex items-center gap-3">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
-                              {item.status === 'success' ? <CheckCircle2 size={18} /> : item.status === 'pending' ? <Clock size={18} /> : <XCircle size={18} />}
+                <div key={item.id} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+                   <div onClick={() => toggleExpand(item.id)} className="flex cursor-pointer items-center justify-between p-4">
+                       <div className="flex items-center gap-4">
+                          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                              item.status === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 
+                              item.status === 'pending' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' : 
+                              'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                          }`}>
+                              <Wallet size={20} />
                           </div>
                           <div>
-                             <p className="text-sm font-bold text-slate-800 dark:text-white">Rp {item.request_amount.toLocaleString('id-ID')}</p>
-                             <p className="text-[10px] text-slate-400">{new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
+                             <p className="text-base font-black text-slate-800 dark:text-white">
+                                Rp {item.request_amount.toLocaleString('id-ID')}
+                             </p>
+                             <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                             </p>
                           </div>
                        </div>
-                       <div className="flex items-center gap-3">
+                       <div className="flex flex-col items-end gap-2">
                           {getStatusBadge(item.status)}
-                          {expandedId === item.id ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                        </div>
                    </div>
-                   {expandedId === item.id && (
-                     <div className="border-t border-slate-100 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-900/30">
-                        <div className="flex justify-between items-center">
-                           <span className="text-slate-500 dark:text-slate-400 font-medium">ID Transaksi</span>
-                           <span className="font-mono font-bold text-slate-700 dark:text-slate-300 select-all">{item.id}</span>
+                   
+                   {/* Detail Expand */}
+                   <div className={`grid transition-all duration-300 ease-in-out ${expandedId === item.id ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                     <div className="overflow-hidden">
+                        <div className="border-t border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800/50 dark:bg-slate-950/30">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-medium text-slate-500 dark:text-slate-400">ID Transaksi</span>
+                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300 select-all">{item.id}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-medium text-slate-500 dark:text-slate-400">Metode</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-300">QRIS Utama</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="font-medium text-slate-500 dark:text-slate-400">Total Tagihan</span>
+                                    <span className="font-bold text-slate-700 dark:text-slate-300">Rp {item.total_bill?.toLocaleString('id-ID')}</span>
+                                </div>
+                            </div>
                         </div>
                      </div>
-                   )}
+                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-8 text-center dark:border-slate-800 dark:bg-slate-950">
-                <p className="text-sm text-slate-400">Belum ada riwayat deposit</p>
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white py-12 dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400 dark:bg-slate-800">
+                    <History size={24} />
+                </div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Belum ada riwayat deposit</p>
               </div>
             )}
           </div>
@@ -358,21 +412,22 @@ export default function Deposit() {
 
       </div>
 
+      {/* Modal Konfirmasi Batal */}
       {confirmModal.show && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-5 animate-in fade-in duration-200">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl scale-100">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-5 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200">
                   <div className="flex flex-col items-center text-center">
-                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                      <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-500">
                           <HelpCircle size={32} />
                       </div>
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{confirmModal.title}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{confirmModal.message}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{confirmModal.message}</p>
                       <div className="flex gap-3 w-full">
-                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                              Batal
+                          <button onClick={closeConfirm} disabled={confirmModal.loading} className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-700 font-bold text-sm transition-all hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                              Kembali
                           </button>
-                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 flex items-center justify-center gap-2">
-                              {confirmModal.loading && <Loader2 size={16} className="animate-spin" />}
+                          <button onClick={confirmModal.onConfirm} disabled={confirmModal.loading} className="flex-1 py-3.5 rounded-2xl bg-red-600 text-white font-bold text-sm transition-all hover:bg-red-700 active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-red-500/30">
+                              {confirmModal.loading && <Loader2 size={18} className="animate-spin" />}
                               {confirmModal.loading ? 'Memproses...' : 'Ya, Batalkan'}
                           </button>
                       </div>
@@ -381,8 +436,9 @@ export default function Deposit() {
           </div>
       )}
 
-      <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full px-5 py-3 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white' : 'bg-red-500 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+      {/* Toast Notification */}
+      <div className={`fixed bottom-24 left-1/2 z-[100] flex w-[90%] max-w-sm -translate-x-1/2 transform items-center gap-3 rounded-2xl px-5 py-4 shadow-2xl transition-all duration-400 ease-out ${toast.show ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95 pointer-events-none'} ${toast.type === 'success' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-red-600 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle2 size={20} className={toast.type === 'success' ? 'text-emerald-400 dark:text-emerald-600' : ''} /> : <AlertCircle size={20} />}
           <span className="text-sm font-bold">{toast.message}</span>
       </div>
 
