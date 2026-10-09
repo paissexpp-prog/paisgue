@@ -485,16 +485,13 @@ export default function Dokumentasi() {
           codeSnippet: `axios.get('https://api.ruangotp.net/api/deposit/create', {\n  params: { amount: 1000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{
   "success": true,
+  "message": "QRIS Berhasil dibuat",
   "data": {
-    "deposit_id": "DEP-230625",
-    "status": "pending",
+    "deposit_id": "DEP-826382",
     "amount_received": 1000,
-    "total_pay": 1200,
-    "method": "qris",
-    "merchant": "Mustika",
-    "qr_image": "https://ruangotp.io/api/qr?data=0002010102122648000200011893600016099857544102099985754410303UME51440014ID.CO.QRIS.WWW0215ID10265935277100303UM",
-    "expired_at": 1790363459445,
-    "created_at": 1790361659445
+    "total_pay": 1210,
+    "qr_image": "https://qr.paiscode.com/api/qr?data=0002010102122648000200011893600016099857544102099985754410303UME51440014ID.CO.QRIS.WWW0215ID10265935277100303UME520458165303360540412105802ID5919WARUNG%20GAMER%20SEJATI6014BANDAR%20LAMPUNG61053515262360120MAY179154816703413920708006486656304FA34&ref_no=QR1791548167360&username=paismd",
+    "expired_at": 1791549967885
   }
 }`
         },
