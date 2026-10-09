@@ -416,10 +416,10 @@ export default function Dokumentasi() {
           response: `{
   "success": true,
   "data": {
-    "order_id": "RUANGOTP1698769999999",
+    "order_id": "RUANGOTP895437",
     "status": "COMPLETED",
-    "otp_code": "123456",
-    "sms": "Kode verifikasi WhatsApp Anda adalah 123456. Jangan bagikan kepada siapa pun."
+    "otp_code": "697512",
+    "sms": "Code: 697512"
   }
 }`
         },
@@ -509,9 +509,15 @@ export default function Dokumentasi() {
           response: `{
   "success": true,
   "data": {
-    "deposit_id": "DEP-230625",
-    "status": "PAID",
-    "amount_received": 1000
+    "deposit_id": "DEP-826382",
+    "status": "pending",
+    "amount_received": 1000,
+    "total_pay": 1210,
+    "method": "qris",
+    "merchant": "PaisMD",
+    "qr_image": "https://qr.paiscode.com/api/qr?data=0002010102122648000200011893600016099857544102099985754410303UME51440014ID.CO.QRIS.WWW0215ID10265935277100303UME520458165303360540412105802ID5919WARUNG%20GAMER%20SEJATI6014BANDAR%20LAMPUNG61053515262360120MAY179154816703413920708006486656304FA34&ref_no=QR1791548167360&username=paismd",
+    "expired_at": 1791549967885,
+    "created_at": 1791548167885
   }
 }`
         },
@@ -528,7 +534,11 @@ export default function Dokumentasi() {
           codeSnippet: `axios.get('https://api.ruangotp.net/api/deposit/cancel', {\n  params: { deposit_id: 'DEP-230625' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
           response: `{
   "success": true,
-  "message": "Deposit berhasil dibatalkan"
+  "message": "Deposit berhasil dibatalkan",
+  "data": {
+    "deposit_id": "DEP-826382",
+    "status": "canceled"
+  }
 }`
         }
       ]
