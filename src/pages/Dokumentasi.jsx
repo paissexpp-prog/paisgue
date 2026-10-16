@@ -1,0 +1,1090 @@
+import React, { useState, useRef } from 'react';
+import BottomNav from '../components/BottomNav';
+import { useTheme } from '../context/ThemeContext';
+import { 
+  ChevronLeft, Terminal, Server, 
+  Globe, Code2, Copy, ExternalLink, 
+  ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
+  ShoppingCart, MessageSquare, XCircle, Wallet, RefreshCw, 
+  Trash2, Send, Lock, Info, Play, Loader2, Wifi, LogIn,
+  Radio, ShieldCheck, Settings, Layers, Download
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import api from '../utils/api';
+
+export default function Dokumentasi() {
+  const { color } = useTheme();
+  const navigate = useNavigate();
+
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  
+  // Gunakan object state agar tiap accordion punya memori tab masing-masing (Terisolasi)
+  const [activeSubTabs, setActiveSubTabs] = useState({}); 
+  const [toast, setToast] = useState({ show: false, message: '' });
+
+  // State untuk executor: { [key]: { loading, status, latency, data, error } }
+  const [execStates, setExecStates] = useState({});
+  // State untuk input values: { [key]: { paramName: value } }
+  const [inputValues, setInputValues] = useState({});
+  // Ref untuk scroll ke response box
+  const responseRefs = useRef({});
+
+  // ── Helpers ──────────────────────────────────────────────────
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+  };
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    showToast("Berhasil disalin! 📋");
+  };
+
+  const toggleAccordion = (index) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
+  // Auto-ambil User ID dari JWT di localStorage
+  const getUserId = () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      const decoded = jwtDecode(token);
+      return decoded.userId || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Key unik per endpoint+subtab agar state tidak bentrok
+  const getExecKey = (index, subTab = 0) => `api_${index}_${subTab}`;
+
+  // Handle perubahan input
+  const handleInputChange = (key, paramName, value) => {
+    setInputValues(prev => ({
+      ...prev,
+      [key]: { ...(prev[key] || {}), [paramName]: value }
+    }));
+  };
+
+  // Execute request ke API
+  const handleExecute = async (endpointData, execKey) => {
+    setExecStates(prev => ({ ...prev, [execKey]: { loading: true } }));
+
+    const inputs = inputValues[execKey] || {};
+    const params = {};
+
+    // Kumpulkan semua parameter bertipe query dari inputValues
+    (endpointData.parameters || []).forEach(p => {
+      if (p.type === 'query') {
+        params[p.name] = inputs[p.name] || '';
+      }
+    });
+
+    const startTime = Date.now();
+    try {
+      const res = await api.get(endpointData.url, { params });
+      const latency = Date.now() - startTime;
+
+      setExecStates(prev => ({
+        ...prev,
+        [execKey]: {
+          loading: false,
+          status: res.status,
+          latency,
+          data: JSON.stringify(res.data, null, 2),
+          error: false
+        }
+      }));
+    } catch (err) {
+      const latency = Date.now() - startTime;
+      const status = err.response?.status || 0;
+      const data = err.response?.data
+        ? JSON.stringify(err.response.data, null, 2)
+        : err.message || 'Tidak ada response dari server';
+
+      setExecStates(prev => ({
+        ...prev,
+        [execKey]: {
+          loading: false,
+          status,
+          latency,
+          data,
+          error: true
+        }
+      }));
+    }
+
+    // Scroll ke response box setelah render
+    setTimeout(() => {
+      responseRefs.current[execKey]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  };
+
+  // ── Status badge ──
+  const renderStatusBadge = (status) => {
+    const isOk = status >= 200 && status < 300;
+    const isWarn = status >= 400 && status < 500;
+    const cls = isOk
+      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+      : isWarn
+      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${cls}`}>
+        {status || 'ERR'}
+      </span>
+    );
+  };
+
+  const baseUrl = 'https://api.ruangotp.net/api';
+
+  // ================================================================
+  // SINGLE API DOCS CONFIGURATION
+  // ================================================================
+  const API_DOCS = [
+    {
+      title: "Daftar Negara",
+      method: "GET",
+      url: "/country-v2/list",
+      desc: "Mengambil daftar seluruh negara yang tersedia pada layanan OTP.",
+      parameters: [
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (otomatis jika melalui panel, dikirim di Header)" }
+      ],
+      codeSnippet: `axios.get('${baseUrl}/country-v2/list', {\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{
+  "success": true,
+  "data": [
+    {
+      "id": 6,
+      "name": "Indonesia",
+      "visible": 1,
+      "retry": 1
+    },
+    {
+      "id": 74,
+      "name": "Afghanistan",
+      "visible": 1,
+      "retry": 1
+    },
+    {
+      "id": 96,
+      "name": "Zimbabwe",
+      "visible": 1,
+      "retry": 1
+    }
+  ]
+}`
+    },
+    {
+      title: "Daftar Layanan (Berdasarkan Negara)",
+      method: "GET",
+      url: "/services-v2/list",
+      desc: "Mengambil daftar layanan OTP yang tersedia berdasarkan ID negara tertentu.",
+      parameters: [
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+        { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 6 untuk Indonesia)" }
+      ],
+      codeSnippet: `axios.get('${baseUrl}/services-v2/list', {\n  params: { country: 6 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{
+  "success": true,
+  "data": [
+    {
+      "code": "wa",
+      "name": "Whatsapp",
+      "service_img": ""
+    },
+    {
+      "code": "yd",
+      "name": "米画师Mihuashi",
+      "service_img": ""
+    }
+  ]
+}`
+    },
+    {
+      title: "Cek Harga & Provider",
+      method: "GET",
+      url: "/cekharga-v2/info",
+      desc: "Mengecek informasi provider beserta harganya untuk layanan dan negara tertentu.",
+      parameters: [
+        { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+        { name: "service", type: "query", required: true, desc: "Kode layanan (Contoh: wa)" },
+        { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 6)" }
+      ],
+      codeSnippet: `axios.get('${baseUrl}/cekharga-v2/info', {\n  params: { service: 'wa', country: 6 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+      response: `{
+  "status": true,
+  "layanan": "Whatsapp",
+  "negara": "Indonesia",
+  "server": [
+    {
+      "id": 91,
+      "label": "Server 1",
+      "harga": 2249,
+      "stok": 5753,
+      "tingkat_otp": 15.62
+    },
+    {
+      "id": 726,
+      "label": "Server 24",
+      "harga": 10648,
+      "stok": 1000,
+      "tingkat_otp": 3.13
+    }
+  ]
+}`
+    },
+    {
+      id: "transaksi_order",
+      title: "Transaksi Nomor (Order)",
+      desc: "Lakukan pemesanan nomor virtual, cek SMS, membatalkan pesanan, atau meminta ulang OTP (resend).",
+      tabs: [
+        {
+          name: "1. Beli Nomor",
+          icon: <ShoppingCart size={14}/>,
+          method: "GET",
+          url: "/order-v2/buy",
+          desc: "Melakukan pembelian nomor virtual baru.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "service", type: "query", required: true, desc: "Kode layanan (Contoh: wa)" },
+            { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 6)" },
+            { name: "provider_id", type: "query", required: true, desc: "ID Provider dari endpoint cekharga" },
+            { name: "expected_price", type: "query", required: true, desc: "Harga sesuai yang tampil di endpoint cekharga" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/order-v2/buy', {\n  params: { service: 'wa', country: 6, provider_id: 91, expected_price: 2249 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "data": {
+    "orderId": "RUANGOTP1698769999999",
+    "activationId": "987654321",
+    "service": "wa",
+    "country": "6",
+    "countryName": "Indonesia",
+    "phoneNumber": "6281234567890",
+    "status": "WAIT_CODE",
+    "price": 1500,
+    "currency": "IDR",
+    "activationTime": "2026-09-26T01:00:00.000Z",
+    "activationEndTime": "2026-09-26T01:20:00.000Z",
+    "cancelAvailableAt": "2026-09-26T01:04:00.000Z"
+  }
+}`
+        },
+        {
+          name: "2. Beli Bulk",
+          icon: <Layers size={14}/>,
+          method: "GET",
+          url: "/order-v2/buy-bulk",
+          desc: "Melakukan pembelian nomor virtual lebih dari satu (bulk) dalam satu waktu.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "service", type: "query", required: true, desc: "Kode layanan (Contoh: wa)" },
+            { name: "country", type: "query", required: true, desc: "ID Negara (Contoh: 6)" },
+            { name: "provider_id", type: "query", required: true, desc: "ID Provider dari endpoint cekharga" },
+            { name: "expected_price", type: "query", required: true, desc: "Harga sesuai yang tampil di endpoint cekharga" },
+            { name: "total", type: "query", required: true, desc: "Jumlah nomor yang ingin dibeli (Contoh: 2)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/order-v2/buy-bulk', {\n  params: { service: 'wa', country: 6, provider_id: 1, expected_price: 3500, total: 2 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "data": {
+    "totalRequested": 2,
+    "totalSuccess": 2,
+    "totalFailed": 0,
+    "totalPrice": 7000,
+    "currency": "IDR",
+    "orders": [
+      {
+        "orderId": "RUANGOTP903419",
+        "activationId": "fc3275c6-77ad-490a-93d2-c94e5e99f5b8",
+        "service": "wa",
+        "country": "6",
+        "countryName": "Indonesia",
+        "phoneNumber": "6285143316544",
+        "status": "WAIT_CODE",
+        "price": 3500,
+        "currency": "IDR",
+        "activationTime": "2026-10-14 20:05:51",
+        "activationEndTime": "2026-10-14T13:20:51.612Z",
+        "cancelAvailableAt": "2026-10-14T13:09:53.194Z"
+      },
+      {
+        "orderId": "RUANGOTP571564",
+        "activationId": "6fa09436-c046-4ea7-a12c-d09052e88f7b",
+        "service": "wa",
+        "country": "6",
+        "countryName": "Indonesia",
+        "phoneNumber": "6285133391209",
+        "status": "WAIT_CODE",
+        "price": 3500,
+        "currency": "IDR",
+        "activationTime": "2026-10-14 20:05:52",
+        "activationEndTime": "2026-10-14T13:20:52.897Z",
+        "cancelAvailableAt": "2026-10-14T13:09:53.241Z"
+      }
+    ]
+  }
+}`
+        },
+        {
+          name: "3. Cek Status",
+          icon: <MessageSquare size={14}/>,
+          method: "GET",
+          url: "/order-v2/check-status",
+          desc: "Mengecek apakah OTP sudah masuk. Sebaiknya lakukan polling per 3-5 detik.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order Anda (Contoh: RUANGOTP1698769999999)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/order-v2/check-status', {\n  params: { order_id: 'RUANGOTP1698769999999' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "data": {
+    "order_id": "RUANGOTP895437",
+    "status": "COMPLETED",
+    "otp_code": "697512",
+    "sms": "Code: 697512"
+  }
+}`
+        },
+        {
+          name: "4. Resend OTP",
+          icon: <Send size={14}/>,
+          method: "GET",
+          url: "/order-v2/resend",
+          desc: "Membuka kembali pesanan untuk menerima OTP baru (resend).",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order Anda (Contoh: RUANGOTP1698769999999)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/order-v2/resend', {\n  params: { order_id: 'RUANGOTP1698769999999' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "message": "Permintaan kirim ulang berhasil. Menunggu SMS kedua masuk...",
+  "data": {
+    "order_id": "RUANGOTP1698769999999",
+    "status": "ACTIVE"
+  }
+}`
+        },
+        {
+          name: "5. Cancel Order",
+          icon: <XCircle size={14}/>,
+          method: "GET",
+          url: "/order-v2/cancel",
+          desc: "Membatalkan pesanan dan mengembalikan saldo. (Biasanya terdapat limit waktu sebelum dapat dicancel).",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "order_id", type: "query", required: true, desc: "ID Order yang akan dibatalkan (Contoh: RUANGOTP1698769999999)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/order-v2/cancel', {\n  params: { order_id: 'RUANGOTP1698769999999' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "message": "Pesanan berhasil dibatalkan. Saldo telah dikembalikan.",
+  "data": {
+    "order_id": "RUANGOTP1698769999999",
+    "status": "CANCELLED",
+    "refund_amount": 1500,
+    "current_balance": 51500
+  }
+}`
+        }
+      ]
+    },
+    {
+      id: "transaksi_deposit",
+      title: "Transaksi Deposit",
+      desc: "Kelola pembuatan invoice deposit, cek status, dan pembatalan otomatis via QRIS.",
+      tabs: [
+        {
+          name: "1. Buat Tagihan",
+          icon: <Wallet size={14}/>,
+          method: "GET",
+          url: "/deposit/create",
+          desc: "Membuat invoice deposit. Response akan mengembalikan QRIS image/string.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "amount", type: "query", required: true, desc: "Nominal deposit (Contoh: 1000)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/deposit/create', {\n  params: { amount: 1000 },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "message": "QRIS Berhasil dibuat",
+  "data": {
+    "deposit_id": "DEP-826382",
+    "amount_received": 1000,
+    "total_pay": 1210,
+    "qr_image": "https://qr.paiscode.com/api/qr?data=0002010102122648000200011893600016099857544102099985754410303UME51440014ID.CO.QRIS.WWW0215ID10265935277100303UME520458165303360540412105802ID5919WARUNG%20GAMER%20SEJATI6014BANDAR%20LAMPUNG61053515262360120MAY179154816703413920708006486656304FA34&ref_no=QR1791548167360&username=paismd",
+    "expired_at": 1791549967885
+  }
+}`
+        },
+        {
+          name: "2. Cek Status",
+          icon: <RefreshCw size={14}/>,
+          method: "GET",
+          url: "/deposit/check-status",
+          desc: "Mengecek apakah deposit sudah berhasil dibayar.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit Anda (Contoh: DEP-230625)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/deposit/check-status', {\n  params: { deposit_id: 'DEP-230625' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "data": {
+    "deposit_id": "DEP-826382",
+    "status": "success",
+    "amount_received": 1000,
+    "total_pay": 1210,
+    "method": "qris",
+    "merchant": "PaisMD",
+    "qr_image": "https://qr.paiscode.com/api/qr?data=0002010102122648000200011893600016099857544102099985754410303UME51440014ID.CO.QRIS.WWW0215ID10265935277100303UME520458165303360540412105802ID5919WARUNG%20GAMER%20SEJATI6014BANDAR%20LAMPUNG61053515262360120MAY179154816703413920708006486656304FA34&ref_no=QR1791548167360&username=paismd",
+    "expired_at": 1791549967885,
+    "created_at": 1791548167885
+  }
+}`
+        },
+        {
+          name: "3. Batalkan",
+          icon: <Trash2 size={14}/>,
+          method: "GET",
+          url: "/deposit/cancel",
+          desc: "Membatalkan invoice deposit yang masih pending.",
+          parameters: [
+            { name: "x-user-id", type: "header", required: true, desc: "ID User Anda (dikirim di Header)" },
+            { name: "deposit_id", type: "query", required: true, desc: "ID Deposit yang akan dibatalkan (Contoh: DEP-230625)" }
+          ],
+          codeSnippet: `axios.get('${baseUrl}/deposit/cancel', {\n  params: { deposit_id: 'DEP-230625' },\n  headers: { 'x-user-id': 'YOUR_USER_ID' }\n})`,
+          response: `{
+  "success": true,
+  "message": "Deposit berhasil dibatalkan",
+  "data": {
+    "deposit_id": "DEP-826382",
+    "status": "canceled"
+  }
+}`
+        }
+      ]
+    }
+  ];
+
+  const ERROR_DOCS = [
+    { title: "IP Tidak Terdaftar di Whitelist", code: 403, desc: "Terjadi jika Anda mengaktifkan fitur Whitelist IP, namun IP server yang melakukan request belum didaftarkan di menu Profil.", response: `{ "success": false, "error": { "message": "Akses ditolak. IP Anda tidak sesuai whitelist.", "detected_ip": "48.193.47.22", "whitelisted_ip": "1.1.1.1" } }` },
+    { title: "Saldo Tidak Mencukupi", code: 400, desc: "Terjadi ketika saldo akun Anda kurang dari harga layanan yang diminta.", response: `{ "success": false, "error": { "message": "Saldo tidak cukup." } }` },
+    { title: "User ID Tidak Valid", code: 403, desc: "Terjadi jika header x-user-id tidak dikirim, salah, atau sudah tidak aktif.", response: `{ "success": false, "error": { "message": "User tidak ditemukan." } }` },
+    { title: "Rate Limit / Terlalu Banyak Request", code: 429, desc: "Terjadi jika Anda mengirim terlalu banyak request dalam waktu singkat.", response: `{ "success": false, "error": { "message": "Terlalu banyak percobaan, silakan coba lagi nanti." } }` }
+  ];
+
+  // ── Handler untuk Download Txt ──
+  const handleDownloadDocs = () => {
+    let content = "=================================================\n";
+    content += "          DOKUMENTASI API RUANGOTP               \n";
+    content += "=================================================\n\n";
+    content += `Base URL: ${baseUrl}\n`;
+    content += "Header Autentikasi Wajib:\n";
+    content += "- x-user-id: <ID_USER_ANDA>\n\n";
+    content += "Catatan Tambahan:\nFitur Whitelist IP kini bersifat OPSIONAL. Anda dapat menambahkannya di menu Profil jika menginginkan perlindungan ekstra untuk API key Anda.\n\n";
+    content += "=================================================\n";
+    content += "                  ENDPOINTS                      \n";
+    content += "=================================================\n";
+
+    API_DOCS.forEach((api, index) => {
+      if (api.tabs) {
+        content += `\n### ${index + 1}. ${api.title.toUpperCase()} ###\n`;
+        content += `${api.desc}\n\n`;
+        api.tabs.forEach((tab) => {
+          content += `  [${tab.method}] ${tab.name}\n`;
+          content += `  URL: ${baseUrl}${tab.url}\n`;
+          content += `  Deskripsi: ${tab.desc}\n`;
+          if (tab.parameters && tab.parameters.length > 0) {
+            content += `  Parameter:\n`;
+            tab.parameters.forEach(p => {
+              content += `  - ${p.name} (${p.type})${p.required ? ' [Wajib]' : ''}: ${p.desc}\n`;
+            });
+          }
+          content += `\n  Contoh Response:\n  ${tab.response.split('\n').join('\n  ')}\n`;
+          content += `  ---------------------------------------------\n`;
+        });
+      } else {
+        content += `\n### ${index + 1}. ${api.title.toUpperCase()} ###\n`;
+        content += `[${api.method}] ${baseUrl}${api.url}\n`;
+        content += `Deskripsi: ${api.desc}\n`;
+        if (api.parameters && api.parameters.length > 0) {
+          content += `Parameter:\n`;
+          api.parameters.forEach(p => {
+            content += `- ${p.name} (${p.type})${p.required ? ' [Wajib]' : ''}: ${p.desc}\n`;
+          });
+        }
+        content += `\nContoh Response:\n${api.response}\n`;
+        content += `-------------------------------------------------\n`;
+      }
+    });
+
+    content += "\n=================================================\n";
+    content += "               WEBHOOK INTEGRATION               \n";
+    content += "=================================================\n";
+    content += "Metode: POST\n";
+    content += "Deskripsi: Webhook RuangOTP memungkinkan sistem Anda (Bot/Website) menerima notifikasi secara real-time saat terjadi pembaruan status transaksi. Tidak perlu polling ulang.\n";
+    content += "Validasi Keamanan: Menggunakan header x-ruangotp-signature (HMAC SHA256) menggunakan webhook_secret.\n\n";
+    content += "Contoh Payload OTP Sukses:\n";
+    content += `{\n  "event": "otp.completed",\n  "data": {\n    "order_id": "RUANGOTP123456",\n    "phone_number": "628123456789",\n    "otp_code": "123456",\n    "sms_content": "Kode verifikasi WhatsApp Anda adalah 123456",\n    "service": "WhatsApp",\n    "status": "COMPLETED"\n  },\n  "timestamp": "2026-09-25T16:09:51.000Z"\n}\n`;
+
+    content += "\n=================================================\n";
+    content += "                  KODE ERROR                     \n";
+    content += "=================================================\n";
+    ERROR_DOCS.forEach(err => {
+      content += `- ${err.code}: ${err.title}\n  ${err.desc}\n\n`;
+    });
+
+    // Proses pembuatan file blob text
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Dokumentasi_API_RuangOTP.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast("Berhasil mendownload Dokumentasi!");
+  };
+
+  // ── Executor Panel ──
+  const renderExecutorPanel = (endpointData, execKey) => {
+    const exec = execStates[execKey] || {};
+    const userId = getUserId();
+    const isLoggedIn = !!userId;
+    const queryParams = (endpointData.parameters || []).filter(p => p.type === 'query');
+
+    return (
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 overflow-hidden">
+        {/* Header executor */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Coba Sekarang</span>
+        </div>
+
+        <div className="p-4 space-y-3 bg-white dark:bg-slate-950">
+          {/* User ID (read-only, auto-fill dari JWT) */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+              x-user-id 
+              {isLoggedIn ? (
+                <span className="text-emerald-500 normal-case font-normal ml-1">(otomatis dari akun Anda)</span>
+              ) : (
+                <span className="text-red-500 normal-case font-normal ml-1">(Akses terkunci)</span>
+              )}
+            </label>
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${isLoggedIn ? 'bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700' : 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30'}`}>
+              <Lock size={12} className={isLoggedIn ? "text-slate-400 shrink-0" : "text-red-400 shrink-0"} />
+              <code className={`text-[11px] font-mono truncate flex-1 ${isLoggedIn ? 'text-slate-500 dark:text-slate-400' : 'text-red-400'}`}>
+                {isLoggedIn ? userId : '•••••••••••••••• (Login Diperlukan)'}
+              </code>
+              {isLoggedIn && (
+                <button onClick={() => handleCopy(userId)} className="text-slate-300 hover:text-slate-500 shrink-0">
+                  <Copy size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Query parameter inputs */}
+          {queryParams.length > 0 && (
+            <div className="space-y-2.5">
+              {queryParams.map((param) => (
+                <div key={param.name}>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                    <code className="text-blue-500 dark:text-blue-400 normal-case">{param.name}</code>
+                    {param.required && <span className="text-red-400">*</span>}
+                    <span className="font-normal text-slate-400 normal-case">— {param.desc}</span>
+                  </label>
+                  <input
+                    type="text"
+                    disabled={!isLoggedIn}
+                    placeholder={isLoggedIn ? `Masukkan ${param.name}...` : 'Login untuk mengisi...'}
+                    value={(inputValues[execKey] || {})[param.name] || ''}
+                    onChange={(e) => handleInputChange(execKey, param.name, e.target.value)}
+                    className={`w-full px-3 py-2.5 rounded-xl border text-[12px] font-mono outline-none transition-colors ${
+                      isLoggedIn 
+                        ? 'bg-slate-50 border-slate-200 text-slate-700 focus:border-blue-400 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:focus:border-blue-500 placeholder:text-slate-300 dark:placeholder:text-slate-600'
+                        : 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700/50'
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Execute button */}
+          {!isLoggedIn ? (
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+            >
+              <LogIn size={15} /> Login untuk Mencoba API
+            </button>
+          ) : (
+            <button
+              onClick={() => handleExecute(endpointData, execKey)}
+              disabled={exec.loading}
+              className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                exec.loading
+                  ? 'bg-slate-200 text-slate-400 dark:bg-slate-800 cursor-not-allowed'
+                  : 'bg-slate-900 text-white hover:bg-black dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100'
+              }`}
+            >
+              {exec.loading
+                ? <><Loader2 size={15} className="animate-spin" /> Mengirim Request...</>
+                : <><Play size={15} /> Execute</>
+              }
+            </button>
+          )}
+
+          {/* Response Box */}
+          {!exec.loading && exec.data !== undefined && (
+            <div ref={el => responseRefs.current[execKey] = el} className="space-y-2">
+              {/* Meta: status + latency */}
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Response</span>
+                  {renderStatusBadge(exec.status)}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                    <Wifi size={10} /> {exec.latency}ms
+                  </span>
+                  <button
+                    onClick={() => handleCopy(exec.data)}
+                    className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"
+                  >
+                    <Copy size={10} /> Salin
+                  </button>
+                </div>
+              </div>
+
+              {/* JSON output */}
+              <div className={`relative rounded-xl border overflow-hidden ${exec.error ? 'border-red-200 dark:border-red-900/50' : 'border-emerald-100 dark:border-emerald-900/30'}`}>
+                <div className={`absolute top-0 left-0 right-0 h-0.5 ${exec.error ? 'bg-red-400' : 'bg-emerald-400'}`}></div>
+                <pre className={`p-4 pt-5 text-[10px] font-mono overflow-x-auto leading-relaxed max-h-64 overflow-y-auto ${
+                  exec.error
+                    ? 'bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400'
+                    : 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400'
+                }`}>
+                  {exec.data}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-28 transition-colors duration-300 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+      
+      {/* HEADER */}
+      <div className="sticky top-0 z-30 bg-white/80 px-5 pt-8 pb-4 backdrop-blur-md border-b border-slate-100 dark:bg-slate-950/80 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/profile')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <h1 className="text-xl font-bold">API Dev Center</h1>
+        </div>
+      </div>
+
+      <div className="px-5 mt-6 space-y-6">
+
+        {/* HERO DENGAN TOMBOL DOWNLOAD */}
+        <div className="p-6 rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 w-fit rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
+                <Terminal size={24} className="text-blue-400" />
+              </div>
+              <button
+                onClick={handleDownloadDocs}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 transition-colors rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 active:scale-95"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Download Docs</span>
+                <span className="sm:hidden">Download</span>
+              </button>
+            </div>
+            
+            <h2 className="text-2xl font-bold mb-1">Dokumentasi API</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Integrasikan sistem Anda dengan mudah. Gunakan header <code>x-user-id</code> pada setiap request.
+            </p>
+          </div>
+          <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12 pointer-events-none">
+            <Code2 size={160} />
+          </div>
+        </div>
+
+        {/* BASE URL INFO */}
+        <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
+          <div className="flex items-center gap-2 mb-2">
+            <Server size={14} className="text-blue-500" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base URL</span>
+          </div>
+          <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+            <code className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate">{baseUrl}</code>
+            <button onClick={() => handleCopy(baseUrl)} className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 shrink-0"><Copy size={14}/></button>
+          </div>
+          <div className="flex items-center gap-2 mt-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+            <Info size={12} className="text-blue-500 shrink-0" />
+            <p className="text-[10px] text-blue-700 dark:text-blue-400 leading-relaxed">Penggunaan <strong>Whitelist IP</strong> bersifat opsional (tidak wajib). Anda dapat mendaftarkan IP server di menu Profil jika ingin pengamanan ekstra.</p>
+          </div>
+        </div>
+
+        {/* MAIN ENDPOINTS */}
+        <div className="space-y-3">
+          <h3 className="px-1 text-sm font-bold text-slate-400 uppercase tracking-widest">Endpoints</h3>
+          
+          {API_DOCS.map((api, index) => {
+            const isExpanded = expandedIndex === index;
+            const isMulti = api.tabs && api.tabs.length > 0;
+            
+            // MENGAMBIL STATE TAB SECARA TERISOLASI
+            const currentSubTab = activeSubTabs[index] || 0;
+            // SAFETY FALLBACK: Jika tab yang diminta tidak ada, otomatis fallback ke tab index 0
+            const currentData = isMulti ? (api.tabs[currentSubTab] || api.tabs[0]) : api; 
+            const execKey = getExecKey(index, isMulti ? currentSubTab : 0);
+
+            return (
+              <div key={index} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 shadow-lg border-blue-500/30 ring-1 ring-blue-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+                
+                <button onClick={() => toggleAccordion(index)} className="w-full p-5 flex items-center justify-between outline-none group">
+                  <div className="flex items-center gap-4">
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${isMulti ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'}`}>
+                      {isMulti ? "MULTI" : api.method}
+                    </span>
+                    <div className="text-left">
+                      <h4 className={`font-bold text-sm transition-colors ${isExpanded ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>{api.title}</h4>
+                      {!isMulti && <p className="text-[10px] text-slate-400 font-mono mt-0.5">{api.url}</p>}
+                    </div>
+                  </div>
+                  {isExpanded ? <ChevronUp size={18} className="text-blue-500" /> : <ChevronDown size={18} className="text-slate-400" />}
+                </button>
+
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[4000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div className="px-5 pb-6 space-y-5">
+                    <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{isMulti ? api.desc : currentData.desc}</p>
+
+                    {/* Sub tabs */}
+                    {isMulti && (
+                      <div className={`grid gap-2 ${api.tabs.length >= 5 ? 'grid-cols-2 sm:grid-cols-5' : api.tabs.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+                        {api.tabs.map((tab, idx) => (
+                          <button 
+                            key={idx} 
+                            // Update tab HANYA untuk accordion yang spesifik
+                            onClick={() => setActiveSubTabs(prev => ({ ...prev, [index]: idx }))} 
+                            className={`flex flex-col items-center justify-center gap-1 py-3 rounded-xl border transition-all text-[10px] font-bold ${currentSubTab === idx ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'}`}
+                          >
+                            {tab.icon}
+                            <span>{tab.name.split('. ')[1]}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* URL badge (multi) */}
+                    {isMulti && (
+                      <div className="flex items-center gap-2 text-[10px] font-mono">
+                        <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold">{currentData.method}</span>
+                        <span className="text-slate-500">{currentData.url}</span>
+                      </div>
+                    )}
+
+                    {/* Parameter table */}
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Parameter</p>
+                      <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                            <tr>
+                              <th className="px-4 py-3 font-bold">Key</th>
+                              <th className="px-4 py-3 font-bold">Lokasi</th>
+                              <th className="px-4 py-3 font-bold">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950">
+                            {currentData.parameters?.map((param, i) => (
+                              <tr key={i} className="text-slate-700 dark:text-slate-300">
+                                <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400 font-bold text-[11px]">{param.name} {param.required && <span className="text-red-500">*</span>}</td>
+                                <td className="px-4 py-3"><span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] uppercase font-bold text-slate-500">{param.type}</span></td>
+                                <td className="px-4 py-3 text-[10px] leading-relaxed opacity-80">{param.desc}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Code snippet */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Kode</p>
+                        <button onClick={() => handleCopy(currentData.codeSnippet)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin Kode</button>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute top-3 left-3 flex gap-1.5 z-10">
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                          <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                        </div>
+                        <pre className="p-4 pt-10 bg-slate-900 rounded-xl text-[10px] font-mono text-blue-300 overflow-x-auto border border-slate-800 shadow-lg leading-relaxed">{currentData.codeSnippet}</pre>
+                      </div>
+                    </div>
+
+                    {/* Example response */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Response JSON</p>
+                        <button onClick={() => handleCopy(currentData.response)} className="text-[10px] font-bold text-emerald-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                      </div>
+                      <pre className="p-4 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">{currentData.response}</pre>
+                    </div>
+
+                    {/* EXECUTOR PANEL */}
+                    {renderExecutorPanel(currentData, execKey)}
+
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* WEBHOOK DOCS (SECTION BARU) */}
+        <div className="space-y-3 mt-8">
+          <h3 className="px-1 text-sm font-bold text-violet-500 uppercase tracking-widest flex items-center gap-2"><Radio size={16} /> Webhook Integration</h3>
+          
+          <div className={`rounded-3xl border transition-all duration-300 ${expandedIndex === 200 ? 'bg-white dark:bg-slate-950 shadow-lg border-violet-500/30 ring-1 ring-violet-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+            <button onClick={() => toggleAccordion(200)} className="w-full p-5 flex items-center justify-between outline-none group">
+              <div className="flex items-center gap-4">
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-violet-50 text-violet-600 dark:bg-violet-900/30">
+                  POST
+                </span>
+                <div className="text-left">
+                  <h4 className={`font-bold text-sm transition-colors ${expandedIndex === 200 ? 'text-violet-600 dark:text-violet-400' : 'text-slate-700 dark:text-slate-200'}`}>Notifikasi Webhook</h4>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">Real-time Callback API</p>
+                </div>
+              </div>
+              {expandedIndex === 200 ? <ChevronUp size={18} className="text-violet-500" /> : <ChevronDown size={18} className="text-slate-400" />}
+            </button>
+
+            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${expandedIndex === 200 ? 'max-h-[4000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="px-5 pb-6 space-y-6">
+                <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
+                
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Webhook RuangOTP memungkinkan sistem Anda (Bot/Website) menerima notifikasi secara <strong>real-time</strong> saat terjadi pembaruan status transaksi. Anda tidak perlu lagi melakukan <em>polling</em> (mengecek status berkali-kali) ke server kami.
+                </p>
+
+                {/* Tombol Arahkan ke Profil */}
+                <div className="p-4 rounded-2xl bg-violet-50 border border-violet-100 dark:bg-violet-900/10 dark:border-violet-900/30">
+                  <h4 className="font-bold text-sm text-violet-700 dark:text-violet-400 mb-2">Mendaftarkan Endpoint Webhook</h4>
+                  <p className="text-xs text-violet-600/80 dark:text-violet-300/80 mb-4 leading-relaxed">
+                    Untuk mulai menerima Webhook, Anda harus mendaftarkan URL tujuan (*endpoint* API Anda) dan mendapatkan <code>webhook_secret</code> di halaman Profil.
+                  </p>
+                  <button onClick={() => navigate('/profile')} className="w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-violet-600 text-white hover:bg-violet-700 shadow-lg shadow-violet-600/20 transition-all active:scale-95">
+                    <Settings size={14} /> Atur Webhook di Profil
+                  </button>
+                </div>
+
+                {/* Keamanan & Validasi */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck size={16} className="text-emerald-500" />
+                    <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Keamanan & Validasi (HMAC SHA256)</p>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                    Untuk memastikan bahwa data (POST Request) yang masuk ke server Anda benar-benar berasal dari RuangOTP, kami melampirkan header <code>x-ruangotp-signature</code>. Signature ini dihasilkan dari enkripsi HMAC SHA256 menggunakan <code>webhook_secret</code> milik Anda terhadap raw body (JSON).
+                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contoh Validasi (Node.js/Express)</p>
+                    <button onClick={() => handleCopy(`const crypto = require('crypto');\n\napp.post('/api/callback/ruangotp', (req, res) => {\n    const signature = req.headers['x-ruangotp-signature'];\n    const payloadString = JSON.stringify(req.body);\n    const secret = "WEBHOOK_SECRET_ANDA";\n\n    const expectedSignature = crypto\n        .createHmac('sha256', secret)\n        .update(payloadString)\n        .digest('hex');\n\n    if (signature !== expectedSignature) {\n        return res.status(401).send('Signature tidak valid!');\n    }\n\n    // Proses data Anda di sini...\n    console.log("Data Valid:", req.body);\n    \n    // PENTING: Anda WAJIB merespon dengan status 200 OK\n    res.status(200).send('OK'); \n});`)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin Kode</button>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute top-3 left-3 flex gap-1.5 z-10">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                    </div>
+                    <pre className="p-4 pt-10 bg-slate-900 rounded-xl text-[10px] font-mono text-blue-300 overflow-x-auto border border-slate-800 shadow-lg leading-relaxed">
+{`const crypto = require('crypto');
+
+app.post('/api/callback/ruangotp', (req, res) => {
+    const signature = req.headers['x-ruangotp-signature'];
+    const payloadString = JSON.stringify(req.body);
+    const secret = "WEBHOOK_SECRET_ANDA";
+
+    const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(payloadString)
+        .digest('hex');
+
+    if (signature !== expectedSignature) {
+        return res.status(401).send('Signature tidak valid!');
+    }
+
+    // Proses data Anda di sini...
+    console.log("Data Valid:", req.body);
+    
+    // PENTING: Anda WAJIB merespon dengan status 200 OK
+    res.status(200).send('OK'); 
+});`}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Payload Event */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-3">Format Payload (Data yang Diterima)</p>
+                  
+                  <div className="space-y-4">
+                    {/* Event OTP */}
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Event: <code className="text-emerald-500">otp.completed</code> <span className="font-normal text-[10px] text-slate-400 ml-1">(Saat OTP Masuk)</span></p>
+                        <button onClick={() => handleCopy(`{\n  "event": "otp.completed",\n  "data": {\n    "order_id": "RUANGOTP123456",\n    "phone_number": "628123456789",\n    "otp_code": "123456",\n    "sms_content": "Kode verifikasi WhatsApp Anda adalah 123456",\n    "service": "WhatsApp",\n    "status": "COMPLETED"\n  },\n  "timestamp": "2026-09-25T16:09:51.000Z"\n}`)} className="text-[10px] font-bold text-emerald-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                      </div>
+                      <pre className="p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">
+{`{
+  "event": "otp.completed",
+  "data": {
+    "order_id": "RUANGOTP123456",
+    "phone_number": "628123456789",
+    "otp_code": "123456",
+    "sms_content": "Kode verifikasi WhatsApp Anda adalah 123456",
+    "service": "WhatsApp",
+    "status": "COMPLETED"
+  },
+  "timestamp": "2026-09-25T16:09:51.000Z"
+}`}
+                      </pre>
+                    </div>
+
+                    {/* Event Deposit */}
+                    <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Event: <code className="text-blue-500">deposit.success</code> <span className="font-normal text-[10px] text-slate-400 ml-1">(Saat Saldo Masuk)</span></p>
+                        <button onClick={() => handleCopy(`{\n  "event": "deposit.success",\n  "data": {\n    "deposit_id": "DEP-123456",\n    "amount": 50000,\n    "method": "qris",\n    "status": "success"\n  },\n  "timestamp": "2026-09-25T16:09:51.000Z"\n}`)} className="text-[10px] font-bold text-blue-500 hover:underline flex items-center gap-1"><Copy size={10} /> Salin JSON</button>
+                      </div>
+                      <pre className="p-3 bg-slate-900 rounded-lg text-[10px] font-mono text-blue-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">
+{`{
+  "event": "deposit.success",
+  "data": {
+    "deposit_id": "DEP-123456",
+    "amount": 50000,
+    "method": "qris",
+    "status": "success"
+  },
+  "timestamp": "2026-09-25T16:09:51.000Z"
+}`}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mekanisme Retry */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-3">Mekanisme Retry (Sistem Antrean)</p>
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                    <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>RuangOTP menggunakan standar industri <strong>Fire-and-Forget</strong> dengan mekanisme Retry.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Server kami mengharapkan respon HTTP <code>200 OK</code> dari server Anda dalam waktu maksimal <strong>5 detik</strong>.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Jika server Anda sedang <em>down</em>, <em>timeout</em>, atau mengembalikan status selain 200 (misal: 404, 500), kami akan memasukkan notifikasi tersebut ke dalam antrean.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Server kami akan mencoba mengirim ulang data tersebut secara otomatis setiap <strong>30 detik</strong>.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0"></div>
+                        <span>Jika pengiriman gagal hingga <strong>3 kali berturut-turut</strong>, data akan dianggap kedaluwarsa dan dihentikan pengirimannya.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ERROR DOCS */}
+        <div className="space-y-3 mt-8">
+          <h3 className="px-1 text-sm font-bold text-red-500 uppercase tracking-widest flex items-center gap-2"><AlertTriangle size={16} /> Error Responses</h3>
+          {ERROR_DOCS.map((err, index) => {
+            const itemIndex = index + 100;
+            const isExpanded = expandedIndex === itemIndex;
+            return (
+              <div key={itemIndex} className={`rounded-3xl border transition-all duration-300 ${isExpanded ? 'bg-white dark:bg-slate-950 border-red-500/30 shadow-lg ring-1 ring-red-500/20' : 'bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+                <button onClick={() => toggleAccordion(itemIndex)} className="w-full p-5 flex items-center justify-between outline-none group">
+                  <div className="flex items-center gap-4">
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-900/30">{err.code}</span>
+                    <h4 className={`font-bold text-sm transition-colors ${isExpanded ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>{err.title}</h4>
+                  </div>
+                  {isExpanded ? <ChevronUp size={18} className="text-red-500" /> : <ChevronDown size={18} className="text-slate-400" />}
+                </button>
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div className="px-5 pb-6 space-y-4">
+                    <div className="h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{err.desc}</p>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Response JSON</p>
+                        <button onClick={() => handleCopy(err.response)} className="text-[10px] font-bold text-red-400 hover:underline flex items-center gap-1"><Copy size={10}/> Salin</button>
+                      </div>
+                      <pre className="p-4 bg-slate-900 rounded-xl text-[10px] font-mono text-red-400 overflow-x-auto border border-slate-800 shadow-inner leading-relaxed">{err.response}</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* FOOTER */}
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 dark:border-slate-800 dark:bg-slate-950 mt-8">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-orange-50 text-orange-500 dark:bg-orange-900/20"><Globe size={20} /></div>
+            <h3 className="font-bold">Butuh Bantuan?</h3>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed mb-4">Penggunaan <strong>Whitelist IP</strong> bersifat opsional. Anda dapat mendaftarkan IP server di menu Profil untuk meningkatkan keamanan akun jika diperlukan.</p>
+          <button onClick={() => window.open('https://t.me/cs_putra', '_blank')} className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${color.btn}`}>
+            <ExternalLink size={14} /> Hubungi Developer CS
+          </button>
+        </div>
+
+      </div>
+
+      {/* TOAST */}
+      <div className={`fixed bottom-24 left-1/2 z-[100] flex -translate-x-1/2 transform items-center gap-3 rounded-full bg-slate-900 dark:bg-white px-5 py-3 text-white dark:text-slate-900 shadow-2xl transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
+        <CheckCircle2 size={18} className="text-emerald-400 dark:text-emerald-600" />
+        <span className="text-sm font-bold">{toast.message}</span>
+      </div>
+
+      {/* BOTTOM NAV: Hanya tampil jika user sudah login */}
+      {localStorage.getItem('token') && <BottomNav />}
+
+    </div>
+  );
+}
