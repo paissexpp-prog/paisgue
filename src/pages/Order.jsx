@@ -69,6 +69,34 @@ const getCountryFlag = (countryName) => {
 };
 
 // ================================================================
+// --- KOMPONEN SERVICE ICON (SaaS Style) ---
+// ================================================================
+const ServiceIcon = memo(({ src, name, size = 'md' }) => {
+    const [error, setError] = useState(false);
+    const initial = name ? name.charAt(0).toUpperCase() : '?';
+
+    // Styling responsif berdasarkan ukuran yang diminta
+    const sizeClasses = size === 'sm' ? 'w-6 h-6 text-[10px]' : (size === 'md' ? 'w-[34px] h-[34px] text-xs' : 'w-10 h-10 text-sm');
+
+    if (!src || error) {
+        return (
+            <div className={`${sizeClasses} shrink-0 flex items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 border border-blue-100/50 dark:bg-blue-900/30 dark:text-[#38bdf8] dark:border-blue-800/50 font-bold shadow-sm`}>
+                {initial}
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={src}
+            alt={name}
+            onError={() => setError(true)}
+            className={`${sizeClasses} shrink-0 rounded-[10px] object-cover shadow-sm bg-slate-50 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50`}
+        />
+    );
+});
+
+// ================================================================
 // --- KOMPONEN KARTU ORDER AKTIF ---
 // ================================================================
 const ActiveOrderCard = memo(({ order, onCopy, onCancel, onClose, onShowToast, onQuickReorder, onResend }) => {
@@ -96,9 +124,12 @@ const ActiveOrderCard = memo(({ order, onCopy, onCancel, onClose, onShowToast, o
     return (
         <div className="bg-slate-50 dark:bg-[#151a27] rounded-[1.25rem] p-4 mb-3 border border-slate-200 dark:border-[#1e2536] shadow-sm">
             <div className="flex justify-between items-center mb-3">
-                <span className="font-bold text-slate-800 dark:text-white text-[15px] capitalize tracking-wide">
-                    {order.service || 'Layanan'}
-                </span>
+                <div className="flex items-center gap-2.5">
+                    <ServiceIcon src={order.service_img} name={order.service || 'Layanan'} size="md" />
+                    <span className="font-bold text-slate-800 dark:text-white text-[15px] capitalize tracking-wide">
+                        {order.service || 'Layanan'}
+                    </span>
+                </div>
                 {isSmsReceived ? (
                     <span className="px-3.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-[#1c3a2f] dark:text-[#34d399] tracking-wide">
                         Berhasil
@@ -110,7 +141,7 @@ const ActiveOrderCard = memo(({ order, onCopy, onCancel, onClose, onShowToast, o
                 )}
             </div>
 
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 pl-[44px]">
                 <button 
                     onClick={handleReorderClick}
                     disabled={isReordering}
@@ -129,7 +160,7 @@ const ActiveOrderCard = memo(({ order, onCopy, onCancel, onClose, onShowToast, o
                 </button>
             </div>
 
-            <div className="flex items-center gap-2 mb-4 pl-[34px]">
+            <div className="flex items-center gap-2 mb-4 pl-[44px]">
                 <span className={`text-[15px] font-mono ${isSmsReceived ? 'text-emerald-600 dark:text-[#34d399] font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
                     OTP: {otpDisplay}
                 </span>
@@ -209,10 +240,13 @@ const ServiceRow = memo(({ service, onCekHarga }) => {
             onClick={() => onCekHarga(service)}
             className="w-full bg-white dark:bg-[#151a27] rounded-[1.25rem] p-4 flex justify-between items-center border border-slate-100 dark:border-[#1e2536] shadow-sm hover:border-blue-200 dark:hover:border-blue-800/50 transition-colors active:scale-95 text-left"
         >
-            <span className="font-bold text-slate-800 dark:text-white text-[15px] capitalize tracking-wide">
-                {service.name}
-            </span>
-            <span className="bg-slate-100 text-slate-600 dark:bg-[#1e293b] dark:text-slate-300 px-4 py-1.5 rounded-full text-[11px] font-bold">
+            <div className="flex items-center gap-3">
+                <ServiceIcon src={service.service_img} name={service.name} size="lg" />
+                <span className="font-bold text-slate-800 dark:text-white text-[15px] capitalize tracking-wide">
+                    {service.name}
+                </span>
+            </div>
+            <span className="bg-slate-100 text-slate-600 dark:bg-[#1e293b] dark:text-slate-300 px-4 py-1.5 rounded-full text-[11px] font-bold shrink-0">
                 Pilih Server
             </span>
         </button>
