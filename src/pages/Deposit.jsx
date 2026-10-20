@@ -17,8 +17,12 @@ export default function Deposit() {
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // State baru untuk menangani loading gambar QRIS agar tidak broken image
+  // ================================================================
+  // STATE BARU: Logika Auto-Retry UI untuk CDN Delay
+  // ================================================================
   const [qrLoading, setQrLoading] = useState(true);
+  const [qrError, setQrError] = useState(false);
+  const [imgRetryCount, setImgRetryCount] = useState(0);
 
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -87,12 +91,22 @@ export default function Deposit() {
 
         if (data.length > 0 && data[0].status === 'pending') {
             const pendingItem = data[0];
-            setQrisData({
-                deposit_id: pendingItem.id,
-                qr_image: pendingItem.qr_image,
-                total_pay: pendingItem.total_bill,
-                amount_received: pendingItem.request_amount,
-                merchant: pendingItem.merchant 
+            
+            // Gunakan callback prev state agar kita tidak mereset animasi loading
+            // jika ID deposit yang dipanggil dari history masih sama dengan yang sedang berjalan
+            setQrisData(prev => {
+                if (!prev || prev.deposit_id !== pendingItem.id) {
+                    setQrLoading(true);
+                    setQrError(false);
+                    setImgRetryCount(0);
+                }
+                return {
+                    deposit_id: pendingItem.id,
+                    qr_image: pendingItem.qr_image,
+                    total_pay: pendingItem.total_bill,
+                    amount_received: pendingItem.request_amount,
+                    merchant: pendingItem.merchant 
+                };
             });
         } else {
             setQrisData(null);
@@ -114,8 +128,11 @@ export default function Deposit() {
     try {
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
-        // Reset animasi loading untuk QR gambar yang baru
+        // Reset state gambar khusus untuk transaksi yang baru dibuat
         setQrLoading(true); 
+        setQrError(false);
+        setImgRetryCount(0);
+        
         setQrisData({
             ...res.data.data,
             merchant: 'RumahOTP'
@@ -170,6 +187,33 @@ export default function Deposit() {
         return <span className="inline-flex items-center gap-1 rounded-md bg-red-100 px-2 py-1 text-[10px] font-bold text-red-700 dark:bg-red-500/10 dark:text-red-400"><XCircle size={12}/> Gagal</span>;
     }
   };
+
+  // ================================================================
+  // FUNGSI BARU: Logic Handle Gambar Error & Success
+  // ================================================================
+  const handleImageError = () => {
+      if (imgRetryCount < 5) {
+          // Jika gambar 404 dari CDN, coba lagi dalam 1.5 detik 
+          // (maksimal 5 kali percobaan)
+          setTimeout(() => {
+              setImgRetryCount(prev => prev + 1);
+          }, 1500);
+      } else {
+          // Menyerah setelah 5 kali gagal
+          setQrLoading(false);
+          setQrError(true);
+      }
+  };
+
+  const handleImageLoad = () => {
+      setQrLoading(false);
+      setQrError(false);
+  };
+
+  // Menyisipkan parameter retry di URL untuk membypass cache browser jika error
+  const currentQrSrc = qrisData?.qr_image 
+      ? `${qrisData.qr_image}${qrisData.qr_image.includes('?') ? '&' : '?'}retry=${imgRetryCount}` 
+      : '';
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-28 transition-colors duration-300 dark:bg-slate-950">
@@ -336,19 +380,33 @@ export default function Deposit() {
 
                     <div className="my-6 flex justify-center">
                         <div className="relative flex items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white p-3 dark:border-slate-700 min-h-[268px] min-w-[268px]">
-                            {/* Overlay Spinner Loading */}
+                            
+                            {/* Overlay Spinner Loading Dinamis */}
                             {qrLoading && (
                                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
                                     <Loader2 size={32} className={`animate-spin mb-3 ${color.text}`} />
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Memuat Kode QRIS...</span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                        {imgRetryCount > 0 ? `Menyinkronkan QRIS... (${imgRetryCount}/5)` : 'Memuat Kode QRIS...'}
+                                    </span>
                                 </div>
                             )}
+
+                            {/* Fallback Jika Setelah 5x Retries Tetap Gagal */}
+                            {qrError && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                                    <AlertCircle size={32} className="text-red-500 mb-3" />
+                                    <span className="text-[10px] font-bold text-slate-500 text-center px-4">
+                                        Gagal memuat gambar dari server.<br/>Klik "Cek Pembayaran" di bawah.
+                                    </span>
+                                </div>
+                            )}
+
                             <img 
-                                src={qrisData.qr_image} 
+                                src={currentQrSrc} 
                                 alt="QRIS" 
-                                className={`h-60 w-60 rounded-xl object-contain transition-opacity duration-300 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
-                                onLoad={() => setQrLoading(false)}
-                                onError={() => setQrLoading(false)}
+                                className={`h-60 w-60 rounded-xl object-contain transition-opacity duration-300 ${(qrLoading || qrError) ? 'opacity-0' : 'opacity-100'}`}
+                                onLoad={handleImageLoad}
+                                onError={handleImageError}
                             />
                         </div>
                     </div>
