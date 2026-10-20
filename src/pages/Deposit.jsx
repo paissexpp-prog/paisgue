@@ -16,6 +16,10 @@ export default function Deposit() {
   const [selectedProvider] = useState('qris1'); 
   const [qrisData, setQrisData] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // State baru untuk menangani loading gambar QRIS agar tidak broken image
+  const [qrLoading, setQrLoading] = useState(true);
+
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -110,6 +114,8 @@ export default function Deposit() {
     try {
       const res = await api.get(`/deposit/create?amount=${amount}`);
       if (res.data.success) {
+        // Reset animasi loading untuk QR gambar yang baru
+        setQrLoading(true); 
         setQrisData({
             ...res.data.data,
             merchant: 'RumahOTP'
@@ -329,8 +335,21 @@ export default function Deposit() {
                     <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Scan QRIS menggunakan aplikasi E-Wallet/M-Banking</p>
 
                     <div className="my-6 flex justify-center">
-                        <div className="relative rounded-3xl border-2 border-dashed border-slate-200 bg-white p-3 dark:border-slate-700">
-                            <img src={qrisData.qr_image} alt="QRIS" className="h-60 w-60 object-contain rounded-xl" />
+                        <div className="relative flex items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-slate-200 bg-white p-3 dark:border-slate-700 min-h-[268px] min-w-[268px]">
+                            {/* Overlay Spinner Loading */}
+                            {qrLoading && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+                                    <Loader2 size={32} className={`animate-spin mb-3 ${color.text}`} />
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Memuat Kode QRIS...</span>
+                                </div>
+                            )}
+                            <img 
+                                src={qrisData.qr_image} 
+                                alt="QRIS" 
+                                className={`h-60 w-60 rounded-xl object-contain transition-opacity duration-300 ${qrLoading ? 'opacity-0' : 'opacity-100'}`}
+                                onLoad={() => setQrLoading(false)}
+                                onError={() => setQrLoading(false)}
+                            />
                         </div>
                     </div>
 
