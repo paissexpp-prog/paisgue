@@ -38,7 +38,7 @@ export default function Dokumentasi() {
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
-    showToast("Berhasil disalin! 📋");
+    showToast("Berhasil disalin!");
   };
 
   const toggleAccordion = (index) => {
@@ -258,18 +258,17 @@ export default function Dokumentasi() {
           response: `{
   "success": true,
   "data": {
-    "orderId": "RUANGOTP1698769999999",
-    "activationId": "987654321",
+    "orderId": "RUANGOTP511436",
     "service": "wa",
     "country": "6",
     "countryName": "Indonesia",
-    "phoneNumber": "6281234567890",
+    "phoneNumber": 6285196492051,
     "status": "WAIT_CODE",
-    "price": 1500,
+    "price": 2295,
     "currency": "IDR",
-    "activationTime": "2026-09-26T01:00:00.000Z",
-    "activationEndTime": "2026-09-26T01:20:00.000Z",
-    "cancelAvailableAt": "2026-09-26T01:04:00.000Z"
+    "activationTime": "2026-10-21 23:43:46",
+    "activationEndTime": "2026-10-21T16:58:46.220Z",
+    "cancelAvailableAt": "2026-10-21T16:47:46.708Z"
   }
 }`
         },
