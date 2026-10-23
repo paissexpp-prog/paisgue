@@ -8,7 +8,8 @@ import {
   ChevronRight, Send, MessageCircle, Moon, Sun, 
   CreditCard, Loader2, Copy, Palette, CheckCircle, Monitor,
   Smartphone, Eye, EyeOff, ShieldCheck, Plus, Trash2, Globe, X,
-  AlertCircle, HelpCircle, Code2, RefreshCw, Link2, Activity
+  AlertCircle, HelpCircle, Code2, RefreshCw, Link2, Activity,
+  Bot // <-- ICON BARU DITAMBAHKAN UNTUK BOT WA
 } from 'lucide-react';
 
 export default function Profile() {
@@ -33,6 +34,10 @@ export default function Profile() {
   const [isUpdatingWebhook, setIsUpdatingWebhook] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
+  // Bot WA States (BARU DITAMBAHKAN)
+  const [botWaInfo, setBotWaInfo] = useState(null);
+  const [botWaLoading, setBotWaLoading] = useState(false);
+
   // State untuk visibilitas ID
   const [showId, setShowId] = useState(false);
 
@@ -52,11 +57,13 @@ export default function Profile() {
   const CACHE_STATS_KEY = 'avinotp_profile_stats';
   const CACHE_WHITELIST_KEY = 'avinotp_profile_whitelist';
   const CACHE_WEBHOOK_KEY = 'avinotp_profile_webhook';
+  const CACHE_BOTWA_KEY = 'avinotp_profile_botwa'; // CACHE KEY BARU UNTUK BOT WA
 
   useEffect(() => {
     fetchUserData();
     fetchWhitelist();
     fetchWebhookInfo();
+    fetchBotWaInfo(); // FETCH BOT WA DIPANGGIL DISINI
   }, []);
 
   const fetchUserData = async () => {
@@ -137,6 +144,28 @@ export default function Profile() {
       }
     } catch (err) {
       console.error("Gagal memuat info webhook dari API, fallback ke cache", err);
+    }
+  };
+
+  // --- FUNGSI FETCH BOT WA (BARU DITAMBAHKAN) ---
+  const fetchBotWaInfo = async () => {
+    setBotWaLoading(true);
+    const cachedBotWa = localStorage.getItem(CACHE_BOTWA_KEY);
+    if (cachedBotWa) {
+      setBotWaInfo(JSON.parse(cachedBotWa));
+      setBotWaLoading(false); // Matikan loading jika cache ada agar UI tidak kedip
+    }
+
+    try {
+      const res = await api.get('/botwa/token');
+      if (res.data.success && res.data.data) {
+        setBotWaInfo(res.data.data);
+        localStorage.setItem(CACHE_BOTWA_KEY, JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.error("Gagal memuat info Bot WA dari API, fallback ke cache", err);
+    } finally {
+      setBotWaLoading(false);
     }
   };
 
@@ -259,6 +288,7 @@ export default function Profile() {
     localStorage.removeItem(CACHE_STATS_KEY);
     localStorage.removeItem(CACHE_WHITELIST_KEY);
     localStorage.removeItem(CACHE_WEBHOOK_KEY);
+    localStorage.removeItem(CACHE_BOTWA_KEY); // BERSIHKAN JUGA CACHE BOT WA
     navigate('/login');
   };
 
@@ -522,7 +552,69 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 5. APLIKASI */}
+        {/* 5. ASISTEN AI & BOT WHATSAPP (SEKSI BARU) */}
+        <div>
+          <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Asisten AI & Bot WhatsApp</h3>
+          <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800 p-5">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 -mr-4 -mt-4 text-emerald-500/5 dark:text-emerald-500/10 pointer-events-none">
+              <Bot size={110} />
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30`}>
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">Bot AI RuangOTP</h4>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Order, deposit & pantau via WhatsApp</p>
+                </div>
+              </div>
+
+              {botWaLoading && !botWaInfo ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 size={24} className="animate-spin text-emerald-500" />
+                </div>
+              ) : botWaInfo ? (
+                <>
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 flex items-center justify-between shadow-inner">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Token Bot Anda</p>
+                      <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200">{botWaInfo.botwa}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(botWaInfo.command);
+                        showToast("Command Bot berhasil disalin!", "success");
+                      }}
+                      className="p-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex flex-col items-center gap-1 active:scale-95"
+                      title="Salin Command"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+
+                  <a
+                    href={botWaInfo.wa_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                  >
+                    <MessageCircle size={18} className="fill-white/20" />
+                    Hubungkan ke WhatsApp
+                  </a>
+                </>
+              ) : (
+                <div className="text-center py-4 text-xs font-medium text-slate-500">
+                  Token Bot tidak tersedia saat ini.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 6. APLIKASI */}
         <div>
           <h3 className="mb-3 px-1 text-sm font-bold text-slate-500 dark:text-slate-400">Aplikasi</h3>
           <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800">
