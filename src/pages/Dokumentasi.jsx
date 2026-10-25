@@ -227,11 +227,18 @@ export default function Dokumentasi() {
       "tingkat_otp": 15.62
     },
     {
-      "id": 726,
-      "label": "Server 24",
-      "harga": 10648,
-      "stok": 1000,
-      "tingkat_otp": 3.13
+      "id": "5_2156",
+      "label": "Server 2",
+      "harga": 2549,
+      "stok": 14034,
+      "tingkat_otp": 29
+    },
+    {
+      "id": "bn_14906150",
+      "label": "Server 3",
+      "harga": 2834,
+      "stok": 281,
+      "tingkat_otp": null
     }
   ]
 }`
