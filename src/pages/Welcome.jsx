@@ -234,14 +234,14 @@ export default function Welcome() {
     <div className="flex min-h-screen flex-col bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       <Helmet>
         <title>RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia</title>
-        <meta name="description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah. Daftar gratis sekarang!" />
+        <meta name="description" content="RuangOTP RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik. Daftar gratis sekarang!" />
         <meta name="keywords" content="RuangOTP, ruangotp, ruang otp, ruang-otp, jasa otp, beli otp, otp murah, layanan otp indonesia, verifikasi otp, nomor virtual indonesia, beli nomor otp, otp whatsapp murah, verifikasi telegram, otp google, nomor virtual sekali pakai, sms verification indonesia, otp bypass, sms otp service, virtual number indonesia" />
         <link rel="canonical" href="https://ruangotp.io/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://ruangotp.io/" />
         <meta property="og:site_name" content="RuangOTP" />
         <meta property="og:title" content="RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia" />
-        <meta property="og:description" content="RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia. Verifikasi akun WA, Telegram, Google dengan cepat, otomatis 24 jam, dan harga termurah." />
+        <meta property="og:description" content="RuangOTP RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik." />
         <meta property="og:image" content="https://cdn.nekohime.site/file/uoprd9bu.jpeg" />
         <meta property="og:locale" content="id_ID" />
         <meta name="twitter:card" content="summary_large_image" />
