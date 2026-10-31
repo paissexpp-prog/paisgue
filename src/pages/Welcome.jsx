@@ -233,15 +233,15 @@ export default function Welcome() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       <Helmet>
-        <title>RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia</title>
-        <meta name="description" content="RuangOTP RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik. Daftar gratis sekarang!" />
+        <title>RuangOTP - Platform OTP untuk Bisnis & Termurah</title>
+        <meta name="description" content="RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik. Daftar gratis sekarang!" />
         <meta name="keywords" content="RuangOTP, ruangotp, ruang otp, ruang-otp, jasa otp, beli otp, otp murah, layanan otp indonesia, verifikasi otp, nomor virtual indonesia, beli nomor otp, otp whatsapp murah, verifikasi telegram, otp google, nomor virtual sekali pakai, sms verification indonesia, otp bypass, sms otp service, virtual number indonesia" />
         <link rel="canonical" href="https://ruangotp.io/" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://ruangotp.io/" />
         <meta property="og:site_name" content="RuangOTP" />
-        <meta property="og:title" content="RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia" />
-        <meta property="og:description" content="RuangOTP RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik." />
+        <meta property="og:title" content="RuangOTP - Platform OTP untuk Bisnis & Termurah" />
+        <meta property="og:description" content="RuangOTP hadir sebagai platform penyedia solusi digital terpadu yang menghubungkan berbagai kebutuhan teknologi dalam satu layanan. Mengutamakan kecepatan, kemudahan, keamanan, dan inovasi untuk pengalaman digital yang lebih baik." />
         <meta property="og:image" content="https://cdn.nekohime.site/file/uoprd9bu.jpeg" />
         <meta property="og:locale" content="id_ID" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -260,7 +260,7 @@ export default function Welcome() {
             "@graph": [
               { "@type": "WebSite", "@id": "https://ruangotp.io/#website", "url": "https://ruangotp.io/", "name": "RuangOTP", "description": "Layanan OTP Tercepat & Termurah di Indonesia", "inLanguage": "id-ID", "potentialAction": { "@type": "SearchAction", "target": "https://ruangotp.io/?s={search_term_string}", "query-input": "required name=search_term_string" } },
               { "@type": "Organization", "@id": "https://ruangotp.io/#organization", "name": "RuangOTP", "alternateName": ["Ruang OTP", "ruangotp", "RuangOTP.site"], "url": "https://ruangotp.io/", "logo": { "@type": "ImageObject", "url": "https://cdn.nekohime.site/file/uoprd9bu.jpeg" }, "contactPoint": { "@type": "ContactPoint", "contactType": "customer service", "url": "https://t.me/cs_putra", "availableLanguage": "Indonesian" }, "sameAs": ["https://t.me/ruangotp", "https://t.me/cs_putra"] },
-              { "@type": "WebPage", "@id": "https://ruangotp.io/#webpage", "url": "https://ruangotp.io/", "name": "RuangOTP - Layanan OTP Tercepat & Termurah di Indonesia", "isPartOf": { "@id": "https://ruangotp.io/#website" }, "about": { "@id": "https://ruangotp.io/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
+              { "@type": "WebPage", "@id": "https://ruangotp.io/#webpage", "url": "https://ruangotp.io/", "name": "RuangOTP - Platform OTP untuk Bisnis & Termurah", "isPartOf": { "@id": "https://ruangotp.io/#website" }, "about": { "@id": "https://ruangotp.io/#organization" }, "description": "RuangOTP adalah layanan penyedia kode OTP nomor 1 di Indonesia.", "inLanguage": "id-ID" }
             ]
           })}
         </script>
