@@ -55,6 +55,17 @@ export default function Login() {
       </Helmet>
 
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300">
+        
+        {/* --- BAGIAN ILUSTRASI SVG ANIMATED --- */}
+        <div className="mb-6 flex justify-center">
+          <img 
+            src="https://cdn.paiscode.com/img/2-3ajph0kh.bin" 
+            alt="Ilustrasi Login" 
+            className="w-full max-w-[280px] h-auto object-contain transition-all duration-300 dark:invert dark:opacity-90"
+          />
+        </div>
+        {/* --- END ILUSTRASI --- */}
+
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-black text-slate-900 dark:text-white">Selamat Datang</h2>
           <p className="mt-2 text-slate-500 dark:text-slate-400">Silakan masuk ke akun Anda</p>
@@ -137,4 +148,3 @@ export default function Login() {
     </div>
   );
 }
-
