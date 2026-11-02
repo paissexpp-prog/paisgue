@@ -61,7 +61,7 @@ export default function Login() {
           <img 
             src="https://cdn.nekohime.site/file/r3ixtrf9.svg" 
             alt="Ilustrasi Login" 
-            className="w-full max-w-[280px] h-auto object-contain transition-all duration-300 dark:invert dark:opacity-90"
+            className="w-full max-w-[280px] h-auto object-contain transition-all duration-300"
           />
         </div>
         {/* --- END ILUSTRASI --- */}
