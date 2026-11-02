@@ -59,7 +59,7 @@ export default function Login() {
         {/* --- BAGIAN ILUSTRASI SVG ANIMATED --- */}
         <div className="mb-6 flex justify-center">
           <img 
-            src="https://cdn.nekohime.site/file/nw27iaxf.svg" 
+            src="https://cdn.nekohime.site/file/r3ixtrf9.svg" 
             alt="Ilustrasi Login" 
             className="w-full max-w-[280px] h-auto object-contain transition-all duration-300 dark:invert dark:opacity-90"
           />
