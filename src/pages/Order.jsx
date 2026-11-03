@@ -913,7 +913,7 @@ export default function Order() {
         {activeOrders.length === 0 && (
             <div className="flex justify-center animate-in fade-in zoom-in duration-500">
                 <img 
-                    src="https://cdn.nekohime.site/file/elui17wo.svg" 
+                    src="https://cdn.nekohime.site/file/o4foj93a.svg" 
                     alt="Ilustrasi Order" 
                     className="w-full max-w-lg h-auto object-contain"
                 />
