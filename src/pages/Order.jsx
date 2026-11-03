@@ -907,6 +907,19 @@ export default function Order() {
 
       <div className="px-5 mt-5 space-y-6">
 
+        {/* ================================================================
+            🚀 ILUSTRASI SVG ANIMATED (HANYA MUNCUL JIKA TIDAK ADA PESANAN)
+            ================================================================ */}
+        {activeOrders.length === 0 && (
+            <div className="flex justify-center -mb-2 animate-in fade-in zoom-in duration-500">
+                <img 
+                    src="https://cdn.nekohime.site/file/g6vo9srs.svg" 
+                    alt="Ilustrasi Order" 
+                    className="w-full max-w-[280px] h-auto object-contain"
+                />
+            </div>
+        )}
+
         {/* SECTION: PESANAN AKTIF */}
         {Array.isArray(activeOrders) && activeOrders.length > 0 && (
             <div className="animate-in fade-in slide-in-from-top-4 duration-500">
