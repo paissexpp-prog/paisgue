@@ -96,13 +96,24 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex min-h-[85vh] items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+    // Tambahan data-nosnippet="true" diselaraskan dengan halaman Auth lainnya
+    <div data-nosnippet="true" className="flex min-h-[85vh] items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
       <Helmet>
         <title>Reset Password - RuangOTP</title>
       </Helmet>
 
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-950 animate-in fade-in zoom-in duration-300">
         
+        {/* --- BAGIAN ILUSTRASI SVG ANIMATED --- */}
+        <div className="mb-6 flex justify-center">
+          <img 
+            src="https://cdn.nekohime.site/file/ioovbd03.svg" 
+            alt="Ilustrasi Lupa Password" 
+            className="w-full max-w-[280px] h-auto object-contain transition-all duration-300"
+          />
+        </div>
+        {/* --- END ILUSTRASI --- */}
+
         {/* --- HEADER --- */}
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-black text-slate-900 dark:text-white">
