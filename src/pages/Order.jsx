@@ -911,11 +911,11 @@ export default function Order() {
             🚀 ILUSTRASI SVG ANIMATED (HANYA MUNCUL JIKA TIDAK ADA PESANAN)
             ================================================================ */}
         {activeOrders.length === 0 && (
-            <div className="flex justify-center -mb-2 animate-in fade-in zoom-in duration-500">
+            <div className="flex justify-center animate-in fade-in zoom-in duration-500">
                 <img 
                     src="https://cdn.nekohime.site/file/g6vo9srs.svg" 
                     alt="Ilustrasi Order" 
-                    className="w-full max-w-[280px] h-auto object-contain"
+                    className="w-full max-w-lg h-auto object-contain"
                 />
             </div>
         )}
