@@ -42,21 +42,28 @@ const BOTTOM_SAFE = 90;
 const calcPopupPosition = (buttonLeft, buttonTop) => {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  
+  // Responsive Dimensions
   const POPUP_WIDTH = Math.min(360, vw - 32); 
-  const POPUP_HEIGHT = Math.min(540, vh - 120);
-  const GAP = 16;
+  const POPUP_HEIGHT = Math.min(540, vh - 140); // Memberikan ruang agar tidak mentok atas/bawah
+  const GAP = 12;
 
-  // Horizontal: Coba tempatkan di sebelah kiri tombol, kalau mentok geser agar pas di layar
-  let left = buttonLeft - POPUP_WIDTH + BUTTON_SIZE;
-  if (left < 16) left = 16; 
-  if (left + POPUP_WIDTH > vw - 16) left = vw - POPUP_WIDTH - 16; 
+  let left, top;
 
-  // Vertikal: Coba tempatkan di atas tombol
-  let top = buttonTop - POPUP_HEIGHT - GAP;
-  // Jika mentok di atas layar, tempatkan di bawah tombol
-  if (top < 16) top = buttonTop + BUTTON_SIZE + GAP;
-  // Jika masih mentok di bawah layar, paskan ke bawah
-  if (top + POPUP_HEIGHT > vh - 16) top = Math.max(16, vh - POPUP_HEIGHT - 16);
+  if (vw < 640) {
+    // Mode Mobile: Posisikan di tengah secara horizontal dan aman dari BottomNav
+    left = (vw - POPUP_WIDTH) / 2;
+    top = Math.max(16, vh - POPUP_HEIGHT - BOTTOM_SAFE); 
+  } else {
+    // Mode Desktop/Tablet: Mengikuti posisi tombol
+    left = buttonLeft - POPUP_WIDTH + BUTTON_SIZE;
+    if (left < 16) left = 16; 
+    if (left + POPUP_WIDTH > vw - 16) left = vw - POPUP_WIDTH - 16; 
+
+    top = buttonTop - POPUP_HEIGHT - GAP;
+    if (top < 16) top = buttonTop + BUTTON_SIZE + GAP;
+    if (top + POPUP_HEIGHT > vh - 16) top = Math.max(16, vh - POPUP_HEIGHT - 16);
+  }
 
   return { left, top, width: POPUP_WIDTH, height: POPUP_HEIGHT };
 };
@@ -85,7 +92,6 @@ const SiriAi = () => {
 
   const buttonRef = useRef(null);
   const fileInputRef = useRef(null);
-  const chatContainerRef = useRef(null);
   
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 });
   const hasDraggedRef = useRef(false);
@@ -113,7 +119,7 @@ const SiriAi = () => {
   }, [fetchHistory]);
 
   // ================================================================
-  // DRAG LOGIC (Mirip OwnerNotification)
+  // DRAG LOGIC
   // ================================================================
   const handlePointerDown = useCallback((e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -187,7 +193,7 @@ const SiriAi = () => {
         posRef.current = { x: btnLeft, y: btnTop };
       } else {
         btnLeft = window.innerWidth - BUTTON_SIZE - 20;
-        btnTop = window.innerHeight - BUTTON_SIZE - BOTTOM_SAFE;
+        btnTop = window.innerHeight - 180;
       }
     }
 
@@ -230,7 +236,6 @@ const SiriAi = () => {
     const currentImg = selectedImage;
     const currentPreview = imagePreview;
 
-    // 1. Tambahkan pesan user ke UI secara instan (Optimistic UI)
     const newUserMsgContent = [];
     if (userText) newUserMsgContent.push({ type: 'text', text: userText });
     if (currentPreview) newUserMsgContent.push({ type: 'image_url', image_url: { url: currentPreview } });
@@ -241,7 +246,6 @@ const SiriAi = () => {
       timestamp: new Date().toISOString(),
     };
 
-    // Karena flex-col-reverse, index 0 berada di bawah
     setMessages(prev => [newUserMsg, ...prev]);
     setInputMsg('');
     clearImage();
@@ -250,7 +254,6 @@ const SiriAi = () => {
     try {
       let imageUrls = [];
       
-      // 2. Upload Gambar ke CDN Paiscode jika ada
       if (currentImg) {
         const formData = new FormData();
         formData.append('file', currentImg);
@@ -266,7 +269,6 @@ const SiriAi = () => {
         }
       }
 
-      // 3. Kirim payload ke API RuangOTP Siri AI
       const payload = { message: userText || "Ini gambar yang saya maksud." };
       if (imageUrls.length > 0) {
         payload.images = imageUrls;
@@ -295,14 +297,10 @@ const SiriAi = () => {
     }
   };
 
-  // Early return jika belum login
   const token = localStorage.getItem('token');
   if (!token) return null;
 
-  // Posisi default: Kanan bawah (di atas bottom nav)
-  const defaultRight = 20;
-  const defaultTop = window.innerHeight - BUTTON_SIZE - BOTTOM_SAFE;
-
+  // VISIBILITY HIDDEN: Menyembunyikan tombol floating agar tidak tumpang tindih dengan jendela Chat
   const btnStyle = pos.x !== null && pos.y !== null
     ? {
         position: 'fixed',
@@ -311,14 +309,16 @@ const SiriAi = () => {
         zIndex: 90,
         touchAction: 'none',
         userSelect: 'none',
+        visibility: isOpen ? 'hidden' : 'visible',
       }
     : {
         position: 'fixed',
-        right: `${defaultRight}px`,
-        top: `${defaultTop}px`,
+        right: '20px',
+        bottom: '180px', // Ditinggikan agar tidak menimpa tombol CS di bottom-28 (112px)
         zIndex: 90,
         touchAction: 'none',
         userSelect: 'none',
+        visibility: isOpen ? 'hidden' : 'visible',
       };
 
   return (
@@ -375,16 +375,10 @@ const SiriAi = () => {
           className={`relative flex h-[60px] w-[60px] items-center justify-center rounded-full bg-slate-900 border-2 border-slate-700 transition-all duration-200 shadow-xl ${isDragging ? 'siri-btn-dragging cursor-grabbing' : 'siri-btn-idle cursor-grab'}`}
           onClick={(e) => e.preventDefault()}
         >
-          {isOpen ? (
-            <X size={28} className="text-slate-400" />
-          ) : (
-            <>
-              <Bot size={28} className="text-white drop-shadow-md" />
-              <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 shadow-lg border-2 border-slate-900">
-                <Sparkles size={12} className="text-white animate-pulse" />
-              </div>
-            </>
-          )}
+          <Bot size={28} className="text-white drop-shadow-md" />
+          <div className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 shadow-lg border-2 border-slate-900">
+            <Sparkles size={12} className="text-white animate-pulse" />
+          </div>
         </button>
       </div>
 
@@ -442,7 +436,6 @@ const SiriAi = () => {
             {messages.map((msg, idx) => {
               const isUser = msg.role === 'user';
               
-              // Ekstrak teks dan gambar jika format array
               let textContent = '';
               let imageUrls = [];
               if (Array.isArray(msg.content)) {
@@ -454,7 +447,6 @@ const SiriAi = () => {
                 textContent = msg.content;
               }
 
-              // Khusus admin message di history (Kadang admin menyela via assistant role)
               const isAdmin = !isUser && textContent.includes('[Pesan dari Admin]:');
               const bubbleBg = isUser 
                 ? `${color.bg} text-slate-800 dark:text-white border border-${color.border.split('-')[1]}-200 dark:border-${color.border.split('-')[1]}-800/50` 
@@ -466,24 +458,20 @@ const SiriAi = () => {
                 <div key={idx} className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex gap-2 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                     
-                    {/* Avatar Kiri (AI/Admin) */}
                     {!isUser && (
                       <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full shadow-sm text-white mt-auto ${isAdmin ? 'bg-amber-500' : 'bg-blue-600'}`}>
                         {isAdmin ? <Sparkles size={14} /> : <Bot size={14} />}
                       </div>
                     )}
 
-                    {/* Bubble Content */}
                     <div className={`flex flex-col gap-2 rounded-2xl px-4 py-3 shadow-sm ${isUser ? 'rounded-br-sm' : 'rounded-bl-sm'} ${bubbleBg}`}>
                       
-                      {/* Image List */}
                       {imageUrls.map((url, i) => (
                         <a key={i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-white/20">
                           <img src={url} alt="Uploaded" className="w-full max-w-[200px] h-auto object-cover hover:opacity-90 transition-opacity" loading="lazy" />
                         </a>
                       ))}
 
-                      {/* Text List */}
                       {textContent && (
                         <p className="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
                           {parseSiriText(textContent).map((part, i) => 
@@ -500,12 +488,10 @@ const SiriAi = () => {
                         </p>
                       )}
 
-                      {/* Timestamp */}
                       <span className={`text-[9px] mt-1 font-medium ${isUser ? 'text-right opacity-60' : 'text-left opacity-50'}`}>
                         {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-
                   </div>
                 </div>
               );
@@ -515,7 +501,6 @@ const SiriAi = () => {
           {/* Area Input (Footer) */}
           <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
             
-            {/* Image Preview Container */}
             {imagePreview && (
               <div className="mb-3 flex items-center gap-3 rounded-xl bg-white dark:bg-slate-950 p-2 border border-slate-200 dark:border-slate-800 shadow-sm relative">
                 <div className="relative h-12 w-12 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -531,7 +516,6 @@ const SiriAi = () => {
               </div>
             )}
 
-            {/* Input Form */}
             <form onSubmit={handleSendMessage} className="flex items-end gap-2">
               <input 
                 type="file" 
