@@ -282,15 +282,17 @@ const SiriAi = () => {
       // 1. Upload ke CDN Paiscode jika ada gambar
       if (currentImg) {
         const formData = new FormData();
-        formData.append('file', currentImg); // Pastikan ini 'file' sesuai multer.single('file') backend CDN
+        formData.append('file', currentImg);
         
-        // PENTING: Gunakan axios langsung, bukan instance 'api' karena ini menembak server eksternal (CDN)
-        const uploadRes = await axios.post('https://cdn.paiscode.com/upload', formData, {
-          headers: { 
-            // Browser akan otomatis menambahkan boundary yang benar jika kita TIDAK hardcode 'Content-Type'
-            // Tapi untuk amannya pada beberapa versi browser:
-            'Content-Type': 'multipart/form-data' 
-          },
+        // PENTING: Gunakan konfigurasi axios yang bersih untuk menghindari konflik interceptor
+        const uploadRes = await axios({
+            method: 'post',
+            url: 'https://cdn.paiscode.com/upload',
+            data: formData,
+            // Biarkan browser mengatur boundary multipart/form-data
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
         });
 
         if (uploadRes.data?.success && uploadRes.data?.data?.url) {
@@ -300,7 +302,7 @@ const SiriAi = () => {
         }
       }
 
-      // 2. Siapkan Data Optimistic UI (Memastikan HANYA URL Publik CDN yang di-render, bukan Base64/ObjectURL)
+      // 2. Siapkan Data Optimistic UI
       const newUserMsgContent = [];
       if (userText) newUserMsgContent.push({ type: 'text', text: userText });
       if (imageUrls.length > 0) newUserMsgContent.push({ type: 'image_url', image_url: { url: imageUrls[0] } });
