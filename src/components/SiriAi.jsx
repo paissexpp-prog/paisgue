@@ -40,22 +40,22 @@ const BOTTOM_SAFE = 90;
 // HELPER: Smart Bounds Kalkulasi Posisi Popup Chat
 // ================================================================
 const calcPopupPosition = (buttonLeft, buttonTop) => {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  // Gunakan VisualViewport agar deteksi sisa layar akurat saat Keyboard HP muncul
+  const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   
-  // Responsive Dimensions
   const POPUP_WIDTH = Math.min(360, vw - 32); 
-  const POPUP_HEIGHT = Math.min(540, vh - 140); // Memberikan ruang agar tidak mentok atas/bawah
+  let POPUP_HEIGHT, left, top;
   const GAP = 12;
 
-  let left, top;
-
   if (vw < 640) {
-    // Mode Mobile: Posisikan di tengah secara horizontal dan aman dari BottomNav
+    // Mode Mobile: Paskan dengan sisa viewport (Krusial saat keyboard terbuka)
+    POPUP_HEIGHT = Math.min(540, vh - 32); // Sisakan margin aman 16px atas/bawah
     left = (vw - POPUP_WIDTH) / 2;
-    top = Math.max(16, vh - POPUP_HEIGHT - BOTTOM_SAFE); 
+    top = Math.max(16, vh - POPUP_HEIGHT - 16); 
   } else {
-    // Mode Desktop/Tablet: Mengikuti posisi tombol
+    // Mode Desktop/Tablet
+    POPUP_HEIGHT = Math.min(540, vh - 140); 
     left = buttonLeft - POPUP_WIDTH + BUTTON_SIZE;
     if (left < 16) left = 16; 
     if (left + POPUP_WIDTH > vw - 16) left = vw - POPUP_WIDTH - 16; 
@@ -117,6 +117,47 @@ const SiriAi = () => {
       fetchHistory();
     }
   }, [fetchHistory]);
+
+  // ================================================================
+  // REALTIME RESIZE LISTENER (PENYELESAIAN MASALAH KEYBOARD MOBILE)
+  // ================================================================
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        let btnLeft, btnTop;
+        if (posRef.current.x !== null && posRef.current.y !== null) {
+          btnLeft = posRef.current.x;
+          btnTop = posRef.current.y;
+        } else {
+          const btn = buttonRef.current;
+          if (btn) {
+            const rect = btn.getBoundingClientRect();
+            btnLeft = rect.left;
+            btnTop = rect.top;
+          } else {
+            btnLeft = window.innerWidth - BUTTON_SIZE - 20;
+            btnTop = window.innerHeight - 180;
+          }
+        }
+        setPopupPos(calcPopupPosition(btnLeft, btnTop));
+      }
+    };
+
+    // Dengarkan perubahan layar standar
+    window.addEventListener('resize', handleResize);
+    
+    // Dengarkan perubahan VisualViewport (spesifik saat keyboard HP muncul)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [isOpen]);
 
   // ================================================================
   // DRAG LOGIC
@@ -314,7 +355,7 @@ const SiriAi = () => {
     : {
         position: 'fixed',
         right: '20px',
-        bottom: '180px', // Ditinggikan agar tidak menimpa tombol CS di bottom-28 (112px)
+        bottom: '180px', 
         zIndex: 90,
         touchAction: 'none',
         userSelect: 'none',
@@ -540,6 +581,12 @@ const SiriAi = () => {
                   className="w-full bg-transparent text-sm py-2.5 outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400"
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
+                  onFocus={() => {
+                    // Pancing re-render jika animasi keyboard bawaan HP terlambat merespon
+                    setTimeout(() => {
+                      window.dispatchEvent(new Event('resize'));
+                    }, 300);
+                  }}
                   disabled={isTyping}
                 />
               </div>
