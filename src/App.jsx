@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Navbar from './components/Navbar';
 import NetworkOverlay from './components/NetworkOverlay';
 import OwnerNotification from './components/OwnerNotification'; // IMPORT KOMPONEN BARU
+import SiriAi from './components/SiriAi'; // IMPORT KOMPONEN SIRI AI
 
 // Lazy Loading Pages
 const Welcome = lazy(() => import('./pages/Welcome'));
@@ -80,6 +81,9 @@ function App() {
 
       {/* NOTIFIKASI OWNER — Global, pojok kiri atas */}
       <OwnerNotification />
+      
+      {/* SIRI AI AGENT — Global, pojok kanan bawah */}
+      <SiriAi />
       
       <Navbar /> 
       
