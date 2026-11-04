@@ -40,7 +40,6 @@ const BOTTOM_SAFE = 90;
 // HELPER: Smart Bounds Kalkulasi Posisi Popup Chat
 // ================================================================
 const calcPopupPosition = (buttonLeft, buttonTop) => {
-  // Gunakan VisualViewport agar deteksi sisa layar akurat saat Keyboard HP muncul
   const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   
@@ -49,12 +48,10 @@ const calcPopupPosition = (buttonLeft, buttonTop) => {
   const GAP = 12;
 
   if (vw < 640) {
-    // Mode Mobile: Paskan dengan sisa viewport (Krusial saat keyboard terbuka)
-    POPUP_HEIGHT = Math.min(540, vh - 32); // Sisakan margin aman 16px atas/bawah
+    POPUP_HEIGHT = Math.min(540, vh - 32); 
     left = (vw - POPUP_WIDTH) / 2;
     top = Math.max(16, vh - POPUP_HEIGHT - 16); 
   } else {
-    // Mode Desktop/Tablet
     POPUP_HEIGHT = Math.min(540, vh - 140); 
     left = buttonLeft - POPUP_WIDTH + BUTTON_SIZE;
     if (left < 16) left = 16; 
@@ -119,7 +116,7 @@ const SiriAi = () => {
   }, [fetchHistory]);
 
   // ================================================================
-  // REALTIME RESIZE LISTENER (PENYELESAIAN MASALAH KEYBOARD MOBILE)
+  // REALTIME RESIZE LISTENER
   // ================================================================
   useEffect(() => {
     const handleResize = () => {
@@ -143,10 +140,8 @@ const SiriAi = () => {
       }
     };
 
-    // Dengarkan perubahan layar standar
     window.addEventListener('resize', handleResize);
     
-    // Dengarkan perubahan VisualViewport (spesifik saat keyboard HP muncul)
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize);
     }
@@ -267,7 +262,7 @@ const SiriAi = () => {
   };
 
   // ================================================================
-  // KIRIM PESAN & GAMBAR
+  // KIRIM PESAN & GAMBAR (PENYESUAIAN CDN DAN API)
   // ================================================================
   const handleSendMessage = async (e) => {
     e?.preventDefault();
@@ -275,19 +270,8 @@ const SiriAi = () => {
 
     const userText = inputMsg.trim();
     const currentImg = selectedImage;
-    const currentPreview = imagePreview;
 
-    const newUserMsgContent = [];
-    if (userText) newUserMsgContent.push({ type: 'text', text: userText });
-    if (currentPreview) newUserMsgContent.push({ type: 'image_url', image_url: { url: currentPreview } });
-
-    const newUserMsg = {
-      role: 'user',
-      content: newUserMsgContent,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages(prev => [newUserMsg, ...prev]);
+    // Bersihkan form seolah-olah sedang diproses
     setInputMsg('');
     clearImage();
     setIsTyping(true);
@@ -295,22 +279,43 @@ const SiriAi = () => {
     try {
       let imageUrls = [];
       
+      // 1. Upload ke CDN Paiscode jika ada gambar
       if (currentImg) {
         const formData = new FormData();
-        formData.append('file', currentImg);
+        formData.append('file', currentImg); // Pastikan ini 'file' sesuai multer.single('file') backend CDN
         
+        // PENTING: Gunakan axios langsung, bukan instance 'api' karena ini menembak server eksternal (CDN)
         const uploadRes = await axios.post('https://cdn.paiscode.com/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { 
+            // Browser akan otomatis menambahkan boundary yang benar jika kita TIDAK hardcode 'Content-Type'
+            // Tapi untuk amannya pada beberapa versi browser:
+            'Content-Type': 'multipart/form-data' 
+          },
         });
 
-        if (uploadRes.data?.data?.url) {
+        if (uploadRes.data?.success && uploadRes.data?.data?.url) {
           imageUrls.push(uploadRes.data.data.url);
         } else {
-          throw new Error("Gagal mendapatkan URL gambar dari CDN");
+          throw new Error("Gagal mendapatkan URL gambar dari CDN Paiscode");
         }
       }
 
-      const payload = { message: userText || "Ini gambar yang saya maksud." };
+      // 2. Siapkan Data Optimistic UI (Memastikan HANYA URL Publik CDN yang di-render, bukan Base64/ObjectURL)
+      const newUserMsgContent = [];
+      if (userText) newUserMsgContent.push({ type: 'text', text: userText });
+      if (imageUrls.length > 0) newUserMsgContent.push({ type: 'image_url', image_url: { url: imageUrls[0] } });
+
+      const newUserMsg = {
+        role: 'user',
+        content: newUserMsgContent,
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Tampilkan pesan User
+      setMessages(prev => [newUserMsg, ...prev]);
+
+      // 3. Kirim ke API Siri (RuangOTP)
+      const payload = { message: userText || "Ini bukti transfer saya." };
       if (imageUrls.length > 0) {
         payload.images = imageUrls;
       }
@@ -327,9 +332,13 @@ const SiriAi = () => {
       }
     } catch (error) {
       console.error("Gagal mengirim pesan Siri AI:", error);
+      
+      // Kembalikan pesan yang gagal agar bisa diketik ulang
+      setInputMsg(userText); 
+      
       const errorMsg = {
         role: 'assistant',
-        content: "Maaf, terjadi kesalahan teknis saat mengirim pesan atau mengunggah gambar. Pastikan CDN Anda mendukung CORS dan server utama menyala.",
+        content: `Maaf, terjadi kesalahan teknis: ${error.message || "Gagal menghubungi server"}. Coba periksa koneksi Anda atau hubungi CS manual.`,
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [errorMsg, ...prev]);
@@ -341,7 +350,6 @@ const SiriAi = () => {
   const token = localStorage.getItem('token');
   if (!token) return null;
 
-  // VISIBILITY HIDDEN: Menyembunyikan tombol floating agar tidak tumpang tindih dengan jendela Chat
   const btnStyle = pos.x !== null && pos.y !== null
     ? {
         position: 'fixed',
@@ -582,7 +590,6 @@ const SiriAi = () => {
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
                   onFocus={() => {
-                    // Pancing re-render jika animasi keyboard bawaan HP terlambat merespon
                     setTimeout(() => {
                       window.dispatchEvent(new Event('resize'));
                     }, 300);
