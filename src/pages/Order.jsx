@@ -10,7 +10,7 @@ import BottomNav from '../components/BottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { 
   Search, CheckCircle2, AlertCircle, HelpCircle, 
-  Copy, RefreshCw, Loader2, X, Bell, Globe, Brain, Info, Bug, ChevronDown, ChevronUp, Wallet, ShoppingCart
+  Copy, RefreshCw, Loader2, X, Bell, Globe, Brain, Info, Bug, ChevronDown, ChevronUp, Wallet, ShoppingCart, Server as ServerIcon
 } from 'lucide-react';
 
 // ================================================================
@@ -276,6 +276,20 @@ export default function Order() {
   const deferredServiceSearch = useDeferredValue(serviceSearch);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
+  // New State for Main Server Selection
+  const [selectedMainServer, setSelectedMainServer] = useState(null);
+  const [showMainServerDropdown, setShowMainServerDropdown] = useState(false);
+  
+  const mainServers = [
+      { id: null, name: 'All Server' },
+      { id: '1', name: 'Server 1' },
+      { id: '2', name: 'Server 2' },
+      { id: '3', name: 'Server 3' },
+      { id: '4', name: 'Server 4' },
+      { id: '5', name: 'Server 5' },
+      { id: '6', name: 'Server 6' },
+  ];
+
   // Modal Server State
   const [serverModal, setServerModal] = useState({
       show: false,
@@ -301,6 +315,7 @@ export default function Order() {
 
   const lastFetchRef = useRef(0);
   const dropdownRef = useRef(null);
+  const serverDropdownRef = useRef(null);
 
   const V2_COUNTRIES_CACHE_KEY  = 'otp_v2_countries';
   const V2_COUNTRIES_CACHE_TIME = 'otp_v2_countries_time';
@@ -308,11 +323,14 @@ export default function Order() {
   const V2_SERVICES_TIME_PREFIX = 'otp_v2_srv_time_';
   const V2_CACHE_DURATION       = 60 * 60 * 1000; // 1 Jam
 
-  // Handle Klik di luar dropdown negara untuk menutupnya
+  // Handle Klik di luar dropdown negara dan server untuk menutupnya
   useEffect(() => {
       const handleClickOutside = (event) => {
           if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
               setShowCountryDropdown(false);
+          }
+          if (serverDropdownRef.current && !serverDropdownRef.current.contains(event.target)) {
+              setShowMainServerDropdown(false);
           }
       };
       document.addEventListener("mousedown", handleClickOutside);
@@ -572,8 +590,11 @@ export default function Order() {
       setServerModal({ show: true, service: service, servers: [], loading: true, processingId: null });
       setBulkQuantity(1);
       
-      const cacheKey = `otp_v2_price_${service.code}_${selectedV2Country.id}`;
-      const cacheTime = `otp_v2_price_time_${service.code}_${selectedV2Country.id}`;
+      const serverParam = selectedMainServer && selectedMainServer.id !== null ? `&server=${selectedMainServer.id}` : '';
+      const serverCacheTag = selectedMainServer?.id || 'all';
+
+      const cacheKey = `otp_v2_price_${service.code}_${selectedV2Country.id}_${serverCacheTag}`;
+      const cacheTime = `otp_v2_price_time_${service.code}_${selectedV2Country.id}_${serverCacheTag}`;
       const now = Date.now();
 
       try {
@@ -587,7 +608,7 @@ export default function Order() {
               }
           }
 
-          const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}`);
+          const res = await api.get(`/cekharga-v2/info?service=${service.code}&country=${selectedV2Country.id}${serverParam}`);
           if (res.data.success || res.data.status) {
               if (res.data.server && res.data.server.length > 0) {
                   setServerModal(prev => ({ ...prev, servers: res.data.server, loading: false }));
@@ -730,7 +751,6 @@ export default function Order() {
       }
   };
 
-  // LOGIKA RESEND (KIRIM ULANG) DIADOPSI DARI ORDER.JSX LAMA
   const handleResendClick = (order) => {
       showConfirm(
           "Kirim Ulang SMS?",
@@ -957,6 +977,43 @@ export default function Order() {
         {/* SECTION: FORM ORDER */}
         <div className="bg-white dark:bg-[#111827] rounded-[1.5rem] p-5 shadow-sm border border-slate-200 dark:border-slate-800/60">
             
+            {/* Input Server */}
+            <div className="mb-4" ref={serverDropdownRef}>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Server</label>
+                <div className="relative">
+                    <div 
+                        onClick={() => setShowMainServerDropdown(!showMainServerDropdown)}
+                        className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3.5 flex items-center justify-between cursor-pointer transition-colors focus-within:border-blue-400 dark:focus-within:border-blue-600"
+                    >
+                        <div className="flex items-center gap-3">
+                            <ServerIcon size={18} className="text-slate-400 shrink-0" />
+                            <span className="text-slate-800 dark:text-white text-sm font-semibold">
+                                {selectedMainServer ? selectedMainServer.name : 'All Server'}
+                            </span>
+                        </div>
+                        <ChevronDown size={18} className="text-slate-400 shrink-0" />
+                    </div>
+
+                    {showMainServerDropdown && (
+                        <div className="absolute z-20 w-full mt-2 bg-white dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden hide-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                            {mainServers.map(server => (
+                                <button 
+                                    key={server.id || 'all'}
+                                    onClick={() => {
+                                        setSelectedMainServer(server);
+                                        setShowMainServerDropdown(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-[#1e2536] transition-colors text-left border-b border-slate-100 dark:border-[#1e2536]/50 last:border-0"
+                                >
+                                    <span className="text-slate-800 dark:text-slate-200 text-sm font-medium">{server.name}</span>
+                                    {((!selectedMainServer && server.id === null) || (selectedMainServer?.id === server.id)) && <CheckCircle2 size={16} className="text-blue-500" />}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Input Negara */}
             <div className="mb-4" ref={dropdownRef}>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Negara</label>
