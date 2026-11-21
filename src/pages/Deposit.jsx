@@ -237,6 +237,17 @@ export default function Deposit() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Form Nominal */}
             <div className="rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm dark:border-slate-800/60 dark:bg-slate-900">
+              
+              {/* --- BAGIAN ILUSTRASI SVG ANIMATED --- */}
+              <div className="mb-6 flex justify-center">
+                <img 
+                  src="https://cdn.nekohime.site/file/fvxz0v30.svg" 
+                  alt="Ilustrasi Deposit" 
+                  className="w-full max-w-[280px] h-auto object-contain transition-all duration-300"
+                />
+              </div>
+              {/* --- END ILUSTRASI --- */}
+
               <label className="mb-3 block text-sm font-bold text-slate-700 dark:text-slate-300">
                   Nominal Deposit
               </label>
