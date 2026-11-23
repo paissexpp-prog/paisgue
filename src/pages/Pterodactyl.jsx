@@ -106,11 +106,16 @@ export default function Pterodactyl() {
     });
   };
 
+  // Validasi Password Helper
+  const isPasswordStarted = formData.password.length > 0;
+  const isPasswordValid = formData.password.length >= 8;
+
   // Create Panel
   const handleCreatePanel = async (e) => {
     e.preventDefault();
     if (!selectedPackage) return showToast("Pilih paket terlebih dahulu", "error");
     if (!formData.nama_panel.trim() || !formData.password.trim()) return showToast("Lengkapi form", "error");
+    if (!isPasswordValid) return showToast("Password minimal 8 karakter", "error");
     if (balance < selectedPackage.price) return showToast("Saldo tidak mencukupi", "error");
 
     setLoading(prev => ({ ...prev, action: true }));
@@ -226,7 +231,7 @@ export default function Pterodactyl() {
         {activeTab === 'buy' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             
-            {/* FORM CREATE (Sekarang ada di paling atas) */}
+            {/* FORM CREATE (Berada di atas, dengan Validasi Password) */}
             <div className="bg-white dark:bg-[#111827] rounded-[1.5rem] p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 animate-in fade-in zoom-in-95 mb-6">
               <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-800/60 pb-4">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-[#38bdf8]">
@@ -258,16 +263,36 @@ export default function Pterodactyl() {
                     type="text" 
                     required
                     placeholder="Gunakan password yang kuat"
-                    className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-slate-400"
+                    className={`w-full bg-slate-50 dark:bg-[#151b2b] border rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none transition-colors placeholder:text-slate-400 ${
+                      !isPasswordStarted 
+                        ? 'border-slate-200 dark:border-[#1e2536] focus:border-blue-400 dark:focus:border-blue-600' 
+                        : isPasswordValid 
+                          ? 'border-emerald-500 focus:border-emerald-500' 
+                          : 'border-red-500 focus:border-red-500'
+                    }`}
                     value={formData.password}
                     onChange={e => setFormData({...formData, password: e.target.value})}
                   />
+                  {/* Teks Bantuan Validasi */}
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium">
+                    {!isPasswordStarted ? (
+                      <span className="text-slate-500 dark:text-slate-400">Minimal 8 karakter kombinasi huruf & angka</span>
+                    ) : isPasswordValid ? (
+                      <span className="text-emerald-500 flex items-center gap-1">
+                        <CheckCircle2 size={12}/> Password memenuhi syarat
+                      </span>
+                    ) : (
+                      <span className="text-red-500 flex items-center gap-1">
+                        <AlertCircle size={12}/> Kurang dari 8 karakter
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button 
                   type="submit"
-                  disabled={loading.action || !selectedPackage}
+                  disabled={loading.action || !selectedPackage || !isPasswordValid}
                   className={`w-full py-3.5 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all active:scale-95 ${
-                    loading.action || !selectedPackage 
+                    loading.action || !selectedPackage || !isPasswordValid
                       ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed' 
                       : color.btn
                   }`}
@@ -277,7 +302,9 @@ export default function Pterodactyl() {
                     ? 'Memproses...' 
                     : !selectedPackage 
                       ? 'Pilih Paket Terlebih Dahulu' 
-                      : `Beli Server - Rp ${selectedPackage.price.toLocaleString('id-ID')}`
+                      : !isPasswordValid
+                        ? 'Password Terlalu Pendek'
+                        : `Beli Server - Rp ${selectedPackage.price.toLocaleString('id-ID')}`
                   }
                 </button>
               </form>
