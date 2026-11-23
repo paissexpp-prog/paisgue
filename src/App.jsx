@@ -27,6 +27,8 @@ const Ketentuan = lazy(() => import('./pages/Ketentuan'));
 const Maintenance = lazy(() => import('./pages/Maintenance'));
 // HALAMAN BARU: Referral / Dapatkan Saldo Gratis
 const Referral = lazy(() => import('./pages/Referral'));
+// HALAMAN BARU: Pterodactyl Panel
+const Pterodactyl = lazy(() => import('./pages/Pterodactyl'));
 
 const PageLoader = () => (
   <div className="flex min-h-[80vh] items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -132,6 +134,13 @@ function App() {
             <Route path="/order" element={
               <PrivateRoute>
                  <Order /> 
+              </PrivateRoute>
+            } />
+
+            {/* RUTEN BARU: PTERODACTYL PANEL */}
+            <Route path="/panel" element={
+              <PrivateRoute>
+                 <Pterodactyl /> 
               </PrivateRoute>
             } />
 

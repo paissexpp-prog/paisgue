@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Monitor, Palette, LogOut, Menu, X, Home, ShoppingBag, Wallet, Activity, User, Code2, FileText, Gift } from 'lucide-react';
+import { Sun, Moon, Monitor, Palette, LogOut, Menu, X, Home, ShoppingBag, Wallet, Activity, User, Code2, FileText, Gift, Server } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Navbar() {
@@ -179,6 +179,14 @@ export default function Navbar() {
               </button>
 
               <button 
+                onClick={() => handleSideNav('/panel')} 
+                className="flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                <Server size={20} className="shrink-0 text-blue-400" />
+                <span className="font-semibold">Panel Server</span>
+              </button>
+
+              <button 
                 onClick={() => handleSideNav('/deposit')} 
                 className="flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
               >
@@ -274,4 +282,3 @@ export default function Navbar() {
     </>
   );
 }
-
