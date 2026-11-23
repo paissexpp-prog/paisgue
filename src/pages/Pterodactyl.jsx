@@ -4,7 +4,7 @@ import api from '../utils/api';
 import BottomNav from '../components/BottomNav';
 import { 
   Server, Cpu, HardDrive, CircuitBoard, Copy, Loader2, AlertCircle, CheckCircle2, 
-  Wallet, Play, Square, RotateCcw, PowerOff, RefreshCw, X, Link as LinkIcon, Key, Info
+  Wallet, Play, Square, RotateCcw, PowerOff, RefreshCw, X, Link as LinkIcon, Key, Info, User 
 } from 'lucide-react';
 
 export default function Pterodactyl() {
@@ -225,7 +225,65 @@ export default function Pterodactyl() {
             ======================================================== */}
         {activeTab === 'buy' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h3 className="font-bold text-slate-800 dark:text-white text-lg mb-4">Pilih Spesifikasi</h3>
+            
+            {/* FORM CREATE (Sekarang ada di paling atas) */}
+            <div className="bg-white dark:bg-[#111827] rounded-[1.5rem] p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 animate-in fade-in zoom-in-95 mb-6">
+              <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-800/60 pb-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-[#38bdf8]">
+                  <Server size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-white text-sm">Konfigurasi Server</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Paket: {selectedPackage ? <span className="font-bold uppercase text-slate-700 dark:text-slate-300">{selectedPackage.id}</span> : <span className="italic">Belum dipilih</span>}
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleCreatePanel} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Server</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Bot WhatsApp-ku"
+                    className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-slate-400"
+                    value={formData.nama_panel}
+                    onChange={e => setFormData({...formData, nama_panel: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Password Panel</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="Gunakan password yang kuat"
+                    className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-slate-400"
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={loading.action || !selectedPackage}
+                  className={`w-full py-3.5 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all active:scale-95 ${
+                    loading.action || !selectedPackage 
+                      ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed' 
+                      : color.btn
+                  }`}
+                >
+                  {loading.action ? <Loader2 size={18} className="animate-spin"/> : <Server size={18}/>}
+                  {loading.action 
+                    ? 'Memproses...' 
+                    : !selectedPackage 
+                      ? 'Pilih Paket Terlebih Dahulu' 
+                      : `Beli Server - Rp ${selectedPackage.price.toLocaleString('id-ID')}`
+                  }
+                </button>
+              </form>
+            </div>
+
+            <h3 className="font-bold text-slate-800 dark:text-white text-lg mb-4">Pilih Spesifikasi Paket</h3>
             
             {loading.packages ? (
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -274,54 +332,6 @@ export default function Pterodactyl() {
                     </button>
                   );
                 })}
-              </div>
-            )}
-
-            {/* FORM CREATE (Muncul kalau package dipilih) */}
-            {selectedPackage && (
-              <div className="bg-white dark:bg-[#111827] rounded-[1.5rem] p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 animate-in fade-in zoom-in-95">
-                <div className="flex items-center gap-3 mb-5 border-b border-slate-100 dark:border-slate-800/60 pb-4">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-[#38bdf8]">
-                    <Server size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 dark:text-white text-sm">Konfigurasi Server</h3>
-                    <p className="text-[11px] text-slate-500">Paket: <span className="font-bold uppercase text-slate-700 dark:text-slate-300">{selectedPackage.id}</span></p>
-                  </div>
-                </div>
-
-                <form onSubmit={handleCreatePanel} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Server</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="e.g. Bot WhatsApp-ku"
-                      className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-slate-400"
-                      value={formData.nama_panel}
-                      onChange={e => setFormData({...formData, nama_panel: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Password Panel</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Gunakan password yang kuat"
-                      className="w-full bg-slate-50 dark:bg-[#151b2b] border border-slate-200 dark:border-[#1e2536] rounded-xl px-4 py-3 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-blue-400 dark:focus:border-blue-600 transition-colors placeholder:text-slate-400"
-                      value={formData.password}
-                      onChange={e => setFormData({...formData, password: e.target.value})}
-                    />
-                  </div>
-                  <button 
-                    type="submit"
-                    disabled={loading.action}
-                    className={`w-full py-3.5 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all active:scale-95 ${loading.action ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : color.btn}`}
-                  >
-                    {loading.action ? <Loader2 size={18} className="animate-spin"/> : <Server size={18}/>}
-                    {loading.action ? 'Memproses...' : `Beli Server - Rp ${selectedPackage.price.toLocaleString('id-ID')}`}
-                  </button>
-                </form>
               </div>
             )}
           </div>
